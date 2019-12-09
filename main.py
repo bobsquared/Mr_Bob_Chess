@@ -4,13 +4,9 @@ import math as m
 import params
 import copy
 import random as r
-import pandas as pd
 import numpy as np
 import datetime
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
+
 
 
 def position2Location(h, w, side, position):
@@ -695,10 +691,7 @@ class Board:
 		self.turn = 'white'
 		self.moveNumber = 0
 		self.traversedNodes = 0
-		self.model = ChessModel()
 		#self.model.load_state_dict(torch.load("model.pwf"))
-		self.allSet = []
-		self.optimizer = optim.SGD(self.model.parameters(), lr=0.1)
 
 
 		if self.color == 'white':
@@ -754,8 +747,6 @@ class Board:
 		self.pieces = []
 		self.moveNumber = 0
 		self.turn = 'white'
-		ret = self.allSet
-		self.allSet = []
 
 		#White pieces
 		for i in range(65, 73):
@@ -945,7 +936,6 @@ class Board:
 			self.turn = 'white'
 
 
-		self.allSet.append(torch.tensor(toA))
 
 		#print(self.outcomeGame())
 		if castling == 1:
@@ -1248,68 +1238,19 @@ class Board:
 
 	def evaluateBoard(self, boardPos):
 		res = r.uniform(-0.025, 0.025)
-		self.model.eval()
 
-		toA = []
 		for key, value in boardPos.items():
-			val = 0
 			if value[0]:
-				val = value[1].value
-				if value[1].color == "black":
-					val = -val
-			toA.append(float(val))
+				if value[1].color == 'white':
+					#res += len(self.getValidMoves(getPosition(params.board_height, params.board_width, self.color, value[1].pos), board=boardPos)) / 10
+					res += value[1].value
+				else:
+					#res -= len(self.getValidMoves(getPosition(params.board_height, params.board_width, self.color, value[1].pos), board=boardPos)) / 10
+					res -= value[1].value
 
-		ress = torch.tensor(toA)
-
-		# for key, value in boardPos.items():
-		# 	if value[0]:
-		# 		if value[1].color == 'white':
-		# 			#res += len(self.getValidMoves(getPosition(params.board_height, params.board_width, self.color, value[1].pos), board=boardPos)) / 10
-		# 			res += value[1].value
-		# 		else:
-		# 			#res -= len(self.getValidMoves(getPosition(params.board_height, params.board_width, self.color, value[1].pos), board=boardPos)) / 10
-		# 			res -= value[1].value
-		# self.model(boardPos)
-
-		print(float(self.model(ress)[1]) + res)
-		return float(self.model(ress)[1]) + res
-
-	def Train(self, Positions, result):
-		positions = torch.stack(Positions)
-		result = result - 1
-		loss_function = nn.NLLLoss()
-
-		self.model.train()
-		loss = float("inf")
-
-		for epoch in range(1):
-			self.optimizer.zero_grad()
-			self.model.zero_grad()
-			scores = self.model(positions)
-			loss = loss_function(scores, torch.tensor([result] * len(Positions)))
-			loss.backward()
-			self.optimizer.step()
-
-		torch.save(self.model.state_dict(), "model.pwf")
+		return res
 
 
-
-class ChessModel(nn.Module):
-	def __init__(self):
-		super(ChessModel, self).__init__()
-		self.fc1 = nn.Linear(64, 128)
-		self.relu1 = nn.ReLU()
-		self.fc2 = nn.Linear(128, 128)
-		self.relu2 = nn.ReLU()
-		self.fc3 = nn.Linear(128, 3)
-
-	def forward(self, chessFeatures):
-	    # Max pooling over a (2, 2) window
-
-		out = self.fc1(chessFeatures)
-		out = self.relu1(out)
-		out = self.fc3(out)
-		return out
 
 
 
