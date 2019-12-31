@@ -15,7 +15,7 @@ is_playing_black = False # Manual control over white pieces, False = Engine
 
 # Engine depth
 white_Max_Depth = 7
-black_Max_Depth = 6
+black_Max_Depth = 5
 
 killerSlots = 2
 searchmethod = 0 # 0 = alphabeta, 1 = minimax

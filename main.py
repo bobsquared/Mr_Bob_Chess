@@ -977,7 +977,7 @@ class Board:
 			return 2
 		elif self.outcomeGame() == 3:
 			return 3
-		elif self.outcomeGame() == 1 or self.moveNumber > 50:
+		elif self.outcomeGame() == 1:# or self.moveNumber > 50:
 			return 1
 
 		return 0
@@ -1182,16 +1182,16 @@ class Board:
 		# print('Number of Nodes traversed:', self.traversedNodes, "nps:", self.traversedNodes / (end - start))
 		self.traversedNodes = 0
 
+		if mrMove[1] and mrMove[2]:
+			f = params.TO_ALG[mrMove[1]]
+			t = params.TO_ALG[mrMove[2]]
+			print(mrMove[0], f, t)
 
-		f = params.TO_ALG[mrMove[1]]
-		t = params.TO_ALG[mrMove[2]]
-
-		print(mrMove[0], f, t)
 		# os.system("pause")
-		if mrMove and mrMove[0] == m.inf:
-			return 2
-		if mrMove and mrMove[0] == -m.inf:
-			return 3
+		# if mrMove and mrMove[0] == m.inf:
+		# 	return 2
+		# if mrMove and mrMove[0] == -m.inf:
+		# 	return 3
 		if mrMove:
 			return self.movePiece(f, t)
 
@@ -1201,6 +1201,7 @@ class Board:
 
 		if depth == maxDepth:
 			return self.evaluateBoard(bitboard), None, None
+
 
 		zobrist = self.zobrist
 		lookUp = zobrist.lookUp
@@ -1265,6 +1266,9 @@ class Board:
 			# if bestMove:
 			# self.zobrist.lookUp[hashF] = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], beta, alpha, beta, bestMove, maxDepth - depth)
 
+			# if filterCheck(useMax) and not bestMove:
+			# 	return -m.inf, None, None
+
 			return alpha, bestMove[0], bestMove[1]
 
 		else:
@@ -1304,6 +1308,9 @@ class Board:
 
 			# if bestMove:
 			# self.zobrist.lookUp[hashF] = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], beta, alpha, beta, bestMove, maxDepth - depth)
+
+			# if filterCheck(useMax) and not bestMove:
+			# 	return m.inf, None, None
 
 			return beta, bestMove[0], bestMove[1]
 
@@ -1554,27 +1561,30 @@ def main():
 		if not cfg.is_playing_white and boardPieces.turn == "white":
 			boardPieces.prevPiece = None
 			mm = boardPieces.minimax('black')
+			chessBoard = colorBoard(height, width, chessBoard, color_side, showValid)
+			boardPieces.show(chessBoard)
 			pg.display.flip()
 		#mm = 0
 		elif not cfg.is_playing_black and boardPieces.turn == "black":
 			boardPieces.prevPiece = None
 			mm = boardPieces.minimax('white')
+			chessBoard = colorBoard(height, width, chessBoard, color_side, showValid)
+			boardPieces.show(chessBoard)
 			pg.display.flip()
 
 		if mm == 2:
 			print("White wins!")
-			#os.system("pause")
+			os.system("pause")
 			boardPieces.resetBoard()
 			# crashed = True
 		if mm == 3:
 			print("Black wins!")
-			#os.system("pause")
+			os.system("pause")
 			boardPieces.resetBoard()
 			# crashed = True
 		if mm == 1:
 			print("Drawn game")
-
-			#os.system("pause")
+			os.system("pause")
 			boardPieces.resetBoard()
 			# crashed = True
 
