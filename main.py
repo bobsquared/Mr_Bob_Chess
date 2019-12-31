@@ -6,6 +6,10 @@ import copy
 import random as r
 import numpy as np
 import datetime
+import time
+import bitboards as b
+import zobrist_hashing as zh
+import config as cfg
 
 
 
@@ -93,10 +97,10 @@ def colorBoard(boardHeight, boardWidth, screen, colorBoard, validMoves=None):
 	squareWidth = boardWidth / 8
 	squareHeight = boardHeight / 8
 
-	lightSquareColor = params.lightSquareColor
-	darkSquareColor = params.darkSquareColor
-	lightSquareColorSelected = params.lightSquareColorSelected
-	darkSquareColorSelected = params.darkSquareColorSelected
+	lightSquareColor = cfg.lightSquareColor
+	darkSquareColor = cfg.darkSquareColor
+	lightSquareColorSelected = cfg.lightSquareColorSelected
+	darkSquareColorSelected = cfg.darkSquareColorSelected
 
 	# Set Dark squares
 	screen.fill(darkSquareColor)
@@ -206,7 +210,7 @@ class King(Piece):
 
 	def validMoves(self, boardPos):
 		res = np.array([], dtype='<S2')
-		currentPos = getPosition(params.board_height, params.board_width, self.color_side, self.pos)
+		currentPos = getPosition(cfg.board_height, cfg.board_width, self.color_side, self.pos)
 		row = int(currentPos[1])
 		col = currentPos[0]
 
@@ -288,7 +292,7 @@ class Queen(Piece):
 
 	def validMoves(self, boardPos):
 		res = np.array([], dtype='<S2')
-		currentPos = getPosition(params.board_height, params.board_width, self.color_side, self.pos)
+		currentPos = getPosition(cfg.board_height, cfg.board_width, self.color_side, self.pos)
 		row = int(currentPos[1])
 		col = currentPos[0]
 
@@ -412,7 +416,7 @@ class Rook(Piece):
 
 	def validMoves(self, boardPos):
 		res = np.array([], dtype='<S2')
-		currentPos = getPosition(params.board_height, params.board_width, self.color_side, self.pos)
+		currentPos = getPosition(cfg.board_height, cfg.board_width, self.color_side, self.pos)
 		row = int(currentPos[1])
 		col = currentPos[0]
 
@@ -468,7 +472,7 @@ class Bishop(Piece):
 
 	def validMoves(self, boardPos):
 		res = np.array([], dtype='<S2')
-		currentPos = getPosition(params.board_height, params.board_width, self.color_side, self.pos)
+		currentPos = getPosition(cfg.board_height, cfg.board_width, self.color_side, self.pos)
 		row = int(currentPos[1])
 		col = currentPos[0]
 
@@ -547,7 +551,7 @@ class Knight(Piece):
 
 	def validMoves(self, boardPos):
 		res = np.array([], dtype='<S2')
-		currentPos = getPosition(params.board_height, params.board_width, self.color_side, self.pos)
+		currentPos = getPosition(cfg.board_height, cfg.board_width, self.color_side, self.pos)
 		row = int(currentPos[1])
 		col = currentPos[0]
 
@@ -620,7 +624,7 @@ class Pawn(Piece):
 
 	def validMoves(self, boardPos):
 		res = np.array([], dtype='<S2')
-		currentPos = getPosition(params.board_height, params.board_width, self.color_side, self.pos)
+		currentPos = getPosition(cfg.board_height, cfg.board_width, self.color_side, self.pos)
 		row = int(currentPos[1])
 		col = currentPos[0]
 
@@ -691,6 +695,21 @@ class Board:
 		self.turn = 'white'
 		self.moveNumber = 0
 		self.traversedNodes = 0
+		self.bitboard = b.Board()
+		self.zobrist = zh.Zobrist()
+		self.prevMove = None
+		self.killerMovesWhite = dict()
+		self.killerMovesBlack = dict()
+
+
+		for i in range(cfg.white_Max_Depth):
+			temp = dict()
+			self.killerMovesWhite[i] = temp
+
+		for i in range(cfg.black_Max_Depth):
+			temp = dict()
+			self.killerMovesBlack[i] = temp
+
 		#self.model.load_state_dict(torch.load("model.pwf"))
 
 
@@ -747,6 +766,7 @@ class Board:
 		self.pieces = []
 		self.moveNumber = 0
 		self.turn = 'white'
+		self.bitboard = b.Board()
 
 		#White pieces
 		for i in range(65, 73):
@@ -789,7 +809,7 @@ class Board:
 
 		self.updateLocation()
 
-		return ret
+		return
 
 	def show(self, board):
 		for piece in self.pieces:
@@ -919,6 +939,14 @@ class Board:
 			notation += "x"
 
 		self.updateLocation()
+		self.prevMove = (params.TO_NUM[loc1], params.TO_NUM[loc2])
+		# print("Move:1")
+		# self.bitboard.printPretty()
+		# print()
+		self.bitboard.movePiece(params.TO_NUM[loc1], params.TO_NUM[loc2])
+		# print("Move:2")
+		# self.bitboard.printPretty()
+		# print()
 
 		toA = []
 		for key, value in self.occupied_squares.items():
@@ -1047,7 +1075,7 @@ class Board:
 
 
 			for piece in self.pieces:
-				if piece.color == color and piece.type == 'k' and getPosition(params.board_height, params.board_width, self.color, piece.pos) in AllValidMoves:
+				if piece.color == color and piece.type == 'k' and getPosition(cfg.board_height, cfg.board_width, self.color, piece.pos) in AllValidMoves:
 					ret = True
 					break
 			piece.isInCheck = ret
@@ -1060,7 +1088,7 @@ class Board:
 			AllValidMoves = AllValidMoves.astype('U2')
 
 			for key, value in board.items():
-				if value[0] and value[1].color == color and value[1].type == 'k' and getPosition(params.board_height, params.board_width, self.color, value[1].pos) in AllValidMoves:
+				if value[0] and value[1].color == color and value[1].type == 'k' and getPosition(cfg.board_height, cfg.board_width, self.color, value[1].pos) in AllValidMoves:
 					ret = True
 					break
 
@@ -1069,7 +1097,7 @@ class Board:
 	def filterCheck(self, boardPositions, validMoves, piece):
 		validMoves = validMoves.astype('U2')
 		boardCopy = boardPositions.copy()
-		mrPiecePos = getPosition(params.board_height, params.board_width, self.color, piece.pos)
+		mrPiecePos = getPosition(cfg.board_height, cfg.board_width, self.color, piece.pos)
 		boardCopy[mrPiecePos] = (False, None)
 		res = np.array([], dtype='<S2')
 
@@ -1107,7 +1135,7 @@ class Board:
 		valid = False
 		for piece in self.pieces:
 			if piece.color == self.turn:
-				allVMoves = self.getValidMoves(getPosition(params.board_height, params.board_width, self.color, piece.pos))
+				allVMoves = self.getValidMoves(getPosition(cfg.board_height, cfg.board_width, self.color, piece.pos))
 				if len(allVMoves) > 0:
 					valid = True
 
@@ -1123,131 +1151,336 @@ class Board:
 	def minimax(self, turn):
 		mrMove = None
 		if turn == "white" and self.turn == 'black':
-			mrMove = self.minimaxR(False, self.occupied_squares, 2)
+			for i in range(cfg.black_Max_Depth + 1):
+				start = time.time()
+				if cfg.searchmethod == 0:
+					mrMove = self.alphaBetaRoot(False, self.bitboard, i, prevMove=self.prevMove)
+				elif cfg.searchmethod == 1:
+					mrMove = self.minimaxR(False, self.bitboard, i)
+				end = time.time()
+				if (end - start) == 0:
+					print('Number of Nodes traversed:', self.traversedNodes, "NPS:", "inf")
+				else:
+					print('Number of Nodes traversed:', self.traversedNodes, "NPS:", self.traversedNodes / (end - start))
+				self.traversedNodes = 0
 
 		if turn == "black" and self.turn == 'white':
-			mrMove = self.minimaxR(True, self.occupied_squares, 2)
+			for i in range(cfg.white_Max_Depth + 1):
+				start = time.time()
+				if cfg.searchmethod == 0:
+					mrMove = self.alphaBetaRoot(True, self.bitboard, i, prevMove=self.prevMove)
+				elif cfg.searchmethod == 1:
+					mrMove = self.minimaxR(True, self.bitboard, i)
+				end = time.time()
+				if (end - start) == 0:
+					print('Number of Nodes traversed:', self.traversedNodes, "NPS:", "inf")
+				else:
+					print('Number of Nodes traversed:', self.traversedNodes, "NPS:", self.traversedNodes / (end - start))
+				self.traversedNodes = 0
 
-		print('Number of Nodes traversed:', self.traversedNodes)
+
+		# print('Number of Nodes traversed:', self.traversedNodes, "nps:", self.traversedNodes / (end - start))
 		self.traversedNodes = 0
 
-		#print(mrMove, self.traversedNodes)
+
+		f = params.TO_ALG[mrMove[1]]
+		t = params.TO_ALG[mrMove[2]]
+
+		print(mrMove[0], f, t)
+		# os.system("pause")
 		if mrMove and mrMove[0] == m.inf:
 			return 2
 		if mrMove and mrMove[0] == -m.inf:
 			return 3
-		if mrMove and mrMove[1] and mrMove[2]:
-			return self.movePiece(mrMove[1], mrMove[2])
+		if mrMove:
+			return self.movePiece(f, t)
 
 		return 0
 
-	def minimaxR(self, useMax, boardPos, maxDepth, depth=0, alpha=-m.inf, beta=m.inf):
+	def alphaBetaRoot(self, useMax, bitboard, maxDepth, depth=0, alpha=-m.inf, beta=m.inf, prevMove=None):
+
+		if depth == maxDepth:
+			return self.evaluateBoard(bitboard), None, None
+
+		zobrist = self.zobrist
+		lookUp = zobrist.lookUp
+		hashBoard = zobrist.hashBoard
+		movePro = bitboard.movePro
+		TO_NUM = params.TO_NUM
+		TO_ALG = params.TO_ALG
+		killerMovesWhite = self.killerMovesWhite
+		killerMovesBlack = self.killerMovesBlack
+
+		movePiece = bitboard.movePiece
+		undoMove = bitboard.undoMove
+		filterCheck = bitboard.filterCheck
+		allValidMoves = bitboard.allValidMoves
+		sortMoves = bitboard.sortMoves
+		alphabetaR = self.alphabetaR
+
+		hashedBoard = None
+		hashF = zobrist.hashBoard(movePro, useMax)
+		if hashF in lookUp:
+			hashedBoard = lookUp[hashF]
+
+		sortedMoves = []
+
+		#Transition table
+		if hashedBoard:
+			sortedMoves.append((TO_NUM[hashedBoard[0]], TO_NUM[hashedBoard[1]], hashedBoard[5][2], hashedBoard[5][3]))
+
+		bestMove = None
+
+		if useMax:
+			vMoves = allValidMoves(0)
+			vMoves = sortMoves(vMoves, sortedMoves, killerMovesWhite[depth], prevMove=prevMove)
+			temp = None
+
+			for move in vMoves:
+				movePiece(move[0], move[1])
+				if not filterCheck(0):
+					undoMove()
+					continue
+				ret = alphabetaR(False, bitboard, maxDepth, depth=depth+1, alpha=alpha, beta=beta, prevMove=move,
+									lookUp=lookUp, hashBoard=hashBoard, movePro=movePro, TO_NUM=TO_NUM, TO_ALG=TO_ALG,
+									killerMovesWhite=killerMovesWhite, killerMovesBlack=killerMovesBlack, movePiece=movePiece,
+									undoMove=undoMove, filterCheck=filterCheck, allValidMoves=allValidMoves, sortMoves=sortMoves, alphabetaR=alphabetaR)
+				undoMove()
+
+				# alpha = max(alpha, ret)
+				if ret >= beta:
+					temp = (TO_ALG[move[0]], TO_ALG[move[1]], beta, alpha, beta, move, maxDepth - depth)
+					lookUp[hashF] = temp
+					if move[3] == None:
+						if 0 in killerMovesWhite[depth]:
+							killerMovesWhite[depth][1] = killerMovesWhite[depth][0]
+						killerMovesWhite[depth][0] = temp
+					return beta, move[0], move[1]
+
+				if ret > alpha:
+					alpha = ret
+					bestMove = move
+
+
+			# if bestMove:
+			# self.zobrist.lookUp[hashF] = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], beta, alpha, beta, bestMove, maxDepth - depth)
+
+			return alpha, bestMove[0], bestMove[1]
+
+		else:
+
+			vMoves = allValidMoves(1)
+			vMoves = sortMoves(vMoves, sortedMoves, killerMovesBlack[depth], prevMove=prevMove)
+			temp = None
+
+			for move in vMoves:
+				movePiece(move[0], move[1])
+				if not filterCheck(1):
+					undoMove()
+					continue
+				ret = alphabetaR(True, bitboard, maxDepth, depth=depth+1, alpha=alpha, beta=beta, prevMove=move,
+									lookUp=lookUp, hashBoard=hashBoard, movePro=movePro, TO_NUM=TO_NUM, TO_ALG=TO_ALG,
+									killerMovesWhite=killerMovesWhite, killerMovesBlack=killerMovesBlack, movePiece=movePiece,
+									undoMove=undoMove, filterCheck=filterCheck, allValidMoves=allValidMoves, sortMoves=sortMoves, alphabetaR=alphabetaR)
+				undoMove()
+
+
+
+				# beta = min(beta, ret)
+				if ret <= alpha:
+					temp = (TO_ALG[move[0]], TO_ALG[move[1]], beta, alpha, beta, move, maxDepth - depth)
+					lookUp[hashF] = temp
+					if move[3] == None:
+						if 0 in killerMovesBlack[depth]:
+							killerMovesBlack[depth][1] = killerMovesBlack[depth][0]
+						killerMovesBlack[depth][0] = temp
+					return alpha, move[0], move[1]
+
+				if ret < beta:
+					beta = ret
+					bestMove = move
+
+
+
+			# if bestMove:
+			# self.zobrist.lookUp[hashF] = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], beta, alpha, beta, bestMove, maxDepth - depth)
+
+			return beta, bestMove[0], bestMove[1]
+
+
+
+	def alphabetaR(self, useMax, bitboard, maxDepth, depth=0, alpha=-m.inf, beta=m.inf, prevMove=None, lookUp=None, hashBoard=None, movePro=None, TO_NUM=None, TO_ALG=None,
+					killerMovesWhite=None, killerMovesBlack=None, movePiece=None,
+					undoMove=None, filterCheck=None, allValidMoves=None, sortMoves=None, alphabetaR=None):
 
 		self.traversedNodes += 1
+
 		if depth == maxDepth:
-			return self.evaluateBoard(boardPos), None, None
+			return self.evaluateBoard(bitboard)
 
-		res = 0
-		prevMove = ""
-		bestMove = ""
-		loc = ""
+		hashedBoard = None
+		hashF = self.zobrist.hashBoard(bitboard.movePro, useMax)
+		if hashF in self.zobrist.lookUp:
+			hashedBoard = self.zobrist.lookUp[hashF]
+			# if hashedBoard[6] >= maxDepth - depth:
+			# 	if useMax:
+			# 		return hashedBoard[3]
+			# 	else:
+			# 		return hashedBoard[4]
 
+		sortedMoves = []
+		bestMove = None
+
+		#Transition table
+		if hashedBoard:
+			sortedMoves.append((params.TO_NUM[hashedBoard[0]], params.TO_NUM[hashedBoard[1]], hashedBoard[5][2], hashedBoard[5][3]))
+
+
+
+		if useMax:
+			# Null move
+			# if depth % 2 == 1 and bitboard.filterCheck(not useMax):
+			# 	ret = self.alphabetaR(not useMax, bitboard, maxDepth, depth=depth+1, alpha=alpha, beta=beta, prevMove=None)
+			#
+			# 	if ret >= beta:
+			# 		return beta
+
+			vMoves = bitboard.allValidMoves(0)
+			vMoves = bitboard.sortMoves(vMoves, sortedMoves, self.killerMovesWhite[depth], prevMove=prevMove)
+			temp = None
+
+			for move in vMoves:
+				movePiece(move[0], move[1])
+				if not filterCheck(0):
+					undoMove()
+					continue
+				ret = self.alphabetaR(False, bitboard, maxDepth, depth=depth+1, alpha=alpha, beta=beta, prevMove=move, movePiece=movePiece, filterCheck=filterCheck, undoMove=undoMove)
+				undoMove()
+
+
+
+				# alpha = max(alpha, ret)
+				if ret >= beta:
+					temp = (params.TO_ALG[move[0]], params.TO_ALG[move[1]], beta, alpha, beta, move, maxDepth - depth)
+					self.zobrist.lookUp[hashF] = temp
+					if move[3] == None:
+						if 0 in self.killerMovesWhite[depth]:
+							self.killerMovesWhite[depth][1] = self.killerMovesWhite[depth][0]
+						self.killerMovesWhite[depth][0] = temp
+					return beta
+
+				if ret > alpha:
+					alpha = ret
+					bestMove = move
+
+
+			# if bestMove:
+			# 	self.zobrist.lookUp[hashF] = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], beta, alpha, beta, bestMove, maxDepth - depth)
+
+			return alpha
+
+		else:
+			# if depth % 2 == 1 and bitboard.filterCheck(not useMax):
+			# 	ret = self.alphabetaR(not useMax, bitboard, maxDepth, depth=depth+1, alpha=alpha, beta=beta, prevMove=None)
+			#
+			# 	if ret <= alpha:
+			# 		return alpha
+
+			vMoves = bitboard.allValidMoves(1)
+			vMoves = bitboard.sortMoves(vMoves, sortedMoves, self.killerMovesBlack[depth], prevMove=prevMove)
+			temp = None
+
+			for move in vMoves:
+				movePiece(move[0], move[1])
+				if not filterCheck(1):
+					undoMove()
+					continue
+				ret = self.alphabetaR(True, bitboard, maxDepth, depth=depth+1, alpha=alpha, beta=beta, prevMove=move, movePiece=movePiece, filterCheck=filterCheck, undoMove=undoMove)
+				undoMove()
+
+
+
+				# beta = min(beta, ret)
+				if ret <= alpha:
+					temp = (params.TO_ALG[move[0]], params.TO_ALG[move[1]], beta, alpha, beta, move, maxDepth - depth)
+					self.zobrist.lookUp[hashF] = temp
+					if move[3] == None:
+						if 0 in self.killerMovesBlack[depth]:
+							self.killerMovesBlack[depth][1] = self.killerMovesBlack[depth][0]
+						self.killerMovesBlack[depth][0] = temp
+					return alpha
+
+				if ret < beta:
+					beta = ret
+					bestMove = move
+
+			# if bestMove:
+			# 	self.zobrist.lookUp[hashF] = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], beta, alpha, beta, bestMove, maxDepth - depth)
+
+			return beta
+
+	def minimaxR(self, useMax, bitboard, maxDepth, depth=0):
+
+
+		self.traversedNodes += 1
+
+		if depth == maxDepth:
+			return self.evaluateBoard(bitboard), None, None
+
+		zobrist = self.zobrist
+		movePiece = bitboard.movePiece
+		undoMove = bitboard.undoMove
+		filterCheck = bitboard.filterCheck
+		minimaxR = self.minimaxR
+
+		hashedBoard = None
+		hashF = zobrist.hashBoard(bitboard.movePro, useMax)
+		if hashF in zobrist.lookUp:
+			hashedBoard = zobrist.lookUp[hashF]
+
+		bestMove = None
 
 		if useMax:
 			res = -m.inf
+			vMoves = bitboard.allValidMoves(0)
+			temp = None
+
+			for move in vMoves:
+				movePiece(move[0], move[1])
+				if not filterCheck(0):
+					undoMove()
+					continue
+				ret = minimaxR(False, bitboard, maxDepth, depth=depth+1)[0]
+				undoMove()
+
+				if ret > res:
+					res = ret
+					bestMove = move
+
+			return res, bestMove[0], bestMove[1]
+
 		else:
 			res = m.inf
+			vMoves = bitboard.allValidMoves(1)
+			temp = None
 
-		if useMax:
-			for key, value in boardPos.items():
-				isPiece = value[0]
-				piece = value[1]
-				if isPiece and piece.color == 'white':
-					coords = getPosition(params.board_height, params.board_width, self.color, value[1].pos)
-					vMoves = self.getValidMoves(coords, boardPos)
-					vMoves = vMoves.astype('U2')
-					if vMoves.shape[0] > 0:
-						for move in vMoves:
-							tmpBoard = boardPos.copy()
+			for move in vMoves:
+				movePiece(move[0], move[1])
+				if not filterCheck(1):
+					undoMove()
+					continue
+				ret = minimaxR(True, bitboard, maxDepth, depth=depth+1)[0]
+				undoMove()
 
-							if piece.type == 'k':
-								mrPiece = King(piece.color, self.color, self.positions[move], 'k', params.black_king_img)
-							elif piece.type == 'q':
-								mrPiece = Queen(piece.color, self.color, self.positions[move], 'q', params.black_king_img)
-							elif piece.type == 'r':
-								mrPiece = Rook(piece.color, self.color, self.positions[move], 'r', params.black_king_img)
-							elif piece.type == 'b':
-								mrPiece = Bishop(piece.color, self.color, self.positions[move], 'b', params.black_king_img)
-							elif piece.type == 'n':
-								mrPiece = Knight(piece.color, self.color, self.positions[move], 'n', params.black_king_img)
-							elif piece.type == 'p':
-								mrPiece = Pawn(piece.color, self.color, self.positions[move], 'p', params.black_king_img)
+				if ret < res:
+					res = ret
+					bestMove = move
 
-							tmpBoard[move] = (True, mrPiece)
-							tmpBoard[coords] = (False, None)
-							ret = self.minimaxR(False, tmpBoard, maxDepth, depth=depth+1, alpha=alpha, beta=beta)[0]
-
-							if ret > res:
-								res = ret
-								loc = coords
-								bestMove = move
-
-							alpha = max(alpha, res)
-							if alpha >= beta:
-								break
-
-		else:
-			for key, value in boardPos.items():
-				isPiece = value[0]
-				piece = value[1]
-				if isPiece and piece.color == 'black':
-					coords = getPosition(params.board_height, params.board_width, self.color, value[1].pos)
-					vMoves = self.getValidMoves(coords, boardPos)
-					vMoves = vMoves.astype('U2')
-					if vMoves.shape[0] > 0:
-						for move in vMoves:
-							tmpBoard = boardPos.copy()
-
-							if piece.type == 'k':
-								mrPiece = King(piece.color, self.color, self.positions[move], 'k', params.black_king_img)
-							elif piece.type == 'q':
-								mrPiece = Queen(piece.color, self.color, self.positions[move], 'q', params.black_king_img)
-							elif piece.type == 'r':
-								mrPiece = Rook(piece.color, self.color, self.positions[move], 'r', params.black_king_img)
-							elif piece.type == 'b':
-								mrPiece = Bishop(piece.color, self.color, self.positions[move], 'b', params.black_king_img)
-							elif piece.type == 'n':
-								mrPiece = Knight(piece.color, self.color, self.positions[move], 'n', params.black_king_img)
-							elif piece.type == 'p':
-								mrPiece = Pawn(piece.color, self.color, self.positions[move], 'p', params.black_king_img)
-
-							tmpBoard[move] = (True, mrPiece)
-							tmpBoard[coords] = (False, None)
-							ret = self.minimaxR(True, tmpBoard, maxDepth, depth=depth+1, alpha=alpha, beta=beta)[0]
-							if ret < res:
-								res = ret
-								loc = coords
-								bestMove = move
-
-							beta = min(beta, res)
-							if alpha >= beta:
-								break
-
-
-		return res, loc, bestMove
+			return res, bestMove[0], bestMove[1]
 
 	def evaluateBoard(self, boardPos):
-		res = r.uniform(-0.025, 0.025)
-
-		for key, value in boardPos.items():
-			if value[0]:
-				if value[1].color == 'white':
-					#res += len(self.getValidMoves(getPosition(params.board_height, params.board_width, self.color, value[1].pos), board=boardPos)) / 10
-					res += value[1].value
-				else:
-					#res -= len(self.getValidMoves(getPosition(params.board_height, params.board_width, self.color, value[1].pos), board=boardPos)) / 10
-					res -= value[1].value
-
+		# res = r.uniform(-0.025, 0.025)
+		res = boardPos.evaluate()
 		return res
 
 
@@ -1258,9 +1491,9 @@ def main():
 
 	r.seed(datetime.datetime.now())
 	# Get width and height of the board
-	width = params.board_width
-	height = params.board_height
-	color_side = 'white'
+	width = cfg.board_width
+	height = cfg.board_height
+	color_side = cfg.color_side
 
 
 	chessBoard = createBoard(height, width) # Pygame object of the board
@@ -1318,12 +1551,12 @@ def main():
 		boardPieces.show(chessBoard)
 		pg.display.flip()
 		mm = 0
-		if boardPieces.turn == "white":
+		if not cfg.is_playing_white and boardPieces.turn == "white":
 			boardPieces.prevPiece = None
 			mm = boardPieces.minimax('black')
 			pg.display.flip()
 		#mm = 0
-		elif boardPieces.turn == "black":
+		elif not cfg.is_playing_black and boardPieces.turn == "black":
 			boardPieces.prevPiece = None
 			mm = boardPieces.minimax('white')
 			pg.display.flip()
@@ -1331,18 +1564,18 @@ def main():
 		if mm == 2:
 			print("White wins!")
 			#os.system("pause")
-			boardPieces.Train(boardPieces.resetBoard(), mm)
+			boardPieces.resetBoard()
 			# crashed = True
 		if mm == 3:
 			print("Black wins!")
 			#os.system("pause")
-			boardPieces.Train(boardPieces.resetBoard(), mm)
+			boardPieces.resetBoard()
 			# crashed = True
 		if mm == 1:
 			print("Drawn game")
 
 			#os.system("pause")
-			boardPieces.Train(boardPieces.resetBoard(), mm)
+			boardPieces.resetBoard()
 			# crashed = True
 
 		clock.tick(144)
