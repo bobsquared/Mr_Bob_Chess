@@ -702,11 +702,12 @@ class Board:
 		self.killerMovesBlack = dict()
 
 
-		for i in range(cfg.white_Max_Depth):
+		kms = max(cfg.white_Max_Depth, cfg.black_Max_Depth)
+		for i in range(kms):
 			temp = dict()
 			self.killerMovesWhite[i] = temp
 
-		for i in range(cfg.black_Max_Depth):
+		for i in range(kms):
 			temp = dict()
 			self.killerMovesBlack[i] = temp
 
@@ -1182,7 +1183,8 @@ class Board:
 		# print('Number of Nodes traversed:', self.traversedNodes, "nps:", self.traversedNodes / (end - start))
 		self.traversedNodes = 0
 
-		if mrMove[1] and mrMove[2]:
+		print(mrMove)
+		if mrMove[1] != None and mrMove[2] != None:
 			f = params.TO_ALG[mrMove[1]]
 			t = params.TO_ALG[mrMove[2]]
 			print(mrMove[0], f, t)
@@ -1487,7 +1489,7 @@ class Board:
 
 	def evaluateBoard(self, boardPos):
 		# res = r.uniform(-0.025, 0.025)
-		res = boardPos.evaluate()
+		res += boardPos.evaluate()
 		return res
 
 
