@@ -264,6 +264,12 @@ class Magic:
 
 class Board:
     def __init__(self):
+
+        self.LSB_TABLE = dict()
+
+        for i in range(len(LSB_TABLE)):
+            self.LSB_TABLE[i] = LSB_TABLE[i]
+
         self.board = 0
         self.colZeros = dict()
         self.rowZeros = dict()
@@ -593,6 +599,18 @@ class Board:
         self.populationPieces[11] = count_population(self.blackKings)
 
 
+        self.kingMovedWhite = False
+        self.kingMovedBlack = False
+
+        self.rookMovedWhiteH = False
+        self.rookMovedWhiteA = False
+        self.rookMovedBlackH = False
+        self.rookMovedBlackA = False
+
+        self.castled = 0
+        self.castleValue = 0.5
+
+
 
     def __copy__(self):
         newone = type(self)()
@@ -641,8 +659,8 @@ class Board:
 
         if color == 0:
             if whiteKing != 0:
-
-                kingPos = bitScan(whiteKing)
+                kingPos = self.LSB_TABLE[(((whiteKing ^ (whiteKing - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                # kingPos = bitScan(whiteKing)
                 rookAttacksMask = self.rookAttacksMask(occupied, kingPos)
                 bishopAttacksMask = self.bishopAttacksMask(occupied, kingPos)
                 ret = blacks & pieces[0] & self.whitePawnAttacks[kingPos]
@@ -658,8 +676,8 @@ class Board:
                 # print()
         else:
             if blackKing != 0:
-
-                kingPos = bitScan(blackKing)
+                kingPos = self.LSB_TABLE[(((blackKing ^ (blackKing - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                # kingPos = bitScan(blackKing)
                 rookAttacksMask = self.rookAttacksMask(occupied, kingPos)
                 bishopAttacksMask = self.bishopAttacksMask(occupied, kingPos)
                 ret = whites & pieces[0] & self.blackPawnAttacks[kingPos]
@@ -668,6 +686,49 @@ class Board:
                 ret |= whites & pieces[3] & rookAttacksMask
                 ret |= whites & pieces[4] & (bishopAttacksMask | rookAttacksMask)
                 ret |= whites & pieces[5] & self.kingMoves[kingPos]
+            else:
+                return False
+
+        return ret == 0
+
+    def isAttacked(self, index, color):
+        movePro = self.movePro
+        pieces = movePro.pieces
+        whites = movePro.whites
+        blacks = movePro.blacks
+        occupied = movePro.occupied
+
+        indexP = 1 << index
+
+        if color == 0:
+            if indexP != 0:
+                pos = self.LSB_TABLE[(((indexP ^ (indexP - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                # kingPos = bitScan(whiteKing)
+                rookAttacksMask = self.rookAttacksMask(occupied, pos)
+                bishopAttacksMask = self.bishopAttacksMask(occupied, pos)
+                ret = blacks & pieces[0] & self.whitePawnAttacks[pos]
+                ret |= blacks & pieces[1] & self.knightMoves[pos]
+                ret |= blacks & pieces[2] & bishopAttacksMask
+                ret |= blacks & pieces[3] & rookAttacksMask
+                ret |= blacks & pieces[4] & (bishopAttacksMask | rookAttacksMask)
+                ret |= blacks & pieces[5] & self.kingMoves[pos]
+            else:
+                return False
+                # print(kingPos)
+                # printBoard((self.bishopAttacksMask(self.movePro.occupied, kingPos) | self.rookAttacksMask(self.movePro.occupied, kingPos)))
+                # print()
+        else:
+            if indexP != 0:
+                pos = self.LSB_TABLE[(((indexP ^ (indexP - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                # kingPos = bitScan(blackKing)
+                rookAttacksMask = self.rookAttacksMask(occupied, pos)
+                bishopAttacksMask = self.bishopAttacksMask(occupied, pos)
+                ret = whites & pieces[0] & self.blackPawnAttacks[pos]
+                ret |= whites & pieces[1] & self.knightMoves[pos]
+                ret |= whites & pieces[2] & bishopAttacksMask
+                ret |= whites & pieces[3] & rookAttacksMask
+                ret |= whites & pieces[4] & (bishopAttacksMask | rookAttacksMask)
+                ret |= whites & pieces[5] & self.kingMoves[pos]
             else:
                 return False
 
@@ -685,28 +746,76 @@ class Board:
         if pieces[0] & whites & indexP:
             base = (self.whitePawnAttacks[index] & blacks) | (self.whitePawnMoves[index] & ~occupied)
             if occupied & (1 << (index + 8)) != 0:
-                base &= flipBits(1 << (index + 16))
-            return fillMoves(base), 0
+                base &= (1 << (index + 16)) ^ 18446744073709551615
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 0
+            # return fillMoves(base), 0
             # Pawn moves
         elif pieces[1] & whites & indexP:
             base = self.knightMoves[index] & ~whites
-            return fillMoves(base), 1
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 1
+            # return fillMoves(base), 1
             # Knight moves
         elif pieces[2] & whites & indexP:
             base = self.bishopAttacksMask(occupied, index) & ~whites
-            return fillMoves(base), 2
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 2
+            # return fillMoves(base), 2
             # Knight moves
         elif pieces[3] & whites & indexP:
             base = self.rookAttacksMask(occupied, index) & ~whites
-            return fillMoves(base), 3
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 3
+            # return fillMoves(base), 3
             # Knight moves
         elif pieces[4] & whites & indexP:
             base = (self.bishopAttacksMask(occupied, index) | self.rookAttacksMask(occupied, index)) & ~whites
-            return fillMoves(base), 4
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 4
+            # return fillMoves(base), 4
             # Knight moves
         elif pieces[5] & whites & indexP:
             base = self.kingMoves[index] & ~whites
-            return fillMoves(base), 5
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 5
+            # return fillMoves(base), 5
             # Knight moves
 
         return []
@@ -723,65 +832,233 @@ class Board:
         if pieces[0] & blacks & indexP:
             base = (self.blackPawnAttacks[index] & whites) | (self.blackPawnMoves[index] & ~occupied)
             if index >= 16 and occupied & (1 << (index - 8)) != 0:
-                base &= flipBits(1 << (index - 16))
-            return fillMoves(base), 0
+                base &= (1 << (index - 16)) ^ 18446744073709551615
+
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 0
+            # return fillMoves(base), 0
             # Pawn moves
         elif pieces[1] & blacks & indexP:
             base = self.knightMoves[index] & ~blacks
-            return fillMoves(base), 1
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 1
+            # return fillMoves(base), 1
             # Knight moves
         elif pieces[2] & blacks & indexP:
             base = self.bishopAttacksMask(occupied, index) & ~blacks
-            return fillMoves(base), 2
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 2
+            # return fillMoves(base), 2
             # Knight moves
         elif pieces[3] & blacks & indexP:
             base = self.rookAttacksMask(occupied, index) & ~blacks
-            return fillMoves(base), 3
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 3
+            # return fillMoves(base), 3
             # Knight moves
         elif pieces[4] & blacks & indexP:
             base = (self.bishopAttacksMask(occupied, index) | self.rookAttacksMask(occupied, index)) & ~blacks
-            return fillMoves(base), 4
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 4
+            # return fillMoves(base), 4
             # Knight moves
         elif pieces[5] & blacks & indexP:
             base = self.kingMoves[index] & ~blacks
-            return fillMoves(base), 5
+            ret = []
+            append = ret.append
+            table = self.LSB_TABLE
+            while base != 0:
+                toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                base ^= 1 << toApp
+                append(toApp)
+            return ret, 5
+            # return fillMoves(base), 5
             # Knight moves
 
         return []
 
     def whitePiecesLoc(self):
-        return fillMoves(self.movePro.whites, self.populationWhites)
+        ret = []
+        append = ret.append
+        bitboard = self.movePro.whites
+        table = self.LSB_TABLE
+        while bitboard != 0:
+            toApp = table[(((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+            # toApp = bitScan(bitboard)
+            bitboard ^= 1 << toApp
+            append(toApp)
+        return ret
+        # return fillMoves(self.movePro.whites, self.populationWhites)
 
     def blackPiecesLoc(self):
-        return fillMoves(self.movePro.blacks, self.populationBlacks)
+        ret = []
+        append = ret.append
+        bitboard = self.movePro.blacks
+        table = self.LSB_TABLE
+        while bitboard != 0:
+            toApp = table[(((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+            # toApp = bitScan(bitboard)
+            bitboard ^= 1 << toApp
+            append(toApp)
+        return ret
+        # return fillMoves(self.movePro.blacks, self.populationBlacks)
 
     def allValidMoves(self, color):
         ret = []
+        ret2 = []
         movePro = self.movePro
         append = ret.append
+        append2 = ret2.append
         occupied = movePro.occupied
         pieces = movePro.pieces
-        validMovesWhite = self.validMovesWhite
-        validMovesBlack = self.validMovesBlack
+        whites = movePro.whites
+        blacks = movePro.blacks
+        # validMovesWhite = self.validMovesWhite
+        # validMovesBlack = self.validMovesBlack
+        table = self.LSB_TABLE
+
+        knightMoves = self.knightMoves
+        bishopAttacksMask = self.bishopAttacksMask
+        rookAttacksMask = self.rookAttacksMask
+        kingMoves = self.kingMoves
 
         if color == 0:
-            for start in self.whitePiecesLoc():
-                vMoves = validMovesWhite(start)
+
+            whitePawnAttacks = self.whitePawnAttacks
+            whitePawnMoves = self.whitePawnMoves
+            mrStart = []
+            appendS = mrStart.append
+            bitboard = self.movePro.whites
+            while bitboard != 0:
+                toApp = table[(((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+                # toApp = bitScan(bitboard)
+                bitboard ^= 1 << toApp
+                appendS(toApp)
+
+            for start in mrStart:
+                vMoves = None
+
+                index = start
+                indexP = 1 << index
+                whitesIndex = whites & indexP
+
+                if pieces[0] & whitesIndex:
+                    base = (whitePawnAttacks[index] & blacks) | (whitePawnMoves[index] & ~occupied)
+                    if occupied & (1 << (index + 8)) != 0:
+                        base &= (1 << (index + 16)) ^ 18446744073709551615
+                    del ret2[:]
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+                    vMoves = (ret2, 0)
+                    # return fillMoves(base), 0
+                    # Pawn moves
+                elif pieces[1] & whitesIndex:
+                    base = knightMoves[index] & ~whites
+                    del ret2[:]
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+                    vMoves = (ret2, 1)
+                    # return fillMoves(base), 1
+                    # Knight moves
+                elif pieces[2] & whitesIndex:
+                    base = bishopAttacksMask(occupied, index) & ~whites
+                    del ret2[:]
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+                    vMoves = (ret2, 2)
+                    # return fillMoves(base), 2
+                    # Knight moves
+                elif pieces[3] & whitesIndex:
+                    base = rookAttacksMask(occupied, index) & ~whites
+                    del ret2[:]
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+                    vMoves = (ret2, 3)
+                    # return fillMoves(base), 3
+                    # Knight moves
+                elif pieces[4] & whitesIndex:
+                    base = (bishopAttacksMask(occupied, index) | rookAttacksMask(occupied, index)) & ~whites
+                    del ret2[:]
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+                    vMoves = (ret2, 4)
+                    # return fillMoves(base), 4
+                    # Knight moves
+                elif pieces[5] & whitesIndex:
+                    base = kingMoves[index] & ~whites
+                    del ret2[:]
+
+                    occupiedToCastleOO = occupied & ((1 << 5) | (1 << 6))
+                    occupiedToCastleOOO = occupied & ((1 << 3) | (1 << 2) | (1 << 1))
+                    if not self.kingMovedWhite:
+                        if not self.rookMovedWhiteH and occupiedToCastleOO == 0 and self.isAttacked(4, 0) and self.isAttacked(5, 0) and self.isAttacked(6, 0):
+                            append2(6)
+                        if not self.rookMovedWhiteA and occupiedToCastleOOO == 0 and self.isAttacked(4, 0) and self.isAttacked(3, 0) and self.isAttacked(2, 0):
+                            append2(2)
+
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+
+                    vMoves = (ret2, 5)
+
                 for end in vMoves[0]:
                     if (1 << end) & occupied != 0:
+                        shiftEnd = (1 << end)
                         # ret += [(start, end, vMoves[1], i) for i in range(6) if pieces[i] & (1 << end) != 0]
                         i = -1
-                        if pieces[0] & (1 << end) != 0:
+                        if pieces[0] & shiftEnd != 0:
                             i = 0
-                        elif pieces[1] & (1 << end) != 0:
+                        elif pieces[1] & shiftEnd != 0:
                             i = 1
-                        elif pieces[2] & (1 << end) != 0:
+                        elif pieces[2] & shiftEnd != 0:
                             i = 2
-                        elif pieces[3] & (1 << end) != 0:
+                        elif pieces[3] & shiftEnd != 0:
                             i = 3
-                        elif pieces[4] & (1 << end) != 0:
+                        elif pieces[4] & shiftEnd != 0:
                             i = 4
-                        elif pieces[5] & (1 << end) != 0:
+                        elif pieces[5] & shiftEnd != 0:
                             i = 5
 
                         append((start, end, vMoves[1], i))
@@ -789,23 +1066,119 @@ class Board:
                     else:
                         append((start, end, vMoves[1], None))
         else:
-            for start in self.blackPiecesLoc():
-                vMoves = validMovesBlack(start)
+
+            blackPawnAttacks = self.blackPawnAttacks
+            blackPawnMoves = self.blackPawnMoves
+            mrStart = []
+            appendS = mrStart.append
+            bitboard = movePro.blacks
+            while bitboard != 0:
+                toApp = table[(((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                # toApp = bitScan(bitboard)
+                bitboard ^= 1 << toApp
+                appendS(toApp)
+
+            # print(mrStart)
+
+            for start in mrStart:
+                vMoves = None
+
+                index = start
+                indexP = 1 << index
+                blacksIndex = blacks & indexP
+
+                if pieces[0] & blacksIndex:
+                    base = (blackPawnAttacks[index] & whites) | (blackPawnMoves[index] & ~occupied)
+                    if index >= 16 and occupied & (1 << (index - 8)) != 0:
+                        base &= (1 << (index - 16)) ^ 18446744073709551615
+
+                    del ret2[:]
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+                    vMoves = (ret2, 0)
+                    # return fillMoves(base), 0
+                    # Pawn moves
+                elif pieces[1] & blacksIndex:
+                    base = knightMoves[index] & ~blacks
+                    del ret2[:]
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+                    vMoves = (ret2, 1)
+                    # return fillMoves(base), 1
+                    # Knight moves
+                elif pieces[2] & blacksIndex:
+                    base = bishopAttacksMask(occupied, index) & ~blacks
+                    del ret2[:]
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+                    vMoves = (ret2, 2)
+                    # return fillMoves(base), 2
+                    # Knight moves
+                elif pieces[3] & blacksIndex:
+                    base = rookAttacksMask(occupied, index) & ~blacks
+                    del ret2[:]
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+                    vMoves = (ret2, 3)
+                    # return fillMoves(base), 3
+                    # Knight moves
+                elif pieces[4] & blacksIndex:
+                    base = (bishopAttacksMask(occupied, index) | rookAttacksMask(occupied, index)) & ~blacks
+                    del ret2[:]
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+                    vMoves = (ret2, 4)
+                    # return fillMoves(base), 4
+                    # Knight moves
+                elif pieces[5] & blacksIndex:
+                    base = kingMoves[index] & ~blacks
+                    del ret2[:]
+
+                    occupiedToCastleOO = occupied & ((1 << 62) | (1 << 61))
+                    occupiedToCastleOOO = occupied & ((1 << 59) | (1 << 58) | (1 << 57))
+                    if not self.kingMovedBlack:
+                        if not self.rookMovedBlackH and occupiedToCastleOO == 0 and self.isAttacked(60, 1) and self.isAttacked(61, 1) and self.isAttacked(62, 1):
+                            append2(62)
+                        if not self.rookMovedBlackA and occupiedToCastleOOO == 0 and self.isAttacked(60, 1) and self.isAttacked(59, 1) and self.isAttacked(58, 1):
+                            append2(58)
+
+                    while base != 0:
+                        toApp = table[(((base ^ (base - 1)) * 0x03f79d71b4cb0a89) & 18446744073709551615) >> 58]
+                        base ^= 1 << toApp
+                        append2(toApp)
+                    vMoves = (ret2, 5)
+
+
+                    # return fillMoves(base), 5
+                    # Knight moves
+
+                # print(vMoves)
                 for end in vMoves[0]:
                     if (1 << end) & occupied != 0:
+                        shiftEnd = (1 << end)
                         # ret += [(start, end, vMoves[1], i) for i in range(6) if pieces[i] & (1 << end) != 0]
                         i = -1
-                        if pieces[0] & (1 << end) != 0:
+                        if pieces[0] & shiftEnd != 0:
                             i = 0
-                        elif pieces[1] & (1 << end) != 0:
+                        elif pieces[1] & shiftEnd != 0:
                             i = 1
-                        elif pieces[2] & (1 << end) != 0:
+                        elif pieces[2] & shiftEnd != 0:
                             i = 2
-                        elif pieces[3] & (1 << end) != 0:
+                        elif pieces[3] & shiftEnd != 0:
                             i = 3
-                        elif pieces[4] & (1 << end) != 0:
+                        elif pieces[4] & shiftEnd != 0:
                             i = 4
-                        elif pieces[5] & (1 << end) != 0:
+                        elif pieces[5] & shiftEnd != 0:
                             i = 5
 
                         append((start, end, vMoves[1], i))
@@ -816,62 +1189,61 @@ class Board:
 
     def sortMoves(self, moves, elements, killers, prevMove=None):
 
-        newList = []
-        append = newList.append
-
-        for i in elements:
-            if i in moves:
-                append(i)
-                # moves.insert(0, moves.pop(moves.index(i)))
-
-        for i in moves:
-            if i[3] and i[2] <= i[3]:
-                append(i)
-                # moves.insert(0, moves.pop(moves.index(i)))
-
-
-        if prevMove:
-            for i in moves:
-                if i[1] == prevMove[1]:
-                    append(i)
-                    # moves.insert(0, moves.pop(moves.index(i)))
+        # newList = []
+        # append = newList.append
 
         if 0 in killers:
             killersFirst = killers[0][5]
             killersFirstMove = (killersFirst[0], killersFirst[1], killersFirst[2], None)
             if killersFirstMove in moves:
-                append(killersFirstMove)
-                # moves.insert(0, moves.pop(moves.index(killersFirstMove)))
+                moves.insert(0, moves.pop(moves.index(killersFirstMove)))
 
             if 1 in killers:
                 killersSecond =  killers[1][5]
                 killersSecondMove = (killersSecond[0], killersSecond[1], killersSecond[2], None)
                 if 1 in killers and killersSecondMove in moves:
-                    append(killersSecondMove)
-                    # moves.insert(0, moves.pop(moves.index(killersSecondMove)))
+                    moves.insert(0, moves.pop(moves.index(killersSecondMove)))
 
 
-        newList = list(dict.fromkeys(newList))
-        notMoves = [i for i in moves if i not in newList]
-        newList = [x for x in itertools.chain(newList, notMoves)]
+
+
+        for i in moves:
+            if i[3] and i[2] <= i[3]:
+                moves.insert(0, moves.pop(moves.index(i)))
+
+        if prevMove:
+            for i in moves:
+                if i[1] == prevMove[1]:
+                    moves.insert(0, moves.pop(moves.index(i)))
+
+
+
+        for i in elements:
+            if i in moves:
+                moves.insert(0, moves.pop(moves.index(i)))
+
+
+        # newList = list(dict.fromkeys(newList))
+        # notMoves = [i for i in moves if i not in newList]
+        # newList = [x for x in itertools.chain(newList, notMoves)]
         # for i in moves:
         #     if i not in newList:
         #         append(i)
         # print(notMoves)
 
-        return newList
+        return moves
 
     def movePiece(self, index1, index2):
 
         movePro = self.movePro
-        setPieces = movePro.setPieces
-        setOccupied = movePro.setOccupied
-        setWhites = movePro.setWhites
-        setBlacks = movePro.setBlacks
-        whites = movePro.whites
-        blacks = movePro.blacks
+        # setPieces = movePro.setPieces
+        # setOccupied = movePro.setOccupied
+        # setWhites = movePro.setWhites
+        # setBlacks = movePro.setBlacks
+        # whites = movePro.whites
+        # blacks = movePro.blacks
         pieces = movePro.pieces
-        occupied = movePro.occupied
+        # occupied = movePro.occupied
         values = movePro.values
         moveStack = self.moveStack
         append = moveStack.append
@@ -899,22 +1271,121 @@ class Board:
             print("Cannot make move")
             return
 
-        moved = True
-        if not (i2 & occupied):
-            setPieces(i, pieces[i] ^ i1i2)
-            if whites & i1:
-                setWhites(whites ^ i1i2)
-                append((i1, i2, i, -1, 0))
-            elif blacks & i1:
-                setBlacks(blacks ^ i1i2)
-                append((i1, i2, i, -1, 1))
+        if not (i2 & movePro.occupied):
+            movePro.pieces[i] ^= i1i2
+            # setPieces(i, pieces[i] ^ i1i2)
 
-            setOccupied(i1i2)
+            if movePro.whites & i1:
+                movePro.whites ^= i1i2
+                kingTrue = 0
+                rookTrue = 0
+                castle = 0
+
+                if i == 5 and not self.kingMovedWhite and index2 == 6:
+                    movePro.whites ^= (1 << 7) | (1 << 5)
+                    movePro.pieces[3] ^= (1 << 7) | (1 << 5)
+                    movePro.occupied ^= (1 << 7) | (1 << 5)
+                    self.castled += self.castleValue
+                    castle = 1
+
+                if i == 5 and not self.kingMovedWhite and index2 == 2:
+                    movePro.whites ^= (1 << 0) | (1 << 3)
+                    movePro.pieces[3] ^= (1 << 0) | (1 << 3)
+                    movePro.occupied ^= (1 << 0) | (1 << 3)
+                    self.castled += self.castleValue
+                    castle = 2
+
+                if i == 5 and not self.kingMovedWhite:
+                    self.kingMovedWhite = self.castleValue
+                    kingTrue = 1
+
+
+                if i == 3 and not self.rookMovedWhiteA and index1 == 0:
+                    self.rookMovedWhiteA = True
+                    rookTrue = 1
+
+                if i == 3 and not self.rookMovedWhiteH and index1 == 7:
+                    self.rookMovedWhiteH = True
+                    rookTrue = 2
+
+                # setWhites(whites ^ i1i2)
+                if i == 0 and index2 > 55:
+                    movePro.pieces[i] ^= i2
+                    movePro.pieces[4] ^= i2
+                    self.materialScore += values[4] - values[0]
+                    self.populationPieces[i] -= 1
+                    self.populationPieces[4] += 1
+                    append((i1, i2, i, -1, 0, 4, kingTrue, rookTrue, castle))
+                else:
+                    append((i1, i2, i, -1, 0, 0, kingTrue, rookTrue, castle))
+            elif movePro.blacks & i1:
+                movePro.blacks ^= i1i2
+
+                kingTrue = 0
+                rookTrue = 0
+                castle = 0
+
+                if i == 5 and not self.kingMovedBlack and index2 == 62:
+                    movePro.blacks ^= (1 << 63) | (1 << 61)
+                    movePro.pieces[3] ^= (1 << 63) | (1 << 61)
+                    movePro.occupied ^= (1 << 63) | (1 << 61)
+                    self.castled -= self.castleValue
+                    castle = 3
+
+                if i == 5 and not self.kingMovedBlack and index2 == 58:
+                    movePro.whites ^= (1 << 56) | (1 << 59)
+                    movePro.pieces[3] ^= (1 << 56) | (1 << 59)
+                    movePro.occupied ^= (1 << 56) | (1 << 59)
+                    self.castled -= self.castleValue
+                    castle = 4
+
+                if i == 5 and not self.kingMovedBlack:
+                    self.kingMovedBlack = True
+                    kingTrue = 2
+
+
+                if i == 3 and not self.rookMovedBlackA and index1 == 56:
+                    self.rookMovedBlackA = True
+                    rookTrue = 3
+
+                if i == 3 and not self.rookMovedBlackH and index1 == 63:
+                    self.rookMovedBlackH = True
+                    rookTrue = 4
+                # setBlacks(blacks ^ i1i2)
+                if i == 0 and index2 < 8:
+                    movePro.pieces[i] ^= i2
+                    movePro.pieces[4] ^= i2
+                    self.materialScore -= values[4] - values[0]
+                    self.populationPieces[i + 6] -= 1
+                    self.populationPieces[4 + 6] += 1
+                    append((i1, i2, i, -1, 1, 4, kingTrue, rookTrue, castle))
+                else:
+                    append((i1, i2, i, -1, 1, 0, kingTrue, rookTrue, castle))
+
+
+
+            movePro.occupied ^= i1i2
+            # setOccupied(i1i2)
 
         else:
-            if whites & i1:
-                setWhites(whites ^ i1i2)
-                if blacks & i2:
+            if movePro.whites & i1:
+                movePro.whites ^= i1i2
+                kingTrue = 0
+                if i == 5 and not self.kingMovedWhite:
+                    self.kingMovedWhite = True
+                    kingTrue = 1
+
+                rookTrue = 0
+                if i == 3 and not self.rookMovedWhiteA and index1 == 0:
+                    self.rookMovedWhiteA = True
+                    rookTrue = 1
+
+                if i == 3 and not self.rookMovedWhiteH and index1 == 7:
+                    self.rookMovedWhiteH = True
+                    rookTrue = 2
+
+                # setWhites(whites ^ i1i2)
+                if movePro.blacks & i2:
                     k = -1
                     if pieces[0] & i2 != 0:
                         k = 0
@@ -929,18 +1400,43 @@ class Board:
                     elif pieces[5] & i2 != 0:
                         k = 5
 
-                    setPieces(k, pieces[k] ^ i2)
-                    setBlacks(blacks ^ i2)
-                    append((i1, i2, i, k, 0))
+                    movePro.pieces[k] ^= i2
+                    movePro.blacks ^= i2
+                    # setPieces(k, pieces[k] ^ i2)
+                    # setBlacks(blacks ^ i2)
+                    if i == 0 and index2 > 55:
+                        movePro.pieces[0] ^= i2
+                        movePro.pieces[4] ^= i2
+                        self.materialScore += values[4] - values[0]
+                        self.populationPieces[0] -= 1
+                        self.populationPieces[4] += 1
+                        append((i1, i2, i, k, 0, 4, kingTrue, rookTrue, 0))
+                    else:
+                        append((i1, i2, i, k, 0, 0, kingTrue, rookTrue, 0))
+
                     self.materialScore += values[k]
                     self.populationBlacks -= 1
                     self.populationPieces[k + 6] -= 1
 
                 else:
-                    append((i1, i2, i, -1, 0))
-            elif blacks & i1:
-                setBlacks(blacks ^ i1i2)
-                if whites & i2:
+                    append((i1, i2, i, -1, 0, 0, kingTrue, rookTrue, 0))
+            elif movePro.blacks & i1:
+                movePro.blacks ^= i1i2
+                kingTrue = 0
+                if i == 5 and not self.kingMovedBlack:
+                    self.kingMovedBlack = True
+                    kingTrue = 2
+
+                rookTrue = 0
+                if i == 3 and not self.rookMovedBlackA and index1 == 56:
+                    self.rookMovedBlackA = True
+                    rookTrue = 3
+
+                if i == 3 and not self.rookMovedBlackH and index1 == 63:
+                    self.rookMovedBlackH = True
+                    rookTrue = 4
+                # setBlacks(blacks ^ i1i2)
+                if movePro.whites & i2:
                     k = -1
                     if pieces[0] & i2 != 0:
                         k = 0
@@ -955,17 +1451,31 @@ class Board:
                     elif pieces[5] & i2 != 0:
                         k = 5
 
-                    setPieces(k, pieces[k] ^ i2)
-                    setWhites(whites ^ i2)
-                    append((i1, i2, i, k, 1))
+                    movePro.pieces[k] ^= i2
+                    movePro.whites ^= i2
+                    # setPieces(k, pieces[k] ^ i2)
+                    # setWhites(whites ^ i2)
+                    if i == 0 and index2 < 8:
+                        movePro.pieces[0] ^= i2
+                        movePro.pieces[4] ^= i2
+                        self.materialScore -= values[4] - values[0]
+                        self.populationPieces[0 + 6] -= 1
+                        self.populationPieces[4 + 6] += 1
+                        append((i1, i2, i, k, 1, 4, kingTrue, rookTrue, 0))
+                    else:
+                        append((i1, i2, i, k, 1, 0, kingTrue, rookTrue, 0))
+
+                    # append((i1, i2, i, k, 1, 0))
                     self.materialScore -= values[k]
                     self.populationWhites -= 1
                     self.populationPieces[k] -= 1
                 else:
-                    append((i1, i2, i, -1, 1))
+                    append((i1, i2, i, -1, 1, 0, kingTrue, rookTrue, 0))
 
-            setOccupied(i1)
-            setPieces(i, pieces[i] ^ i1i2)
+            movePro.occupied ^= i1
+            movePro.pieces[i] ^= i1i2
+            # setOccupied(i1)
+            # setPieces(i, pieces[i] ^ i1i2)
 
 
         return
@@ -973,14 +1483,14 @@ class Board:
     def undoMove(self):
         # printBoard(self.moveStack[-1].occupied)
         movePro = self.movePro
-        setPieces = movePro.setPieces
-        setOccupied = movePro.setOccupied
-        setWhites = movePro.setWhites
-        setBlacks = movePro.setBlacks
-        whites = movePro.whites
-        blacks = movePro.blacks
-        pieces = movePro.pieces
-        occupied = movePro.occupied
+        # setPieces = movePro.setPieces
+        # setOccupied = movePro.setOccupied
+        # setWhites = movePro.setWhites
+        # setBlacks = movePro.setBlacks
+        # whites = movePro.whites
+        # blacks = movePro.blacks
+        # pieces = movePro.pieces
+        # occupied = movePro.occupied
         values = movePro.values
         moveStack = self.moveStack
 
@@ -990,32 +1500,96 @@ class Board:
         toLoc = m[1]
         movingPiece = m[2]
         capturedPiece = m[3]
+        promotionPiece = m[5]
+
+        if m[8] == 1:
+            movePro.whites ^= (1 << 7) | (1 << 5)
+            movePro.pieces[3] ^= (1 << 7) | (1 << 5)
+            movePro.occupied ^= (1 << 7) | (1 << 5)
+            self.castled = 0
+
+        elif m[8] == 2:
+            movePro.whites ^= (1 << 0) | (1 << 3)
+            movePro.pieces[3] ^= (1 << 0) | (1 << 3)
+            movePro.occupied ^= (1 << 0) | (1 << 3)
+            self.castled = 0
+
+        elif m[8] == 3:
+            movePro.blacks ^= (1 << 63) | (1 << 61)
+            movePro.pieces[3] ^= (1 << 63) | (1 << 61)
+            movePro.occupied ^= (1 << 63) | (1 << 61)
+            self.castled = 0
+
+        elif m[8] == 4:
+            movePro.whites ^= (1 << 56) | (1 << 59)
+            movePro.pieces[3] ^= (1 << 56) | (1 << 59)
+            movePro.occupied ^= (1 << 56) | (1 << 59)
+            self.castled = 0
+
+        if m[6] == 1:
+            self.kingMovedWhite = False
+        elif m[6] == 2:
+            self.kingMovedBlack = False
+
+        if m[7] != 0:
+            if m[7] == 1:
+                self.rookMovedWhiteA = False
+            elif m[7] == 2:
+                self.rookMovedWhiteH = False
+            elif m[7] == 3:
+                self.rookMovedBlackA = False
+            elif m[7] == 4:
+                self.rookMovedBlackH = False
+
 
         i1i2 = fromLoc ^ toLoc
         if toLoc != fromLoc:
-            setPieces(movingPiece, pieces[movingPiece] ^ i1i2)
+            movePro.pieces[movingPiece] ^= i1i2
+            # setPieces(movingPiece, pieces[movingPiece] ^ i1i2)
             if m[4] == 0:
-                setWhites(whites ^ i1i2)
+                movePro.whites ^= i1i2
+                # setWhites(whites ^ i1i2)
                 if capturedPiece != -1:
-                    setPieces(capturedPiece, pieces[capturedPiece] ^ toLoc)
-                    setBlacks(blacks ^ toLoc)
-                    setOccupied(fromLoc)
+                    movePro.pieces[capturedPiece] ^= toLoc
+                    movePro.blacks ^= toLoc
+                    movePro.occupied ^= fromLoc
+                    # setPieces(capturedPiece, pieces[capturedPiece] ^ toLoc)
+                    # setBlacks(blacks ^ toLoc)
+                    # setOccupied(fromLoc)
                     self.materialScore -= values[capturedPiece]
                     self.populationBlacks += 1
                     self.populationPieces[capturedPiece + 6] += 1
                 else:
-                    setOccupied(i1i2)
+                    movePro.occupied ^= i1i2
+
+                if promotionPiece != 0:
+                    movePro.pieces[promotionPiece] ^= toLoc
+                    movePro.pieces[0] ^= toLoc
+                    self.materialScore -= values[4] - values[0]
+                    self.populationPieces[4] -= 1
+                    # setOccupied(i1i2)
             else:
-                setBlacks(blacks ^ i1i2)
+                movePro.blacks ^= i1i2
+                # setBlacks(blacks ^ i1i2)
                 if capturedPiece != -1:
-                    setPieces(capturedPiece, pieces[capturedPiece] ^ toLoc)
-                    setWhites(whites ^ toLoc)
-                    setOccupied(fromLoc)
+                    movePro.pieces[capturedPiece] ^= toLoc
+                    movePro.whites ^= toLoc
+                    movePro.occupied ^= fromLoc
+                    # setPieces(capturedPiece, pieces[capturedPiece] ^ toLoc)
+                    # setWhites(whites ^ toLoc)
+                    # setOccupied(fromLoc)
                     self.materialScore += values[capturedPiece]
                     self.populationWhites += 1
                     self.populationPieces[capturedPiece] += 1
                 else:
-                    setOccupied(i1i2)
+                    movePro.occupied ^= i1i2
+
+                if promotionPiece != 0:
+                    movePro.pieces[promotionPiece] ^= toLoc
+                    movePro.pieces[0] ^= toLoc
+                    self.materialScore += values[4] - values[0]
+                    self.populationPieces[4 + 6] -= 1
+                    # setOccupied(i1i2)
 
         del moveStack[-1]
         # self.moveStack = np.delete(self.moveStack, -1)
@@ -1023,7 +1597,7 @@ class Board:
 
     def evaluate(self):
         ret = 0
-        ret += self.materialScore
+        ret += self.materialScore + self.castled
         # for i in range(6):
         #     ret -= count_population(self.movePro.pieces[i] & self.movePro.blacks) * self.movePro.values[i]
         #     ret += count_population(self.movePro.pieces[i] & self.movePro.whites) * self.movePro.values[i]
@@ -1087,7 +1661,8 @@ def fillMoves(bitboard, population=None):
     ret = []
     append = ret.append
     while bitboard != 0:
-        toApp = bitScan(bitboard)
+        toApp = LSB_TABLE[(((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58]
+        # toApp = bitScan(bitboard)
         bitboard ^= 1 << toApp
         append(toApp)
     return ret
@@ -1372,12 +1947,16 @@ for i in range(64):
 
 # x.printPretty()
 # print()
-# x.movePiece(11, 19)
-# x.printPretty()
-# print()
-# x.movePiece(62, 47)
-# x.printPretty()
-# print()
+x.movePiece(62, 16)
+x.printPretty()
+print()
+x.movePiece(61, 21)
+x.printPretty()
+print()
+print(x.allValidMoves(1))
+x.undoMove()
+x.printPretty()
+print()
 # x.movePiece(2, 47)
 # x.printPretty()
 # print()
@@ -1392,7 +1971,7 @@ end = time.time() * 1000000
 # x.printPretty()
 # print()
 occupations = 0
-printBoard(rookBlockBoard[5][0])
+printBoard(x.rookMoves[5])
 print()
 printBoard(x.rookAttacksMask(occupations, 5))
 # printBoard(x.rookMoves[3])

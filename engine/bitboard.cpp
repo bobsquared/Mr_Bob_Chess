@@ -1,0 +1,1773 @@
+#include <bitset>
+#include <iostream>
+#include "bitboard.h"
+#include "dumb7flooding.h"
+#include <stdlib.h>
+#include <time.h>
+#include <assert.h>
+#include <string>
+#include <algorithm>
+
+
+bool operator==(const Bitboard::Move& lhs, const Bitboard::Move& rhs) {
+  return (lhs.fromLoc == rhs.fromLoc) && (lhs.toLoc == rhs.toLoc);
+}
+
+bool operator==(const Bitboard::KillerMove& lhs, const Bitboard::KillerMove& rhs) {
+  return (lhs.move == rhs.move) && (lhs.depth == rhs.depth);
+}
+
+std::ostream& operator<<(std::ostream& stream, const Bitboard::Move& rhs) {
+  return stream << rhs.fromLoc << rhs.toLoc;
+}
+
+
+Bitboard::Bitboard() {
+
+  InitWhitePawnMoves();
+  InitBlackPawnMoves();
+  InitKnightMoves();
+  InitBishopMoves();
+  InitRookMoves();
+  InitQueenMoves();
+  InitKingMoves();
+
+  InitRayAttacks();
+
+  optimalMagicRook();
+  optimalMagicBishop();
+
+  for (uint8_t i = 0; i < 64; i++) {
+    uint64_t mrMasked = 0;
+    if (i == 0) {
+      mrMasked = UP_MASK & RIGHT_MASK;
+    }
+    else if (i == 7) {
+      mrMasked = UP_MASK & LEFT_MASK;
+    }
+    else if (i == 63) {
+      mrMasked = DOWN_MASK & LEFT_MASK;
+    }
+    else if (i == 56) {
+      mrMasked = DOWN_MASK & RIGHT_MASK;
+    }
+    else if (i < 7 && i > 0) {
+      mrMasked = UP_MASK & LEFT_MASK & RIGHT_MASK;
+    }
+    else if (i < 63 && i > 56) {
+      mrMasked = DOWN_MASK & LEFT_MASK & RIGHT_MASK;
+    }
+    else if (i == 8 || i == 16 || i == 24 || i == 32 || i == 40 || i == 48) {
+      mrMasked = UP_MASK & RIGHT_MASK & DOWN_MASK;
+    }
+    else if (i == 15 || i == 23 || i == 31 || i == 39 || i == 47 || i == 55) {
+      mrMasked = UP_MASK & LEFT_MASK & DOWN_MASK;
+    }
+    else {
+      mrMasked = INNER_MASK;
+    }
+
+    mrMasked &= rookMoves[i];
+    uint8_t count = count_population(mrMasked);
+    uint8_t mrShift = 64 - count;
+    uint64_t mrMagic = magicR[i];
+
+    MagicPro mp = MagicPro();
+    mp.bitboard = rookMoves[i];
+    mp.shift = mrShift;
+    mp.magic = mrMagic;
+    mp.mask = mrMasked;
+    attacksR[i] = mp;
+
+  }
+
+  for (uint8_t i = 0; i < 64; i++) {
+    uint64_t mrMasked = INNER_MASK & bishopMoves[i];
+    uint8_t count = count_population(mrMasked);
+    uint8_t mrShift = 64 - count;
+    uint64_t mrMagic = magicB[i];
+
+    MagicPro mp = MagicPro();
+    mp.bitboard = bishopMoves[i];
+    mp.shift = mrShift;
+    mp.magic = mrMagic;
+    mp.mask = mrMasked;
+    attacksB[i] = mp;
+  }
+
+  // Generate_Magic_Bishops();
+
+  for (uint8_t i = 0; i < 64; i++) {
+    assert(InitBlocksRook(rookMoves[i], i, magicR[i]));
+    assert(InitBlocksBishop(bishopMoves[i], i, magicB[i]));
+  }
+
+  whites = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKings;
+  blacks = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKings;
+  occupied = whites | blacks;
+
+  pieces[0] = (whitePawns | blackPawns);
+  pieces[1] = (whiteKnights | blackKnights);
+  pieces[2] = (whiteBishops | blackBishops);
+  pieces[3] = (whiteRooks | blackRooks);
+  pieces[4] = (whiteQueens | blackQueens);
+  pieces[5] = (whiteKings | blackKings);
+
+
+  zobrist = Zobrist();
+
+  for (uint16_t i = 0; i < 1024; i++) {
+    for (uint8_t j = 0; j < 2; j++) {
+      killerMoves[i][j] = KillerMove();
+    }
+  }
+
+
+}
+
+void Bitboard::InitRayAttacks() {
+
+  for (uint8_t i = 0; i < 64; i++) {
+
+    rayAttacks[0][i] = dumb7FloodingN(0, 1ULL << i);
+    rayAttacks[1][i] = dumb7FloodingNE(0, 1ULL << i);
+    rayAttacks[2][i] = dumb7FloodingE(0, 1ULL << i);
+    rayAttacks[3][i] = dumb7FloodingSE(0, 1ULL << i);
+    rayAttacks[4][i] = dumb7FloodingS(0, 1ULL << i);
+    rayAttacks[5][i] = dumb7FloodingSW(0, 1ULL << i);
+    rayAttacks[6][i] = dumb7FloodingW(0, 1ULL << i);
+    rayAttacks[7][i] = dumb7FloodingNW(0, 1ULL << i);
+
+  }
+
+}
+
+void Bitboard::InitBlackPawnMoves() {
+  for (uint8_t i = 0; i < 64; i++) {
+    uint64_t tempBitBoard = 1ULL << i;
+    tempBitBoard |= tempBitBoard >> 8;
+
+    if (i < 56 && i > 47) {
+      tempBitBoard |= tempBitBoard >> 8;
+    }
+    tempBitBoard ^= 1ULL << i;
+    blackPawnMoves[i] = tempBitBoard;
+  }
+
+  for (uint8_t i = 0; i < 64; i++) {
+    uint64_t tempBitBoard = 1ULL << i;
+    uint64_t tempBitBoard1 = tempBitBoard >> 9;
+    uint64_t tempBitBoard2 = tempBitBoard >> 7;
+
+    tempBitBoard1 &= RIGHT_MASK;
+    tempBitBoard2 &= LEFT_MASK;
+    blackPawnAttacks[i] = tempBitBoard1 | tempBitBoard2;
+  }
+
+  blackPawns = (1ULL << 48) | (1ULL << 49) | (1ULL << 50) | (1ULL << 51) | (1ULL << 52) | (1ULL << 53) | (1ULL << 54) | (1ULL << 55);
+
+}
+
+void Bitboard::InitWhitePawnMoves() {
+  for (uint8_t i = 0; i < 64; i++) {
+    uint64_t tempBitBoard = 1ULL << i;
+    tempBitBoard |= tempBitBoard << 8;
+
+    if (i < 16 && i > 7) {
+      tempBitBoard |= tempBitBoard << 8;
+    }
+    tempBitBoard ^= 1ULL << i;
+    whitePawnMoves[i] = tempBitBoard;
+  }
+
+  for (uint8_t i = 0; i < 64; i++) {
+    uint64_t tempBitBoard = 1ULL << i;
+    uint64_t tempBitBoard1 = tempBitBoard << 9;
+    uint64_t tempBitBoard2 = tempBitBoard << 7;
+
+    tempBitBoard1 &= LEFT_MASK;
+    tempBitBoard2 &= RIGHT_MASK;
+    whitePawnAttacks[i] = tempBitBoard1 | tempBitBoard2;
+  }
+
+  whitePawns = (1ULL << 8) | (1ULL << 9) | (1ULL << 10) | (1ULL << 11) | (1ULL << 12) | (1ULL << 13) | (1ULL << 14) | (1ULL << 15);
+
+}
+
+
+void Bitboard::InitKnightMoves() {
+
+  for (uint8_t i = 0; i < 64; i++) {
+    uint64_t tempBitBoard = 0;
+    uint64_t tempBitBoard1 = 0;
+    uint64_t tempBitBoard2 = 0;
+    uint64_t tempBitBoard3 = 0;
+    uint64_t tempBitBoard4 = 0;
+
+    tempBitBoard |= 1ULL << i;
+    tempBitBoard1 |= ((tempBitBoard << 15) & ALL_ONES);
+    tempBitBoard1 |= tempBitBoard >> 17;
+    tempBitBoard1 &= 9187201950435737471U;
+
+    tempBitBoard2 |= ((tempBitBoard << 6) & ALL_ONES);
+    tempBitBoard2 |= tempBitBoard >> 10;
+    tempBitBoard2 &= 13816973012072644543U;
+    tempBitBoard2 &= 9187201950435737471U;
+
+    tempBitBoard3 |= ((tempBitBoard << 10) & ALL_ONES);
+    tempBitBoard3 |= tempBitBoard >> 6;
+    tempBitBoard3 &= 18374403900871474942U;
+    tempBitBoard3 &= 18302063728033398269U;
+
+    tempBitBoard4 |= ((tempBitBoard << 17) & ALL_ONES);
+    tempBitBoard4 |= tempBitBoard >> 15;
+    tempBitBoard4 &= 18374403900871474942U;
+
+    knightMoves[i] = tempBitBoard1 | tempBitBoard2 | tempBitBoard3 | tempBitBoard4;
+
+  }
+
+  whiteKnights = (1ULL << 1) | (1ULL << 6);
+  blackKnights = (1ULL << 62) | (1ULL << 57);
+
+}
+
+void Bitboard::InitBishopMoves() {
+
+  for (uint8_t i = 0; i < 64; i++) {
+    uint64_t tempBitBoard = 0;
+    uint64_t tempBitBoard1 = 0;
+    uint64_t tempBitBoard2 = 0;
+    uint64_t tempBitBoard3 = 0;
+    uint64_t tempBitBoard4 = 0;
+
+    tempBitBoard |= 1ULL << i;
+    uint8_t col = i % 8;
+
+    for (uint8_t k = col; k < 8; k++) {
+      if (k == 7) {
+        break;
+      }
+      else {
+          tempBitBoard1 |= tempBitBoard << (9 + 9 * (k - col));
+      }
+    }
+
+    for (uint8_t k = col; k < 8; k++) {
+      if (k == 7) {
+        break;
+      }
+      else {
+        tempBitBoard2 |= tempBitBoard >> (7 + 7 * (k - col));
+      }
+    }
+
+    for (int8_t k = col; k >= 0; k--) {
+      if (k == 0) {
+        break;
+      }
+      else {
+        tempBitBoard3 |= tempBitBoard << (7 + 7 * (col - k));
+      }
+    }
+
+    for (int8_t k = col; k >= 0; k--) {
+      if (k == 0) {
+        break;
+      }
+      else {
+        tempBitBoard4 |= tempBitBoard >> (9 + 9 * (col - k));
+      }
+    }
+
+    bishopMoves[i] = ((tempBitBoard1 & ALL_ONES) | tempBitBoard2 | tempBitBoard4 | (tempBitBoard3 & ALL_ONES));
+  }
+
+  whiteBishops = (1ULL << 2) | (1ULL << 5);
+  blackBishops = (1ULL << 61) | (1ULL << 58);
+
+}
+
+
+void Bitboard::InitRookMoves() {
+
+  for (uint8_t i = 0; i < 64; i++) {
+    uint64_t tempBitBoard = 0;
+    uint64_t tempBitBoard1 = 0;
+    uint64_t tempBitBoard2 = 0;
+    uint64_t tempBitBoard3 = 0;
+    uint64_t tempBitBoard4 = 0;
+
+    tempBitBoard |= 1ULL << i;
+    uint8_t col = i % 8;
+
+    for (uint8_t k = 0; k < 8; k++) {
+      tempBitBoard1 |= tempBitBoard >> (8 + k * 8);
+      tempBitBoard2 |= ((tempBitBoard << (8 + k * 8)) & ALL_ONES);
+    }
+
+    for (uint8_t k = col; k < 8; k++) {
+      if (k == 7) {
+        break;
+      }
+      else {
+        tempBitBoard3 |= ((tempBitBoard << (1 + 1 * (k - col))) & ALL_ONES);
+      }
+    }
+
+    for (uint8_t k = col; k >= 0; k--) {
+      if (k == 0) {
+        break;
+      }
+      else {
+        tempBitBoard4 |= tempBitBoard >> (1 + 1 * (col - k));
+      }
+    }
+
+    rookMoves[i] = (tempBitBoard1 | tempBitBoard2 | tempBitBoard4 | tempBitBoard3) & (tempBitBoard ^ ALL_ONES);
+  }
+
+  whiteRooks = 1 | (1ULL << 7);
+  blackRooks = (1ULL << 56) | (1ULL << 63);
+}
+
+
+
+void Bitboard::InitQueenMoves() {
+
+  for (uint8_t i = 0; i < 64; i++) {
+    queenMoves[i] = rookMoves[i] | bishopMoves[i];
+  }
+
+  whiteQueens = 1ULL << 3;
+  blackQueens = 1ULL << 59;
+
+}
+
+void Bitboard::InitKingMoves() {
+
+  for (uint8_t i = 0; i < 64; i++) {
+    uint64_t tempBitBoard = 0;
+    uint64_t tempBitBoard1 = 0;
+    uint64_t tempBitBoard2 = 0;
+
+    tempBitBoard = 1ULL << i;
+
+    tempBitBoard |= tempBitBoard >> 8;
+    tempBitBoard |= tempBitBoard << 8;
+
+    tempBitBoard1 |= tempBitBoard >> 1;
+    tempBitBoard1 &= RIGHT_MASK;
+
+    tempBitBoard2 |= tempBitBoard << 1;
+    tempBitBoard2 &= LEFT_MASK;
+
+    tempBitBoard |= tempBitBoard1 | tempBitBoard2;
+    tempBitBoard &= (1ULL << i) ^ ALL_ONES;
+
+    kingMoves[i] = tempBitBoard;
+  }
+
+  whiteKings = 1ULL << 4;
+  blackKings = 1ULL << 60;
+
+}
+
+void Bitboard::optimalMagicRook() {
+  magicR[0] = 36029348655939588ULL;
+  magicR[1] = 1170971087756869632ULL;
+  magicR[2] = 2954370427062910992ULL;
+  magicR[3] = 792651127156903192ULL;
+  magicR[4] = 144134979419643920ULL;
+  magicR[5] = 144133922724252680ULL;
+  magicR[6] = 1224981864905722624ULL;
+  magicR[7] = 36029896532706432ULL;
+  magicR[8] = 1176002594440085568ULL;
+  magicR[9] = 1176002594440085568ULL;
+  magicR[10] = 720857489461223424ULL;
+  magicR[11] = 563233431752968ULL;
+  magicR[12] = 612771093152793856ULL;
+  magicR[13] = 2306406440271102464ULL;
+  magicR[14] = 4901886943039603200ULL;
+  magicR[15] = 81627760442819714ULL;
+  magicR[16] = 73219228345303168ULL;
+  magicR[17] = 13515472343416832ULL;
+  magicR[18] = 53876606698049ULL;
+  magicR[19] = 1153204079900499976ULL;
+  magicR[20] = 363121411788701700ULL;
+  magicR[21] = 144397762973533184ULL;
+  magicR[22] = 1225053866778034440ULL;
+  magicR[23] = 72567772480644ULL;
+  magicR[24] = 36029072970620928ULL;
+  magicR[25] = 153123625355968832ULL;
+  magicR[26] = 2380187600323363073ULL;
+  magicR[27] = 597923640185473536ULL;
+  magicR[28] = 2306406036477059204ULL;
+  magicR[29] = 1198520459426533540ULL;
+  magicR[30] = 3476787725604028944ULL;
+  magicR[31] = 108086949402902593ULL;
+  magicR[32] = 5944821895705657472ULL;
+  magicR[33] = 2287015328485378ULL;
+  magicR[34] = 585487743337906560ULL;
+  magicR[35] = 4922434534500207376ULL;
+  magicR[36] = 5919981847684841536ULL;
+  magicR[37] = 721138907520963200ULL;
+  magicR[38] = 9016064671220257ULL;
+  magicR[39] = 551534199060ULL;
+  magicR[40] = 3062447884323602432ULL;
+  magicR[41] = 3756037342331682816ULL;
+  magicR[42] = 563260004892704ULL;
+  magicR[43] = 17703859519520ULL;
+  magicR[44] = 1729426237660659748ULL;
+  magicR[45] = 72620578623848484ULL;
+  magicR[46] = 4521510043910161ULL;
+  magicR[47] = 2765963264001ULL;
+  magicR[48] = 54044844816867456ULL;
+  magicR[49] = 4521466693419072ULL;
+  magicR[50] = 1166432853781647488ULL;
+  magicR[51] = 9043483311472896ULL;
+  magicR[52] = 10141899550622976ULL;
+  magicR[53] = 563018807902720ULL;
+  magicR[54] = 26668627411968ULL;
+  magicR[55] = 73192582104023552ULL;
+  magicR[56] = 145258839090921537ULL;
+  magicR[57] = 1225330946669088801ULL;
+  magicR[58] = 576814967383134465ULL;
+  magicR[59] = 4182999766471278661ULL;
+  magicR[60] = 72621231253753922ULL;
+  magicR[61] = 154811290358403106ULL;
+  magicR[62] = 1765416045839388676ULL;
+  magicR[63] = 6341349750872344705ULL;
+
+}
+
+void Bitboard::optimalMagicBishop() {
+  magicB[0] = 18058413343254592ULL;
+  magicB[1] = 580969858422935552ULL;
+  magicB[2] = 4774382545141760288ULL;
+  magicB[3] = 866954202594672640ULL;
+  magicB[4] = 72622812002529568ULL;
+  magicB[5] = 2308377521225204227ULL;
+  magicB[6] = 2882603482052296708ULL;
+  magicB[7] = 576814796190524416ULL;
+  magicB[8] = 145245503276450816ULL;
+  magicB[9] = 571758948256256ULL;
+  magicB[10] = 1225067076759339146ULL;
+  magicB[11] = 9912801435648ULL;
+  magicB[12] = 4522361118261760ULL;
+  magicB[13] = 11559171662021664ULL;
+  magicB[14] = 11276874991802378ULL;
+  magicB[15] = 10152891463766192ULL;
+  magicB[16] = 4773815640718049410ULL;
+  magicB[17] = 585469119940399234ULL;
+  magicB[18] = 362557448223204105ULL;
+  magicB[19] = 145245649256972544ULL;
+  magicB[20] = 2310927168246382594ULL;
+  magicB[21] = 281483573134336ULL;
+  magicB[22] = 288318345689696288ULL;
+  magicB[23] = 723109766066734344ULL;
+  magicB[24] = 290517919356420480ULL;
+  magicB[25] = 2260733424304256ULL;
+  magicB[26] = 290486575219875872ULL;
+  magicB[27] = 290284021825552ULL;
+  magicB[28] = 1153765998273249280ULL;
+  magicB[29] = 864766994766891040ULL;
+  magicB[30] = 2535473852067841ULL;
+  magicB[31] = 75435573485045889ULL;
+  magicB[32] = 288828579433549888ULL;
+  magicB[33] = 77726689016418308ULL;
+  magicB[34] = 4612816326066178304ULL;
+  magicB[35] = 144431881785114961ULL;
+  magicB[36] = 162129724562604160ULL;
+  magicB[37] = 4684033987151528448ULL;
+  magicB[38] = 4516794874267904ULL;
+  magicB[39] = 148918134047375616ULL;
+  magicB[40] = 4612829691747764224ULL;
+  magicB[41] = 1297321501090906884ULL;
+  magicB[42] = 581599883627073537ULL;
+  magicB[43] = 72057731879536904ULL;
+  magicB[44] = 387045542527744ULL;
+  magicB[45] = 9361250622383120ULL;
+  magicB[46] = 4540991679889600ULL;
+  magicB[47] = 4612852342570877188ULL;
+  magicB[48] = 866423857610760ULL;
+  magicB[49] = 866423857610760ULL;
+  magicB[50] = 576464331153080960ULL;
+  magicB[51] = 290482193691058176ULL;
+  magicB[52] = 144115806584836096ULL;
+  magicB[53] = 9064391442041408ULL;
+  magicB[54] = 37159936853286912ULL;
+  magicB[55] = 37159936853286912ULL;
+  magicB[56] = 4630369471107178512ULL;
+  magicB[57] = 612489832815665152ULL;
+  magicB[58] = 9896695701760ULL;
+  magicB[59] = 4503599670625280ULL;
+  magicB[60] = 38284995181281792ULL;
+  magicB[61] = 3260606405228512289ULL;
+  magicB[62] = 18084777051894536ULL;
+  magicB[63] = 1733890258883450368ULL;
+}
+
+
+uint64_t Bitboard::pawnAttacksWhite(uint64_t bitboard) {
+
+  uint64_t tempBitBoard1 = (bitboard << 9);
+  uint64_t tempBitBoard2 = (bitboard << 7);
+
+  tempBitBoard1 &= LEFT_MASK;
+  tempBitBoard2 &= RIGHT_MASK;
+  return tempBitBoard1 | tempBitBoard2;
+
+}
+
+uint64_t Bitboard::pawnAttacksBlack(uint64_t bitboard) {
+
+  uint64_t tempBitBoard1 = (bitboard >> 9);
+  uint64_t tempBitBoard2 = (bitboard >> 7);
+
+  tempBitBoard1 &= RIGHT_MASK;
+  tempBitBoard2 &= LEFT_MASK;
+  return tempBitBoard1 | tempBitBoard2;
+
+}
+
+
+// Adapted from https://www.chessprogramming.org/Knight_Pattern#MultipleKnightAttacks
+uint64_t Bitboard::knightAttacks(uint64_t knights) {
+  uint64_t l1 = (knights >> 1) & 0x7f7f7f7f7f7f7f7f;
+  uint64_t l2 = (knights >> 2) & 0x3f3f3f3f3f3f3f3f;
+  uint64_t r1 = (knights << 1) & 0xfefefefefefefefe;
+  uint64_t r2 = (knights << 2) & 0xfcfcfcfcfcfcfcfc;
+  uint64_t h1 = l1 | r1;
+  uint64_t h2 = l2 | r2;
+  return (h1 << 16) | (h1 >> 16) | (h2 << 8) | (h2 >> 8);
+}
+
+
+
+uint64_t Bitboard::bishopAttacksMask(uint64_t occupations, uint8_t index){
+  occupations &= attacksB[index].mask;
+  occupations = ((attacksB[index].magic * occupations) >> attacksB[index].shift);
+  return bishopComb[index][occupations];
+}
+
+
+uint64_t Bitboard::rookAttacksMask(uint64_t occupations, uint8_t index) {
+  occupations &= attacksR[index].mask;
+  occupations = ((attacksR[index].magic * occupations) >> attacksR[index].shift);
+  return rookComb[index][occupations];
+}
+
+
+
+
+// #I honestly tried to implement myself but failed.
+// #Adapted from https://stackoverflow.com/questions/30680559/how-to-find-magic-bitboards
+uint64_t Bitboard::bitCombinations(uint64_t index, uint64_t bitboard) {
+  uint8_t bindex = 0;
+  uint64_t board = bitboard;
+
+  for (uint8_t i = 0; i < 64; i++){
+    uint64_t bitToFlip = 1ULL << i;
+
+    if ((bitToFlip & bitboard) != 0) {
+      if ((index & (1ULL << bindex)) == 0) {
+        board &= ~bitToFlip;
+      }
+      bindex++;
+    }
+  }
+
+  return board;
+}
+
+
+bool Bitboard::InitBlocksRook(uint64_t bitboard, uint64_t index, uint64_t magic) {
+
+  uint64_t bitboardMasked = bitboard & attacksR[index].mask;
+
+  uint64_t indexP = 1ULL << index;
+  uint8_t countMasked = count_population(bitboardMasked);
+
+  for (uint64_t i = 0; i < 1ULL << countMasked; i++) {
+    uint64_t r = bitCombinations(i, bitboardMasked);
+
+    uint64_t res = (dumb7FloodingN(indexP, r) | dumb7FloodingE(indexP, r) | dumb7FloodingS(indexP, r) | dumb7FloodingW(indexP, r)) & (indexP ^ ALL_ONES);
+    uint64_t magicI = ((r * magic) >> attacksR[index].shift);
+
+    if (rookComb[index].find(magicI) != rookComb[index].end()) {
+      // std::cout << "Failed rook magic: " << index << " " << magic << " " << attacksR[index].shift << " " <<  i << std::endl;
+      rookComb.erase(index);
+      return false;
+    }
+
+    rookComb[index][magicI] = res;
+  }
+
+  return true;
+
+}
+
+bool Bitboard::InitBlocksBishop(uint64_t bitboard, uint8_t index, uint64_t magic) {
+
+  uint64_t bitboardMasked = bitboard & INNER_MASK;
+  uint64_t indexP = 1ULL << index;
+  uint8_t countMasked = count_population(bitboardMasked);
+
+  for (uint64_t i = 0; i < 1ULL << countMasked; i++) {
+    uint64_t r = bitCombinations(i, bitboardMasked);
+
+    uint64_t res = (dumb7FloodingNE(indexP, r) | dumb7FloodingSE(indexP, r) | dumb7FloodingSW(indexP, r) | dumb7FloodingNW(indexP, r)) & (indexP ^ ALL_ONES);
+    uint64_t magicI = ((r * magic) >> attacksB[index].shift);
+
+    if (bishopComb[index].find(magicI) != bishopComb[index].end()) {
+      // std::cout << "Failed rook magic: " << index << " " << magic << " " << attacksR[index].shift << " " <<  i << std::endl;
+      bishopComb.erase(index);
+      return false;
+    }
+
+    bishopComb[index][magicI] = res;
+  }
+
+  return true;
+
+}
+
+
+void Bitboard::Generate_Magic_Rooks() {
+  uint64_t x = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+
+  for (uint8_t i = 0; i < 64; i++) {
+    while(!InitBlocksRook(rookMoves[i], i, x)) {
+      uint64_t x1 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+      uint64_t x2 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+      uint64_t x3 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+      x = x1 & x2 & x3;
+    }
+    std::cout << "  magicR[" << unsigned(i) << "] = " << x << "ULL;" << std::endl;
+  }
+
+}
+
+void Bitboard::Generate_Magic_Bishops() {
+  uint64_t x = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+
+  for (uint8_t i = 0; i < 64; i++) {
+    while(!InitBlocksBishop(bishopMoves[i], i, x)) {
+      uint64_t x1 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+      uint64_t x2 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+      uint64_t x3 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+      x = x1 & x2 & x3;
+    }
+    std::cout << "  magicB[" << unsigned(i) << "] = " << x << "ULL;" << std::endl;
+  }
+
+}
+
+//Adapted from https://www.chessprogramming.org/BitScan
+uint8_t Bitboard::bitScanF(uint64_t bitboard) {
+  unsigned int folded;
+  bitboard ^= bitboard - 1;
+  folded = (int)(bitboard ^ (bitboard >> 32));
+  return LSB_TABLE[(folded * 0x78291ACF) >> 26];
+}
+
+//Adapted from https://www.chessprogramming.org/BitScan
+uint8_t Bitboard::bitScanR(uint64_t bitboard) {
+  return MSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89) >> 58];
+}
+
+
+uint8_t Bitboard::count_population(uint64_t bitboard) {
+
+  uint8_t count = 0;
+  while (bitboard != 0) {
+    count++;
+    bitboard &= (bitboard - 1);
+  }
+
+  return count;
+}
+
+
+void Bitboard::printBoard(uint64_t board) {
+
+  std::bitset<64> x(board);
+  for (int16_t i = 7; i >= 0; i--) {
+    for (int16_t j = 7; j >= 0; j--) {
+      std::cout << x[(7 - j) + 8 * i] << " ";
+    }
+    std::cout << std::endl;
+  }
+
+}
+
+
+void Bitboard::printPretty() {
+
+  std::bitset<64> oc(occupied);
+  std::bitset<64> wh(whites);
+  std::bitset<64> bl(blacks);
+  std::bitset<64> pa(pieces[0]);
+  std::bitset<64> kn(pieces[1]);
+  std::bitset<64> bi(pieces[2]);
+  std::bitset<64> ro(pieces[3]);
+  std::bitset<64> qu(pieces[4]);
+  std::bitset<64> ki(pieces[5]);
+  std::cout << "-----------------------------------------" << std::endl;
+
+  for (int16_t i = 7; i >= 0; i--) {
+    for (int16_t j = 7; j >= 0; j--) {
+      std::string s = "";
+      if (oc[(7 - j) + 8 * i] != 0) {
+        if (wh[(7 - j) + 8 * i] != 0) {
+          s += "w";
+        }
+        if (bl[(7 - j) + 8 * i] != 0) {
+          s += "b";
+        }
+        if (pa[(7 - j) + 8 * i] != 0) {
+          s += "P";
+        }
+        if (kn[(7 - j) + 8 * i] != 0) {
+          s += "N";
+        }
+        if (bi[(7 - j) + 8 * i] != 0) {
+          s += "B";
+        }
+        if (ro[(7 - j) + 8 * i] != 0) {
+          s += "R";
+        }
+        if (qu[(7 - j) + 8 * i] != 0) {
+          s += "Q";
+        }
+        if (ki[(7 - j) + 8 * i] != 0) {
+          s += "K";
+        }
+
+
+      }
+
+      if (s == "") {
+        s += "  ";
+      }
+      std::cout << s << " ";
+    }
+    std::cout << std::endl;
+  }
+
+  std::cout << "-----------------------------------------" << std::endl;
+
+}
+
+
+
+
+// ------------------- Above are Initializiation functions, rest will be called during play -------------------/
+
+bool Bitboard::filterCheck(bool color) {
+
+  uint64_t ret = 0;
+
+  if (color == 0) {
+    if (pieces[5] & whites) {
+
+      uint64_t indexP = pieces[5] & whites;
+      uint8_t index = MSB_TABLE[(((indexP ^ (indexP - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58];
+      assert ((1ULL << index) == indexP);
+
+      uint64_t bishopAttacksMaskI = bishopAttacksMask(occupied, index);
+      uint64_t rookAttacksMaskI = rookAttacksMask(occupied, index);
+      ret = blacks & pieces[0] & whitePawnAttacks[index];
+      ret |= blacks & pieces[1] & knightMoves[index];
+      ret |= blacks & pieces[2] & bishopAttacksMaskI;
+      ret |= blacks & pieces[3] & rookAttacksMaskI;
+      ret |= blacks & pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
+      ret |= blacks & pieces[5] & kingMoves[index];
+    }
+    else {
+      return false;
+    }
+
+  }
+  else {
+
+    if (pieces[5] & blacks) {
+
+      uint64_t indexP = pieces[5] & blacks;
+      uint8_t index = MSB_TABLE[(((indexP ^ (indexP - 1)) * 0x03f79d71b4cb0a89) & ALL_ONES) >> 58];
+      assert ((1ULL << index) == indexP);
+
+      uint64_t bishopAttacksMaskI = bishopAttacksMask(occupied, index);
+      uint64_t rookAttacksMaskI = rookAttacksMask(occupied, index);
+      ret = whites & pieces[0] & blackPawnAttacks[index];
+      ret |= whites & pieces[1] & knightMoves[index];
+      ret |= whites & pieces[2] & bishopAttacksMaskI;
+      ret |= whites & pieces[3] & rookAttacksMaskI;
+      ret |= whites & pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
+      ret |= whites & pieces[5] & kingMoves[index];
+
+
+    }
+    else {
+      return false;
+    }
+
+  }
+
+  return ret == 0;
+
+}
+
+
+bool Bitboard::isAttacked(uint8_t index, bool color) {
+
+  uint64_t ret = 0;
+
+  if (!color) {
+
+    uint64_t bishopAttacksMaskI = bishopAttacksMask(occupied, index);
+    uint64_t rookAttacksMaskI = rookAttacksMask(occupied, index);
+    ret = blacks & pieces[0] & whitePawnAttacks[index];
+    ret |= blacks & pieces[1] & knightMoves[index];
+    ret |= blacks & pieces[2] & bishopAttacksMaskI;
+    ret |= blacks & pieces[3] & rookAttacksMaskI;
+    ret |= blacks & pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
+    ret |= blacks & pieces[5] & kingMoves[index];
+
+  }
+  else {
+
+    uint64_t bishopAttacksMaskI = bishopAttacksMask(occupied, index);
+    uint64_t rookAttacksMaskI = rookAttacksMask(occupied, index);
+    ret = whites & pieces[0] & blackPawnAttacks[index];
+    ret |= whites & pieces[1] & knightMoves[index];
+    ret |= whites & pieces[2] & bishopAttacksMaskI;
+    ret |= whites & pieces[3] & rookAttacksMaskI;
+    ret |= whites & pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
+    ret |= whites & pieces[5] & kingMoves[index];
+
+  }
+
+  return ret == 0;
+
+}
+
+
+
+std::vector<Bitboard::Move> Bitboard::allValidMoves(bool color) {
+
+  std::vector<Move> ret = {};
+  bool quiet = true;
+  int pieceFC = -1;
+  int pieceTC = -1;
+
+  if (color == 0){
+
+    std::vector<uint8_t> loc = whitePiecesLoc();
+    for (uint8_t i : loc) {
+
+      if (((1ULL << i) & pieces[0]) != 0) {
+        pieceFC = 0;
+      }
+      else if (((1ULL << i) & pieces[1]) != 0) {
+        pieceFC = 1;
+      }
+      else if (((1ULL << i) & pieces[2]) != 0) {
+        pieceFC = 2;
+      }
+      else if (((1ULL << i) & pieces[3]) != 0) {
+        pieceFC = 3;
+      }
+      else if (((1ULL << i) & pieces[4]) != 0) {
+        pieceFC = 4;
+      }
+      else if (((1ULL << i) & pieces[5]) != 0) {
+        pieceFC = 5;
+      }
+
+      std::vector<uint8_t> move = validMovesWhite(i);
+
+      for (uint8_t j : move) {
+        if (((1ULL << j) & occupied) != 0) {
+          quiet = false;
+          if (((1ULL << j) & pieces[0]) != 0) {
+            pieceTC = 0;
+          }
+          else if (((1ULL << j) & pieces[1]) != 0) {
+            pieceTC = 1;
+          }
+          else if (((1ULL << j) & pieces[2]) != 0) {
+            pieceTC = 2;
+          }
+          else if (((1ULL << j) & pieces[3]) != 0) {
+            pieceTC = 3;
+          }
+          else if (((1ULL << j) & pieces[4]) != 0) {
+            pieceTC = 4;
+          }
+          else if (((1ULL << j) & pieces[5]) != 0) {
+            pieceTC = 5;
+          }
+        }
+        else {
+          quiet = true;
+          pieceTC = -1;
+        }
+        ret.push_back((Move){i, j, quiet, pieceFC, pieceTC});
+      }
+
+    }
+
+  }
+  else {
+
+    std::vector<uint8_t> loc = blackPiecesLoc();
+    for (uint8_t i : loc) {
+
+      if (((1ULL << i) & pieces[0]) != 0) {
+        pieceFC = 0;
+      }
+      else if (((1ULL << i) & pieces[1]) != 0) {
+        pieceFC = 1;
+      }
+      else if (((1ULL << i) & pieces[2]) != 0) {
+        pieceFC = 2;
+      }
+      else if (((1ULL << i) & pieces[3]) != 0) {
+        pieceFC = 3;
+      }
+      else if (((1ULL << i) & pieces[4]) != 0) {
+        pieceFC = 4;
+      }
+      else if (((1ULL << i) & pieces[5]) != 0) {
+        pieceFC = 5;
+      }
+
+      std::vector<uint8_t> move = validMovesBlack(i);
+
+      for (uint8_t j : move) {
+        if (((1ULL << j) & occupied) != 0) {
+          quiet = false;
+          if (((1ULL << j) & pieces[0]) != 0) {
+            pieceTC = 0;
+          }
+          else if (((1ULL << j) & pieces[1]) != 0) {
+            pieceTC = 1;
+          }
+          else if (((1ULL << j) & pieces[2]) != 0) {
+            pieceTC = 2;
+          }
+          else if (((1ULL << j) & pieces[3]) != 0) {
+            pieceTC = 3;
+          }
+          else if (((1ULL << j) & pieces[4]) != 0) {
+            pieceTC = 4;
+          }
+          else if (((1ULL << j) & pieces[5]) != 0) {
+            pieceTC = 5;
+          }
+        }
+        else {
+          quiet = true;
+          pieceTC = -1;
+        }
+        ret.push_back((Move){i, j, quiet, pieceFC, pieceTC});
+      }
+
+    }
+
+  }
+
+  return ret;
+
+}
+
+
+std::vector<uint8_t> Bitboard::whitePiecesLoc() {
+  std::vector<uint8_t> ret = {};
+  uint64_t bitboard = whites;
+  while (bitboard != 0){
+    uint8_t toApp = LSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+    bitboard ^= 1ULL << toApp;
+    ret.push_back(toApp);
+  }
+  return ret;
+}
+
+
+std::vector<uint8_t> Bitboard::blackPiecesLoc() {
+  std::vector<uint8_t> ret = {};
+  uint64_t bitboard = blacks;
+  while (bitboard != 0){
+    uint8_t toApp = LSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+    bitboard ^= 1ULL << toApp;
+    ret.push_back(toApp);
+  }
+  return ret;
+}
+
+
+std::vector<uint8_t> Bitboard::validMovesWhite(uint8_t index) {
+  uint64_t indexP = 1ULL << index;
+  uint64_t whitesIndex = indexP & whites;
+  std::vector<uint8_t> ret = {};
+
+
+  if ((pieces[0] & whitesIndex) != 0) {
+    uint64_t base = (whitePawnAttacks[index] & blacks) | (whitePawnMoves[index] & ~occupied);
+    if ((occupied & (1ULL << (index + 8))) != 0){
+      base &= (1ULL << (index + 16)) ^ 18446744073709551615U;
+    }
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+  else if ((pieces[1] & whitesIndex) != 0) {
+    uint64_t base = knightMoves[index] & ~whites;
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+  else if ((pieces[2] & whitesIndex) != 0) {
+    uint64_t base = bishopAttacksMask(occupied, index) & ~whites;
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+  else if ((pieces[3] & whitesIndex) != 0) {
+    uint64_t base = rookAttacksMask(occupied, index) & ~whites;
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+  else if ((pieces[4] & whitesIndex) != 0) {
+    uint64_t base = (bishopAttacksMask(occupied, index) | rookAttacksMask(occupied, index)) & ~whites;
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+  else if ((pieces[5] & whitesIndex) != 0) {
+    uint64_t base = kingMoves[index] & ~whites;
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+
+  return ret;
+}
+
+
+
+
+std::vector<uint8_t>  Bitboard::validMovesBlack(uint8_t index) {
+  uint64_t indexP = 1ULL << index;
+  uint64_t blacksIndex = indexP & blacks;
+  std::vector<uint8_t> ret = {};
+
+  if ((pieces[0] & blacksIndex) != 0) {
+    uint64_t base = (blackPawnAttacks[index] & whites) | (blackPawnMoves[index] & ~occupied);
+    if ((index >= 16 && (occupied & (1ULL << (index - 8))) != 0)){
+      base &= (1ULL << (index - 16)) ^ 18446744073709551615U;
+    }
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+  else if ((pieces[1] & blacksIndex) != 0) {
+    uint64_t base = knightMoves[index] & ~blacks;
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+  else if ((pieces[2] & blacksIndex) != 0) {
+    uint64_t base = bishopAttacksMask(occupied, index) & ~blacks;
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+  else if ((pieces[3] & blacksIndex) != 0) {
+    uint64_t base = rookAttacksMask(occupied, index) & ~blacks;
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+  else if ((pieces[4] & blacksIndex) != 0) {
+    uint64_t base = (bishopAttacksMask(occupied, index) | rookAttacksMask(occupied, index)) & ~blacks;
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+  else if ((pieces[5] & blacksIndex) != 0) {
+    uint64_t base = kingMoves[index] & ~blacks;
+    while (base != 0) {
+      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+      base ^= 1ULL << toApp;
+      ret.push_back(toApp);
+    }
+    return ret;
+  }
+
+  return ret;
+}
+
+
+
+void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
+
+  uint64_t i1 = 1ULL << index1;
+  uint64_t i2 = 1ULL << index2;
+  uint64_t i1i2 = i1 ^ i2;
+
+  int8_t i = -1;
+  if ((pieces[0] & i1) != 0) {
+    i = 0;
+  }
+  else if ((pieces[1] & i1) != 0) {
+    i = 1;
+  }
+  else if ((pieces[2] & i1) != 0) {
+    i = 2;
+  }
+  else if ((pieces[3] & i1) != 0) {
+    i = 3;
+  }
+  else if ((pieces[4] & i1) != 0) {
+    i = 4;
+  }
+  else if ((pieces[5] & i1) != 0) {
+    i = 5;
+  }
+
+
+  // std::cout << unsigned(index1) << std::endl;
+  // printPretty();
+  assert(i != -1);
+
+  if (!(i2 & occupied)) {
+    pieces[i] ^= i1i2;
+
+    if (whites & i1) {
+      whites ^= i1i2;
+
+      if (i == 0 && index2 > 55) {
+        pieces[i] ^= i2;
+        pieces[4] ^= i2;
+        moveStack.push_back((MoveStack){i1, i2, i, -1, 0, true});
+      }
+      else {
+        moveStack.push_back((MoveStack){i1, i2, i, -1, 0, false});
+      }
+
+    }
+    else if (blacks & i1) {
+      blacks ^= i1i2;
+
+      if (i == 0 && index2 < 8) {
+        pieces[i] ^= i2;
+        pieces[4] ^= i2;
+        moveStack.push_back((MoveStack){i1, i2, i, -1, 1, true});
+      }
+      else {
+        moveStack.push_back((MoveStack){i1, i2, i, -1, 1, false});
+      }
+
+    }
+
+    occupied ^= i1i2;
+  }
+  else {
+
+    if (whites & i1) {
+      whites ^= i1i2;
+
+      if (blacks & i2) {
+        int8_t k = -1;
+        if ((pieces[0] & i2) != 0) {
+          k = 0;
+        }
+        else if ((pieces[1] & i2) != 0) {
+          k = 1;
+        }
+        else if ((pieces[2] & i2) != 0) {
+          k = 2;
+        }
+        else if ((pieces[3] & i2) != 0) {
+          k = 3;
+        }
+        else if ((pieces[4] & i2) != 0) {
+          k = 4;
+        }
+        else if ((pieces[5] & i2) != 0) {
+          k = 5;
+        }
+
+        assert(k != -1);
+
+        pieces[k] ^= i2;
+        blacks ^= i2;
+
+        if (i == 0 && index2 > 55) {
+          pieces[i] ^= i2;
+          pieces[4] ^= i2;
+          moveStack.push_back((MoveStack){i1, i2, i, k, 0, true});
+        }
+        else {
+          moveStack.push_back((MoveStack){i1, i2, i, k, 0, false});
+        }
+
+      }
+      else {
+        // assert(blacks & i2 == 0);
+        moveStack.push_back((MoveStack){i1, i2, i, -1, 0});
+      }
+    }
+    else if (blacks & i1) {
+      blacks ^= i1i2;
+      if (whites & i2) {
+        int8_t k = -1;
+        if ((pieces[0] & i2) != 0) {
+          k = 0;
+        }
+        else if ((pieces[1] & i2) != 0) {
+          k = 1;
+        }
+        else if ((pieces[2] & i2) != 0) {
+          k = 2;
+        }
+        else if ((pieces[3] & i2) != 0) {
+          k = 3;
+        }
+        else if ((pieces[4] & i2) != 0) {
+          k = 4;
+        }
+        else if ((pieces[5] & i2) != 0) {
+          k = 5;
+        }
+
+        assert(k != -1);
+
+        pieces[k] ^= i2;
+        whites ^= i2;
+
+
+        if (i == 0 && index2 < 8) {
+          pieces[i] ^= i2;
+          pieces[4] ^= i2;
+          moveStack.push_back((MoveStack){i1, i2, i, k, 1, true});
+        }
+        else {
+          moveStack.push_back((MoveStack){i1, i2, i, k, 1, false});
+        }
+
+      }
+      else {
+        // assert(whites & i2 == 0);
+        moveStack.push_back((MoveStack){i1, i2, i, -1, 1});
+      }
+
+    }
+
+    occupied ^= i1;
+    pieces[i] ^= i1i2;
+
+  }
+
+}
+
+
+
+void Bitboard::undoMove() {
+  MoveStack m = moveStack.back();
+  uint64_t fromLoc = m.fromLoc;
+  uint64_t toLoc = m.toLoc;
+  int8_t movePiece = m.movePiece;
+  int8_t capturePiece = m.capturePiece;
+  bool promotion = m.promote;
+
+  uint64_t i1i2 = fromLoc ^ toLoc;
+
+  if (toLoc != fromLoc) {
+    pieces[movePiece] ^= i1i2;
+    if (!m.color) {
+      whites ^= i1i2;
+      if (capturePiece != -1) {
+        pieces[capturePiece] ^= toLoc;
+        blacks ^= toLoc;
+        occupied ^= fromLoc;
+      }
+      else {
+        occupied ^= i1i2;
+      }
+
+      if (promotion) {
+        pieces[4] ^= toLoc;
+        pieces[0] ^= toLoc;
+      }
+    }
+    else {
+      blacks ^= i1i2;
+      if (capturePiece != -1) {
+        pieces[capturePiece] ^= toLoc;
+        whites ^= toLoc;
+        occupied ^= fromLoc;
+      }
+      else {
+        occupied ^= i1i2;
+      }
+
+      if (promotion) {
+        pieces[4] ^= toLoc;
+        pieces[0] ^= toLoc;
+      }
+
+    }
+  }
+
+  moveStack.pop_back();
+
+}
+
+
+int Bitboard::evaluate() {
+  int ret = 0;
+  ret += count_population(pieces[0] & whites);
+  ret += count_population(pieces[1] & whites) * 30;
+  ret += count_population(pieces[2] & whites) * 30;
+  ret += count_population(pieces[3] & whites) * 50;
+  ret += count_population(pieces[4] & whites) * 90;
+  ret += count_population(pieces[5] & whites) * 2000;
+
+  ret -= count_population(pieces[0] & blacks);
+  ret -= count_population(pieces[1] & blacks) * 30;
+  ret -= count_population(pieces[2] & blacks) * 30;
+  ret -= count_population(pieces[3] & blacks) * 50;
+  ret -= count_population(pieces[4] & blacks) * 90;
+  ret -= count_population(pieces[5] & blacks) * 2000;
+
+  ret += count_population(knightAttacks(whites & pieces[1]) & whites) * 1.5;
+  ret -= count_population(knightAttacks(blacks & pieces[1]) & blacks) * 1.5;
+
+  uint64_t bishopsW = whites & pieces[2];
+  uint64_t bishopsB = blacks & pieces[2];
+  for (uint8_t i = 0; i < count_population(bishopsW); i++) {
+    ret += count_population(bishopAttacksMask(occupied, bitScanF(bishopsW)));
+    bishopsW &= (bishopsW - 1);
+  }
+
+  for (uint8_t i = 0; i < count_population(bishopsB); i++) {
+    ret -= count_population(bishopAttacksMask(occupied, bitScanF(bishopsB)));
+    bishopsB &= (bishopsW - 1);
+  }
+
+  uint64_t rooksW = whites & pieces[3];
+  uint64_t rooksB = blacks & pieces[3];
+  for (uint8_t i = 0; i < count_population(rooksW); i++) {
+    ret += count_population(rookAttacksMask(occupied, bitScanF(rooksW))) / 2;
+    rooksW &= (rooksW - 1);
+  }
+
+  for (uint8_t i = 0; i < count_population(rooksB); i++) {
+    ret -= count_population(rookAttacksMask(occupied, bitScanF(rooksB))) / 2;
+    rooksB &= (rooksB - 1);
+  }
+
+  return ret;
+}
+
+
+void Bitboard::sortMoves(std::vector<Move> &moveList, Move move, int depth) {
+
+  if (moveList.size() <= 1) {
+    return;
+  }
+
+  uint8_t insertIndex = 0;
+  std::vector<Move>::iterator p = std::find(moveList.begin(), moveList.end(), move);
+  if (p != moveList.end()) {
+    std::swap(*p, moveList[insertIndex]);
+    insertIndex++;
+  }
+
+  for (uint8_t i = insertIndex; i < (moveList.size() - 1) && insertIndex < moveList.size(); i++) {
+
+    if (moveList[i].pieceFrom <= moveList[i].pieceTo){
+      p = std::find(moveList.begin() + insertIndex, moveList.end(), moveList[i]);
+      if (p != moveList.end()) {
+        std::swap(*p, moveList[insertIndex]);
+        insertIndex++;
+      }
+    }
+
+
+  }
+
+  p = std::find(moveList.begin() + insertIndex, moveList.end(), killerMoves[depth][0].move);
+  if (p != moveList.end() && !(*p == moveList[0])) {
+    std::swap(*p, moveList[insertIndex]);
+    insertIndex++;
+  }
+
+  p = std::find(moveList.begin() + insertIndex, moveList.end(), killerMoves[depth][1].move);
+  if (p != moveList.end() && !(*p == moveList[0]) && !(*p == moveList[1])) {
+    std::swap(*p, moveList[insertIndex]);
+    insertIndex++;
+  }
+
+}
+
+
+void Bitboard::InsertKiller(Move move, int depth) {
+  KillerMove val = KillerMove();
+
+  if (killerMoves[depth][0] == val) {
+    val.move = move;
+    val.depth = depth;
+    killerMoves[depth][0] = val;
+  }
+  else if (killerMoves[depth][1] == val) {
+    killerMoves[depth][1] = killerMoves[depth][0];
+    val.move = move;
+    val.depth = depth;
+    killerMoves[depth][0] = val;
+  }
+
+}
+
+
+void Bitboard::InsertLookup(Move move, int score, int alpha, int beta, int depth, uint8_t flag, uint64_t key) {
+  ZobristVal val = ZobristVal();
+  val.move = move;
+  val.score = score;
+  val.alpha = alpha;
+  val.beta = beta;
+  val.depth = depth;
+  val.flag = flag;
+
+  lookup[key] = val;
+
+}
+
+uint64_t Bitboard::hashBoard(bool turn) {
+  return zobrist.hashBoard(pieces, occupied, blacks, turn);
+}
+
+
+
+
+// Classical approach : https://www.chessprogramming.org/Classical_Approach
+// For single pieces (super kings)
+uint64_t Bitboard::CRayAttacksN(uint64_t occupation, uint64_t index) {
+
+  uint64_t attacks = rayAttacks[0][index];
+  uint64_t blocker = attacks & occupied;
+  if (blocker) {
+    attacks ^= rayAttacks[0][1ULL << bitScanR(blocker)];
+  }
+
+  return attacks;
+
+}
+
+// Classical approach : https://www.chessprogramming.org/Classical_Approach
+// For single pieces (super kings)
+uint64_t Bitboard::CRayAttacksNE(uint64_t occupation, uint64_t index) {
+
+  uint64_t attacks = rayAttacks[1][index];
+  uint64_t blocker = attacks & occupied;
+  if (blocker) {
+    attacks ^= rayAttacks[1][1ULL << bitScanF(blocker)];
+  }
+
+  return attacks;
+
+}
+
+// Classical approach : https://www.chessprogramming.org/Classical_Approach
+// For single pieces (super kings)
+uint64_t Bitboard::CRayAttacksE(uint64_t occupation, uint64_t index) {
+
+  uint64_t attacks = rayAttacks[2][index];
+  uint64_t blocker = attacks & occupied;
+  if (blocker) {
+    attacks ^= rayAttacks[2][1ULL << bitScanF(blocker)];
+  }
+
+  return attacks;
+
+}
+
+// Classical approach : https://www.chessprogramming.org/Classical_Approach
+// For single pieces (super kings)
+uint64_t Bitboard::CRayAttacksSE(uint64_t occupation, uint64_t index) {
+
+  uint64_t attacks = rayAttacks[3][index];
+  uint64_t blocker = attacks & occupied;
+  if (blocker) {
+    attacks ^= rayAttacks[3][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
+  }
+
+  return attacks;
+
+}
+
+// Classical approach : https://www.chessprogramming.org/Classical_Approach
+// For single pieces (super kings)
+uint64_t Bitboard::CRayAttacksS(uint64_t occupation, uint64_t index) {
+
+  uint64_t attacks = rayAttacks[4][index];
+  uint64_t blocker = attacks & occupied;
+  if (blocker) {
+    attacks ^= rayAttacks[4][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
+  }
+
+  return attacks;
+
+}
+
+// Classical approach : https://www.chessprogramming.org/Classical_Approach
+// For single pieces (super kings)
+uint64_t Bitboard::CRayAttacksSW(uint64_t occupation, uint64_t index) {
+
+  uint64_t attacks = rayAttacks[5][index];
+  uint64_t blocker = attacks & occupied;
+  if (blocker) {
+    attacks ^= rayAttacks[5][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
+  }
+
+  return attacks;
+
+}
+
+// Classical approach : https://www.chessprogramming.org/Classical_Approach
+// For single pieces (super kings)
+uint64_t Bitboard::CRayAttacksW(uint64_t occupation, uint64_t index) {
+
+  uint64_t attacks = rayAttacks[6][index];
+  uint64_t blocker = attacks & occupied;
+  if (blocker) {
+    attacks ^= rayAttacks[6][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
+  }
+
+  return attacks;
+
+}
+
+// Classical approach : https://www.chessprogramming.org/Classical_Approach
+// For single pieces (super kings)
+uint64_t Bitboard::CRayAttacksNW(uint64_t occupation, uint64_t index) {
+
+  uint64_t attacks = rayAttacks[7][index];
+  uint64_t blocker = attacks & occupied;
+  if (blocker) {
+    attacks ^= rayAttacks[7][1ULL << bitScanF(blocker)];
+  }
+
+  return attacks;
+
+}
+
+
+// Adapted from https://www.chessprogramming.org/DirGolem
+// Basically line by line while modifying it to fit code.
+void Bitboard::test() {
+
+  // uint64_t whiteKing = pieces[5] & whites;
+  // uint64_t blackPawns = pieces[0] & blacks;
+  // uint64_t blackRooks = pieces[3] & blacks;
+  // uint64_t blackBishops = pieces[2] & blacks;
+  // uint64_t blackQueens = pieces[4] & blacks;
+  //
+  // uint64_t blackAttacks = dumb7FloodingW(blackRooks | blackQueens, occupied ^ whiteKing);
+  // uint64_t blackAnyAttacks = blackAttacks;
+  // uint64_t whiteSupers = CRayAttacksE(whiteKing, occupied);
+  // uint64_t whiteSupersR = whiteSupers;
+  // uint64_t betweenH = whiteSupers & blackAttacks;
+  //
+  // blackAttacks = dumb7FloodingE(blackRooks | blackQueens, occupied ^ whiteKing);
+  // blackAnyAttacks |= blackAttacks;
+  // whiteSupers = CRayAttacksW(whiteKing, occupied);
+  // whiteSupersR |= whiteSupers;
+  // betweenH |= whiteSupers & blackAttacks;
+  //
+  // blackAttacks = dumb7FloodingN(blackRooks | blackQueens, occupied ^ whiteKing);
+  // blackAnyAttacks |= blackAttacks;
+  // whiteSupers = CRayAttacksS(whiteKing, occupied);
+  // whiteSupersR |= whiteSupers;
+  // uint64_t betweenV = whiteSupers & blackAttacks;
+  //
+  // blackAttacks = dumb7FloodingS(blackRooks | blackQueens, occupied ^ whiteKing);
+  // blackAnyAttacks |= blackAttacks;
+  // whiteSupers = CRayAttacksN(whiteKing, occupied);
+  // whiteSupersR |= whiteSupers;
+  // betweenV |= whiteSupers & blackAttacks;
+  //
+  // blackAttacks = dumb7FloodingNE(blackBishops | blackQueens, occupied ^ whiteKing);
+  // blackAnyAttacks |= blackAttacks;
+  // whiteSupers = CRayAttacksSW(whiteKing, occupied);
+  // uint64_t whiteSupersB = whiteSupers;
+  // uint64_t betweenD = whiteSupers & blackAttacks;
+  //
+  // blackAttacks = dumb7FloodingSW(blackBishops | blackQueens, occupied ^ whiteKing);
+  // blackAnyAttacks |= blackAttacks;
+  // whiteSupers = CRayAttacksNE(whiteKing, occupied);
+  // whiteSupersB |= whiteSupers;
+  // betweenD |= whiteSupers & blackAttacks;
+  //
+  // blackAttacks = dumb7FloodingNW(blackBishops | blackQueens, occupied ^ whiteKing);
+  // blackAnyAttacks |= blackAttacks;
+  // whiteSupers = CRayAttacksSE(whiteKing, occupied);
+  // whiteSupersB |= whiteSupers;
+  // uint64_t betweenA = whiteSupers & blackAttacks;
+  //
+  // blackAttacks = dumb7FloodingSE(blackBishops | blackQueens, occupied ^ whiteKing);
+  // blackAnyAttacks |= blackAttacks;
+  // whiteSupers = CRayAttacksNW(whiteKing, occupied);
+  // whiteSupersB |= whiteSupers;
+  // betweenA |= whiteSupers & blackAttacks;
+  //
+  // blackAnyAttacks |= pawnAttacksBlack(pieces[0] & blacks);
+  // blackAnyAttacks |= knightAttacks(pieces[1] & blacks);
+  // blackAnyAttacks |= kingMoves[bitScanF(pieces[5] & blacks)];
+  //
+  // uint64_t allBetween = betweenH | betweenV | betweenA | betweenD;
+  // uint64_t blocks = allBetween & ~occupied;
+  // uint64_t checkFrom = (whiteSupersR & (blackRooks | blackQueens)) | (whiteSupersB & (blackBishops | blackQueens)) | (knightAttacks(whiteKing) & blackKnights) | (pawnAttacksWhite(whiteKing) & blackPawns);
+  //
+  // int64_t nullIfCheck = ((int64_t)(blackAnyAttacks & whiteKing) - 1) >> 63;
+  // int64_t nullIfDoubleCheck = ((int64_t)(checkFrom & (checkFrom - 1)) - 1) >> 63;
+  //
+  // uint64_t checkTo = checkFrom | blocks | nullIfCheck;
+  // uint64_t targetMask = ~whites & checkTo & nullIfDoubleCheck;
+  // checkFrom = ()
+
+
+
+  /* horizontal rook and queen moves */
+  // uint64_t sliders = (whiteRooks | whiteQueens) & ~(allBetween ^ betweenH);
+  // m_moveTargets[eWest] = dumb7FloodingW (sliders, occupied) & targetMask;
+  // m_moveTargets[eEast] = dumb7FloodingE (sliders, occupied) & targetMask;
+  // /* vertical rook and queen moves*/
+  // sliders = (whiteRooks | whiteQueens) & ~(allBetween ^ betweenV);
+  // m_moveTargets[eNort] = dumb7FloodingN (sliders, occupied) & targetMask;
+  // m_moveTargets[eSout] = dumb7FloodingS (sliders, occupied) & targetMask;
+  // /* diagonal bishop and queen moves */
+  // sliders = (whiteBishops | whiteQueens) & ~(allBetween ^ betweenD);
+  // m_moveTargets[eNoEa] = dumb7FloodingNE (sliders, occupied) & targetMask;
+  // m_moveTargets[eSoWe] = dumb7FloodingSW (sliders, occupied) & targetMask;
+  // /* antidiagonal bishop and queen moves */
+  // sliders = (whiteBishops | whiteQueens) & ~(allBetween ^ betweenA);
+  // m_moveTargets[eNoWe] = dumb7FloodingNW (sliders, occupied) & targetMask;
+  // m_moveTargets[eSoEa] = dumb7FloodingSE (sliders, occupied) & targetMask;
+  //
+  // /* knight moves */
+  // _knights = m_wKnights & ~allInbetween;
+  // m_moveTargets[eNoNoEa] = noNoEa(_knights) & targetMask;
+  // m_moveTargets[eNoEaEa] = noEaEa(_knights) & targetMask;
+  // m_moveTargets[eSoEaEa] = soEaEa(_knights) & targetMask;
+  // m_moveTargets[eSoSoEa] = soSoEa(_knights) & targetMask;
+  // m_moveTargets[eNoNoWe] = noNoWe(_knights) & targetMask;
+  // m_moveTargets[eNoWeWe] = noWeWe(_knights) & targetMask;
+  // m_moveTargets[eSoWeWe] = soWeWe(_knights) & targetMask;
+  // m_moveTargets[eSoSoWe] = soSoWe(_knights) & targetMask;
+  // /* pawn captures and en passant */
+  // _targets = ( m_bPieces & targetMask) | (C64(1) << m_epTarget);
+  // _pawns   = m_wPans & ~(allInbetween ^ diaInbetween);
+  // m_moveTargets[eNoEa] |=  noEaOne (_pawns) & _targets ;
+  // _pawns   = m_wPans & ~(allInbetween ^ antInbetween);
+  // m_moveTargets[eNoWe] |= noWeOne(_pawns) & _targets;
+  // /* pawn pushes ... */
+  // _pawns   = m_wPans  & ~(allInbetween ^ verInbetween);
+  // _pawnPushs = nortOne (_pawns) & ~m_occ;
+  // m_moveTargets[eNort] |= _pawnPushs & targetMask;
+  // /* and double pushs */
+  // _rank4 = C64(0x00000000FF000000);
+  // m_moveTargets[eNort] |= nortOne (_pawnPushs) & ~m_occ & targetMask & _rank4;
+  // /* king moves */
+  // targetMask = ~(m_wPieces | bAnyAttacks);
+  // m_moveTargets[eWest] |= westOne (m_wKbb) & targetMask;
+  // m_moveTargets[eEast] |= eastOne (m_wKbb) & targetMask;
+  // m_moveTargets[eNort] |= nortOne (m_wKbb) & targetMask;
+  // m_moveTargets[eSout] |= soutOne (m_wKbb) & targetMask;
+  // m_moveTargets[eNoEa] |= noEaOne (m_wKbb) & targetMask;
+  // m_moveTargets[eSoWe] |= soWeOne (m_wKbb) & targetMask;
+  // m_moveTargets[eNoWe] |= noWeOne (m_wKbb) & targetMask;
+  // m_moveTargets[eSoEa] |= soEaOne (m_wKbb) & targetMask;
+
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//

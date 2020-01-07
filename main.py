@@ -10,6 +10,8 @@ import time
 import bitboards as b
 import zobrist_hashing as zh
 import config as cfg
+import connector as co
+import multiprocessing
 
 
 
@@ -939,7 +941,18 @@ class Board:
 			self.pieces.remove(mrPiece)
 			notation += "x"
 
+		if mrPiece2 and mrPiece2.type == "p" and mrPiece2.color == "white" and params.TO_NUM[loc2] > 55:
+			self.pieces.remove(mrPiece2)
+			self.pieces.append(Queen('white', self.color, self.positions[loc2], 'q', params.white_queen_img))
+
+		if mrPiece2 and mrPiece2.type == "p" and mrPiece2.color == "black" and params.TO_NUM[loc2] < 8:
+			print("HEY")
+			self.pieces.remove(mrPiece2)
+			self.pieces.append(Queen('black', self.color, self.positions[loc2], 'q', params.black_queen_img))
+
+
 		self.updateLocation()
+		co.put((loc1 + loc2).lower())
 		self.prevMove = (params.TO_NUM[loc1], params.TO_NUM[loc2])
 		# print("Move:1")
 		# self.bitboard.printPretty()
@@ -1149,34 +1162,59 @@ class Board:
 		elif self.turn == 'black':
 			return 2
 
+	def printInfo(self, depth, move, branchingFactor, time):
+		if time == 0:
+			print("Iterative Deepening: Depth", depth + 1, 'Number of Nodes traversed:', self.traversedNodes, "NPS:", "inf", round(time * 1000, 2), "ms")
+			print("	Best move found:", (params.TO_ALG[move[1]] + params.TO_ALG[move[2]]).lower(), "Score:", round(move[0], 2), "Effective Branching Factor:", round(branchingFactor, 2))
+		else:
+			print("Iterative Deepening: Depth", depth + 1, 'Number of Nodes traversed:', self.traversedNodes, "NPS:", round(self.traversedNodes / time, 2), round(time * 1000, 2), "ms")
+			print("	Best move found:", (params.TO_ALG[move[1]] + params.TO_ALG[move[2]]).lower(), "Score:", round(move[0], 2), "Effective Branching Factor:", round(branchingFactor, 2))
+
+
 	def minimax(self, turn):
 		mrMove = None
+		prevNodes = None
+		branchingFactor = None
 		if turn == "white" and self.turn == 'black':
-			for i in range(cfg.black_Max_Depth + 1):
+
+			for i in range(cfg.black_Max_Depth):
+
 				start = time.time()
 				if cfg.searchmethod == 0:
-					mrMove = self.alphaBetaRoot(False, self.bitboard, i, prevMove=self.prevMove)
+					mrMove = self.alphaBetaRoot(False, self.bitboard, i + 1, prevMove=self.prevMove)
 				elif cfg.searchmethod == 1:
-					mrMove = self.minimaxR(False, self.bitboard, i)
+					mrMove = self.minimaxR(False, self.bitboard, i + 1)
 				end = time.time()
-				if (end - start) == 0:
-					print('Number of Nodes traversed:', self.traversedNodes, "NPS:", "inf")
+
+				if branchingFactor:
+					branchingFactor = self.traversedNodes / prevNodes
+					prevNodes = self.traversedNodes
 				else:
-					print('Number of Nodes traversed:', self.traversedNodes, "NPS:", self.traversedNodes / (end - start))
+					branchingFactor = self.traversedNodes
+					prevNodes = self.traversedNodes
+
+				self.printInfo(i, mrMove, branchingFactor, end - start)
 				self.traversedNodes = 0
 
 		if turn == "black" and self.turn == 'white':
-			for i in range(cfg.white_Max_Depth + 1):
+			for i in range(cfg.white_Max_Depth):
+
 				start = time.time()
 				if cfg.searchmethod == 0:
-					mrMove = self.alphaBetaRoot(True, self.bitboard, i, prevMove=self.prevMove)
+					mrMove = self.alphaBetaRoot(True, self.bitboard, i + 1, prevMove=self.prevMove)
 				elif cfg.searchmethod == 1:
-					mrMove = self.minimaxR(True, self.bitboard, i)
+					mrMove = self.minimaxR(True, self.bitboard, i + 1)
 				end = time.time()
-				if (end - start) == 0:
-					print('Number of Nodes traversed:', self.traversedNodes, "NPS:", "inf")
+
+
+				if branchingFactor:
+					branchingFactor = self.traversedNodes / prevNodes
+					prevNodes = self.traversedNodes
 				else:
-					print('Number of Nodes traversed:', self.traversedNodes, "NPS:", self.traversedNodes / (end - start))
+					branchingFactor = self.traversedNodes
+					prevNodes = self.traversedNodes
+
+				self.printInfo(i, mrMove, branchingFactor, end - start)
 				self.traversedNodes = 0
 
 
@@ -1253,15 +1291,17 @@ class Board:
 				# alpha = max(alpha, ret)
 				if ret >= beta:
 					temp = (TO_ALG[move[0]], TO_ALG[move[1]], beta, alpha, beta, move, maxDepth - depth)
-					lookUp[hashF] = temp
 					if move[3] == None:
 						if 0 in killerMovesWhite[depth]:
-							killerMovesWhite[depth][1] = killerMovesWhite[depth][0]
-						killerMovesWhite[depth][0] = temp
+							self.killerMovesWhite[depth][1] = killerMovesWhite[depth][0]
+						self.killerMovesWhite[depth][0] = temp
 					return beta, move[0], move[1]
 
 				if ret > alpha:
 					alpha = ret
+					bestMove = move
+
+				if bestMove == None:
 					bestMove = move
 
 
@@ -1270,8 +1310,11 @@ class Board:
 
 			# if filterCheck(useMax) and not bestMove:
 			# 	return -m.inf, None, None
-
-			return alpha, bestMove[0], bestMove[1]
+			if bestMove:
+				return alpha, bestMove[0], bestMove[1]
+			else:
+				os.system("pause")
+				return alpha, None, None
 
 		else:
 
@@ -1295,15 +1338,17 @@ class Board:
 				# beta = min(beta, ret)
 				if ret <= alpha:
 					temp = (TO_ALG[move[0]], TO_ALG[move[1]], beta, alpha, beta, move, maxDepth - depth)
-					lookUp[hashF] = temp
 					if move[3] == None:
 						if 0 in killerMovesBlack[depth]:
-							killerMovesBlack[depth][1] = killerMovesBlack[depth][0]
-						killerMovesBlack[depth][0] = temp
+							self.killerMovesBlack[depth][1] = killerMovesBlack[depth][0]
+						self.killerMovesBlack[depth][0] = temp
 					return alpha, move[0], move[1]
 
 				if ret < beta:
 					beta = ret
+					bestMove = move
+
+				if bestMove == None:
 					bestMove = move
 
 
@@ -1313,8 +1358,10 @@ class Board:
 
 			# if filterCheck(useMax) and not bestMove:
 			# 	return m.inf, None, None
-
-			return beta, bestMove[0], bestMove[1]
+			if bestMove:
+				return beta, bestMove[0], bestMove[1]
+			else:
+				return beta, None, None
 
 
 
@@ -1324,26 +1371,36 @@ class Board:
 
 		self.traversedNodes += 1
 
-		if depth == maxDepth:
+
+		if depth >= maxDepth:
 			return self.evaluateBoard(bitboard)
+
+		alphaO = alpha
+		betaO = beta
+		TTFlag = 0
 
 		hashedBoard = None
 		hashF = self.zobrist.hashBoard(bitboard.movePro, useMax)
 		if hashF in self.zobrist.lookUp:
 			hashedBoard = self.zobrist.lookUp[hashF]
-			# if hashedBoard[6] >= maxDepth - depth:
-			# 	if useMax:
-			# 		return hashedBoard[3]
-			# 	else:
-			# 		return hashedBoard[4]
+			if hashedBoard[6] >= maxDepth - depth:
+				if hashedBoard[7] == 0:
+					return hashedBoard[2]
+				elif hashedBoard[7] == 2:
+					alpha = max(hashedBoard[3], alpha)
+				elif hashedBoard[7] == 1:
+					beta = min(hashedBoard[4], beta)
+				if alpha >= beta:
+					return hashedBoard[2]
+
 
 		sortedMoves = []
 		bestMove = None
+		traversedNodes = 0
 
 		#Transition table
 		if hashedBoard:
 			sortedMoves.append((params.TO_NUM[hashedBoard[0]], params.TO_NUM[hashedBoard[1]], hashedBoard[5][2], hashedBoard[5][3]))
-
 
 
 		if useMax:
@@ -1359,18 +1416,29 @@ class Board:
 			temp = None
 
 			for move in vMoves:
+
 				movePiece(move[0], move[1])
 				if not filterCheck(0):
 					undoMove()
 					continue
-				ret = self.alphabetaR(False, bitboard, maxDepth, depth=depth+1, alpha=alpha, beta=beta, prevMove=move, movePiece=movePiece, filterCheck=filterCheck, undoMove=undoMove)
+
+				ret = 0
+				if depth > cfg.Late_Move_Reduction_Depth and traversedNodes >= cfg.Late_Move_Reduction:
+					ret = self.alphabetaR(False, bitboard, maxDepth - 1, depth=depth+1, alpha=alpha, beta=beta, prevMove=move, movePiece=movePiece, filterCheck=filterCheck, undoMove=undoMove)
+				else:
+					ret = self.alphabetaR(False, bitboard, maxDepth, depth=depth+1, alpha=alpha, beta=beta, prevMove=move, movePiece=movePiece, filterCheck=filterCheck, undoMove=undoMove)
+
+				traversedNodes += 1
 				undoMove()
-
-
 
 				# alpha = max(alpha, ret)
 				if ret >= beta:
-					temp = (params.TO_ALG[move[0]], params.TO_ALG[move[1]], beta, alpha, beta, move, maxDepth - depth)
+					if ret >= alphaO:
+						TTFlag = 1
+					elif ret <= betaO:
+						TTFlag = 2
+
+					temp = (params.TO_ALG[move[0]], params.TO_ALG[move[1]], beta, alpha, beta, move, maxDepth - depth, TTFlag)
 					self.zobrist.lookUp[hashF] = temp
 					if move[3] == None:
 						if 0 in self.killerMovesWhite[depth]:
@@ -1378,13 +1446,19 @@ class Board:
 						self.killerMovesWhite[depth][0] = temp
 					return beta
 
+				# alpha = max(alpha, ret)
 				if ret > alpha:
 					alpha = ret
 					bestMove = move
 
 
 			# if bestMove:
-			# 	self.zobrist.lookUp[hashF] = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], beta, alpha, beta, bestMove, maxDepth - depth)
+			# 	if ret >= alphaO:
+			# 		TTFlag = 1
+			# 	elif ret <= beta:
+			# 		TTFlag = 2
+			#
+			# 	self.zobrist.lookUp[hashF] = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], alpha, alpha, beta, bestMove, maxDepth - depth, TTFlag)
 
 			return alpha
 
@@ -1400,18 +1474,30 @@ class Board:
 			temp = None
 
 			for move in vMoves:
+
 				movePiece(move[0], move[1])
 				if not filterCheck(1):
 					undoMove()
 					continue
-				ret = self.alphabetaR(True, bitboard, maxDepth, depth=depth+1, alpha=alpha, beta=beta, prevMove=move, movePiece=movePiece, filterCheck=filterCheck, undoMove=undoMove)
+
+				ret = 0
+				if depth > cfg.Late_Move_Reduction_Depth and traversedNodes >= cfg.Late_Move_Reduction:
+					ret = self.alphabetaR(True, bitboard, maxDepth - 1, depth=depth+1, alpha=alpha, beta=beta, prevMove=move, movePiece=movePiece, filterCheck=filterCheck, undoMove=undoMove)
+				else:
+					ret = self.alphabetaR(True, bitboard, maxDepth, depth=depth+1, alpha=alpha, beta=beta, prevMove=move, movePiece=movePiece, filterCheck=filterCheck, undoMove=undoMove)
+
+				traversedNodes += 1
 				undoMove()
-
-
 
 				# beta = min(beta, ret)
 				if ret <= alpha:
-					temp = (params.TO_ALG[move[0]], params.TO_ALG[move[1]], beta, alpha, beta, move, maxDepth - depth)
+
+					if ret >= alphaO:
+						TTFlag = 1
+					elif ret <= betaO:
+						TTFlag = 2
+
+					temp = (params.TO_ALG[move[0]], params.TO_ALG[move[1]], alpha, alpha, beta, move, maxDepth - depth, TTFlag)
 					self.zobrist.lookUp[hashF] = temp
 					if move[3] == None:
 						if 0 in self.killerMovesBlack[depth]:
@@ -1419,12 +1505,18 @@ class Board:
 						self.killerMovesBlack[depth][0] = temp
 					return alpha
 
+				# beta = min(beta, ret)
 				if ret < beta:
 					beta = ret
 					bestMove = move
 
 			# if bestMove:
-			# 	self.zobrist.lookUp[hashF] = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], beta, alpha, beta, bestMove, maxDepth - depth)
+			# 	if ret >= alphaO:
+			# 		TTFlag = 1
+			# 	elif ret <= beta:
+			# 		TTFlag = 2
+			#
+			# 	self.zobrist.lookUp[hashF] = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], beta, alpha, beta, bestMove, maxDepth - depth, TTFlag)
 
 			return beta
 
@@ -1446,6 +1538,11 @@ class Board:
 		hashF = zobrist.hashBoard(bitboard.movePro, useMax)
 		if hashF in zobrist.lookUp:
 			hashedBoard = zobrist.lookUp[hashF]
+			if hashedBoard[6] >= maxDepth - depth:
+				if useMax:
+					return hashedBoard[2], params.TO_NUM[hashedBoard[0]], params.TO_NUM[hashedBoard[1]]
+				else:
+					return hashedBoard[2], params.TO_NUM[hashedBoard[0]], params.TO_NUM[hashedBoard[1]]
 
 		bestMove = None
 
@@ -1466,7 +1563,19 @@ class Board:
 					res = ret
 					bestMove = move
 
-			return res, bestMove[0], bestMove[1]
+				if bestMove == None:
+					bestMove = move
+
+
+
+
+			if bestMove:
+				temp = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], res, 0, 0, bestMove, maxDepth - depth)
+				self.zobrist.lookUp[hashF] = temp
+				return res, bestMove[0], bestMove[1]
+			else:
+				return res, None, None
+
 
 		else:
 			res = m.inf
@@ -1485,18 +1594,42 @@ class Board:
 					res = ret
 					bestMove = move
 
-			return res, bestMove[0], bestMove[1]
+				if bestMove == None:
+					bestMove = move
+
+
+
+			if bestMove:
+				temp = (params.TO_ALG[bestMove[0]], params.TO_ALG[bestMove[1]], res, 0, 0, bestMove, maxDepth - depth)
+				self.zobrist.lookUp[hashF] = temp
+				return res, bestMove[0], bestMove[1]
+			else:
+				return res, None, None
+
 
 	def evaluateBoard(self, boardPos):
 		# res = r.uniform(-0.025, 0.025)
+		res = 0
 		res += boardPos.evaluate()
 		return res
 
 
-
-
+# def engineMove(color):
+#
+# 	co.put("color " + str(color))
+# 	mp = co.search(cfg.white_Max_Depth)
+#
+# 	mp1 = mp[0:2]
+# 	mp2 = mp[2:4]
+#
+# 	return
+#
+# mp1 = ""
+# mp2 = ""
 
 def main():
+
+
 
 	r.seed(datetime.datetime.now())
 	# Get width and height of the board
@@ -1562,14 +1695,50 @@ def main():
 		mm = 0
 		if not cfg.is_playing_white and boardPieces.turn == "white":
 			boardPieces.prevPiece = None
-			mm = boardPieces.minimax('black')
+			co.put("color 1")
+			# if not p:
+			# 	p = multiprocessing.Process(target=engineMove, args=(1,)).start()
+			# elif p:
+			# 	if mp1 != "" and mp2 != "":
+			# 		boardPieces.movePiece(mp1.upper(), mp2.upper())
+			# 		mp1 = ""
+			# 		mp2 = ""
+			if boardPieces.outcomeGame() == 0:
+				mp = co.search(cfg.white_Max_Depth)
+				if mp != "HAHA":
+					mp1 = mp[0:2]
+					mp2 = mp[2:4]
+					print(mp)
+					boardPieces.movePiece(mp1.upper(), mp2.upper())
+			else:
+				mm = 2
+			# mm = boardPieces.minimax('black')
 			chessBoard = colorBoard(height, width, chessBoard, color_side, showValid)
 			boardPieces.show(chessBoard)
 			pg.display.flip()
 		#mm = 0
 		elif not cfg.is_playing_black and boardPieces.turn == "black":
 			boardPieces.prevPiece = None
-			mm = boardPieces.minimax('white')
+			# if not p:
+			# 	p = multiprocessing.Process(target=engineMove, args=(0,)).start()
+			# elif p:
+			# 	if mp1 != "" and mp2 != "":
+			# 		boardPieces.movePiece(mp1.upper(), mp2.upper())
+			# 		mp1 = ""
+			# 		mp2 = ""
+			co.put("color 0")
+			if boardPieces.outcomeGame() == 0:
+				mp = co.search(cfg.black_Max_Depth)
+
+				if mp != "HAHA":
+					mp1 = mp[0:2]
+					mp2 = mp[2:4]
+					print(mp)
+					boardPieces.movePiece(mp1.upper(), mp2.upper())
+			else:
+				mm = 3
+
+			# mm = boardPieces.minimax('white')
 			chessBoard = colorBoard(height, width, chessBoard, color_side, showValid)
 			boardPieces.show(chessBoard)
 			pg.display.flip()
@@ -1589,6 +1758,7 @@ def main():
 			os.system("pause")
 			boardPieces.resetBoard()
 			# crashed = True
+
 
 		clock.tick(144)
 

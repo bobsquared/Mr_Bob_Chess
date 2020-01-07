@@ -17,7 +17,7 @@ class Zobrist:
         occupied = movePro.occupied
         blacks = movePro.blacks
         table = self.table
-        
+
         ret = turn
         for i in range(64):
             if occupied & (1 << i) != 0:
