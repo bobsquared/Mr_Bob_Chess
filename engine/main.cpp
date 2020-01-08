@@ -23,7 +23,7 @@ void printInfo(int depth, std::string move, float branchingFactor, long long int
 
 std::string search(Bitboard &bitboard, int depth, bool color) {
 
-  int branchingFactor = 0;
+  float branchingFactor = 0;
   int prevNodes = 0;
   std::string bestMove = "";
 
@@ -32,6 +32,7 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
     auto t1 = std::chrono::high_resolution_clock::now();
     bestMove = alphabetaRoot(color, bitboard, i, depth);
     auto t2 = std::chrono::high_resolution_clock::now();
+    // std::cout << (double)(pruning) / (double)(pruningTotal) << std::endl;
 
     // bool c = color;
     // for (uint8_t j = 0; j < i; j++) {
@@ -86,12 +87,12 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
     // }
 
 
-    if (branchingFactor == 0) {
+    if (branchingFactor == 0.0) {
       branchingFactor = traversedNodes;
       prevNodes = traversedNodes;
     }
     else {
-      branchingFactor = traversedNodes / prevNodes;
+      branchingFactor = (float)(traversedNodes) / (float)(prevNodes);
       prevNodes = traversedNodes;
     }
 
@@ -102,8 +103,10 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
   }
 
 
-
+  // std::cout << bitboard.lookup.bucket_count() << std::endl;
+  // std::cout << bitboard.lookup.max_size() << std::endl;
   std::cout << "end" << std::endl;
+
   bitboard.lookup.clear();
   return bestMove;
 
@@ -146,7 +149,7 @@ int main() {
     }
 
     if (move.substr(0, 3) == "uci") {
-      std::cout << "id name 'Mr Bob' v0.1" << std::endl;
+      std::cout << "id name 'Mr Bob' v0.1.1" << std::endl;
       std::cout << "id author Vincent Yu" << std::endl;
       std::cout << "uciok" << std::endl;
       continue;

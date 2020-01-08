@@ -10,6 +10,8 @@ class Bitboard{
 
 public:
 
+  const int pieceValues[6] = {10, 30, 30, 50, 90, 2000};
+
   struct Move {
     uint8_t fromLoc;
     uint8_t toLoc;
@@ -32,6 +34,11 @@ public:
     uint8_t flag;
   };
 
+  struct SortMove {
+    Move move;
+    int eval;
+  };
+
   Bitboard();
   void printBoard(uint64_t board);
   void printPretty();
@@ -40,15 +47,18 @@ public:
   std::vector<uint8_t> blackPiecesLoc();
   std::vector<uint8_t> validMovesWhite(uint8_t index);
   std::vector<uint8_t> validMovesBlack(uint8_t index);
+  bool IsMoveWhite(uint8_t index, uint8_t index2);
+  bool IsMoveBlack(uint8_t index, uint8_t index2);
   std::vector<Move> allValidMoves(bool color);
 
   bool isAttacked(uint8_t index, bool color);
   bool filterCheck(bool color);
-  void sortMoves(std::vector<Move> &moveList, Move move, int depth);
+  uint8_t sortMoves(std::vector<Move> &moveList, Move *usedMoves, uint8_t count, Move move, int depth);
   void movePiece(uint8_t index1, uint8_t index2);
   void undoMove();
 
   int evaluate();
+  int evaluateMobility();
 
   uint64_t rookAttacksMask(uint64_t occupations, uint8_t index);
   uint64_t bishopAttacksMask(uint64_t occupations, uint8_t index);
@@ -56,6 +66,7 @@ public:
 
 
   std::unordered_map<uint64_t, ZobristVal> lookup = {}; // Transpostion table
+  // std::vector<ZobristVal> lookup = {}; // Transpostion table
   KillerMove killerMoves[1024][2];  // Killer Moves
   void InsertKiller(Move move, int depth);
   void InsertLookup(Move move, int score, int alpha, int beta, int depth, uint8_t flag, uint64_t key);
@@ -226,6 +237,8 @@ const int LSB_TABLE[64] = {
   uint64_t whites;
   uint64_t blacks;
   uint64_t occupied;
+
+  int materialScore;
 
   std::vector<MoveStack> moveStack = {};
 

@@ -19,8 +19,8 @@ is_playing_white = False # Manual control over white pieces, False = Engine
 is_playing_black = True # Manual control over white pieces, False = Engine
 
 # Engine depth (Obviously, More depth is better, but lower depth is faster)
-white_Max_Depth = 7
-black_Max_Depth = 7
+white_Max_Depth = 8
+black_Max_Depth = 8
 Late_Move_Reduction = 2
 Late_Move_Reduction_Depth = 1
 
