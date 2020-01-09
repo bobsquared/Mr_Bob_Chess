@@ -1496,12 +1496,12 @@ int Bitboard::evaluateMobility() {
   uint64_t bishopsW = whites & pieces[2];
   uint64_t bishopsB = blacks & pieces[2];
   for (uint8_t i = 0; i < count_population(bishopsW); i++) {
-    ret += count_population(bishopAttacksMask(occupied, bitScanF(bishopsW)));
+    ret += count_population(bishopAttacksMask(occupied, bitScanF(bishopsW))) * 1.25;
     bishopsW &= (bishopsW - 1);
   }
 
   for (uint8_t i = 0; i < count_population(bishopsB); i++) {
-    ret -= count_population(bishopAttacksMask(occupied, bitScanF(bishopsB)));
+    ret -= count_population(bishopAttacksMask(occupied, bitScanF(bishopsB))) * 1.25;
     bishopsB &= (bishopsW - 1);
   }
 
@@ -1516,6 +1516,18 @@ int Bitboard::evaluateMobility() {
     ret -= count_population(rookAttacksMask(occupied, bitScanF(rooksB))) / 2;
     rooksB &= (rooksB - 1);
   }
+
+  // uint64_t queensW = whites & pieces[4];
+  // uint64_t queensB = blacks & pieces[4];
+  // for (uint8_t i = 0; i < count_population(queensW); i++) {
+  //   uint8_t c = bitScanF(queensW);
+  //   ret += count_population(rookAttacksMask(occupied, c) | bishopAttacksMask(occupied, c)) / 3.5;
+  // }
+  //
+  // for (uint8_t i = 0; i < count_population(queensW); i++) {
+  //   uint8_t c = bitScanF(queensB);
+  //   ret -= count_population(rookAttacksMask(occupied, c) | bishopAttacksMask(occupied, c)) / 3.5;
+  // }
 
   return ret;
 

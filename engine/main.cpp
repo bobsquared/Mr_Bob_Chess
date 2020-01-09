@@ -32,7 +32,7 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
     auto t1 = std::chrono::high_resolution_clock::now();
     bestMove = alphabetaRoot(color, bitboard, i, depth);
     auto t2 = std::chrono::high_resolution_clock::now();
-    // std::cout << (double)(pruning) / (double)(pruningTotal) << std::endl;
+    std::cout << (double)(pruning) / (double)(pruningTotal) << std::endl;
 
     // bool c = color;
     // for (uint8_t j = 0; j < i; j++) {
@@ -168,6 +168,7 @@ int main() {
     }
 
     if (move.substr(0, 2) == "go") {
+      std::cout << move << std::endl;
       std::regex_search(move, m, r);
       // std::thread th1(search,x,  std::stoi(m[0]), color);
       search(x, std::stoi(m[0]), color);

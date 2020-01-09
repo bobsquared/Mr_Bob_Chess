@@ -11,7 +11,10 @@ import bitboards as b
 import zobrist_hashing as zh
 import config as cfg
 import connector as co
+import subprocess
 import multiprocessing
+import threading, queue
+import asyncio
 
 
 
@@ -1613,22 +1616,66 @@ class Board:
 		res += boardPos.evaluate()
 		return res
 
+# def flipping():
+# 	t = threading.currentThread()
+# 	while getattr(t, "do_run", True):
+		# for event in pg.event.get():
+		# 	if event.type == pg.QUIT:
+		# 		pg.quit()
+		# 		quit()
+		#
+		# pg.display.flip()
 
-# def engineMove(color):
+	# while(threadFlag):
+	# 	for event in pg.event.get():
+	# 		if event.type == pg.QUIT:
+	# 			pg.quit()
+	# 			quit()
+	# 	pg.display.flip()
+
+
+def engineMove(color):
+	# global pgdf
+	# global pgeg
+	# pgdf = pg.display.flip
+	# pgeg = pg.event.get
+	# threadFlag = True;
+	#
+	# t1 = threading.Thread(target=flipping);
+	# t1.daemon=True
+	# t1.start()
+
+	co.put("color " + str(color))
+	mp = ""
+	if color == 1:
+		mp = co.search(cfg.white_Max_Depth)
+	else:
+		mp = co.search(cfg.black_Max_Depth)
+
+	# threadFlag = False;
+	# t1.do_run = False;
+	# t1.join()
+
+
+	return mp
 #
-# 	co.put("color " + str(color))
-# 	mp = co.search(cfg.white_Max_Depth)
-#
-# 	mp1 = mp[0:2]
-# 	mp2 = mp[2:4]
-#
-# 	return
-#
-# mp1 = ""
-# mp2 = ""
+mp1 = ""
+mp2 = ""
+
+
+
+threadFlag = True;
+
+# engine = subprocess.Popen(
+# 	'Mr Bob.exe',
+# 	universal_newlines = True,
+# 	stdin=subprocess.PIPE,
+# 	stdout=subprocess.PIPE,
+# )
+
+
 
 def main():
-
 
 
 	r.seed(datetime.datetime.now())
@@ -1695,7 +1742,14 @@ def main():
 		mm = 0
 		if not cfg.is_playing_white and boardPieces.turn == "white":
 			boardPieces.prevPiece = None
-			co.put("color 1")
+
+			mp = engineMove(1)
+
+			mp1 = mp[0:2]
+			mp2 = mp[2:4]
+
+			boardPieces.movePiece(mp1.upper(), mp2.upper())
+			# co.put("color 1")
 			# if not p:
 			# 	p = multiprocessing.Process(target=engineMove, args=(1,)).start()
 			# elif p:
@@ -1703,22 +1757,30 @@ def main():
 			# 		boardPieces.movePiece(mp1.upper(), mp2.upper())
 			# 		mp1 = ""
 			# 		mp2 = ""
-			if boardPieces.outcomeGame() == 0:
-				mp = co.search(cfg.white_Max_Depth)
-				if mp != "HAHA":
-					mp1 = mp[0:2]
-					mp2 = mp[2:4]
-					print(mp)
-					boardPieces.movePiece(mp1.upper(), mp2.upper())
-			else:
-				mm = 2
+			# if boardPieces.outcomeGame() == 0:
+			# 	engineMove(True)
+			# 	# mp = co.search(cfg.white_Max_Depth)
+			# 	# if mp != "HAHA":
+			# 	mp1 = mp[0:2]
+			# 	mp2 = mp[2:4]
+			# 	print(mp)
+			# 	boardPieces.movePiece(mp1.upper(), mp2.upper())
+			# else:
+			# 	mm = 2
 			# mm = boardPieces.minimax('black')
 			chessBoard = colorBoard(height, width, chessBoard, color_side, showValid)
 			boardPieces.show(chessBoard)
-			pg.display.flip()
 		#mm = 0
 		elif not cfg.is_playing_black and boardPieces.turn == "black":
+
 			boardPieces.prevPiece = None
+
+			mp = engineMove(0)
+
+			mp1 = mp[0:2]
+			mp2 = mp[2:4]
+
+			boardPieces.movePiece(mp1.upper(), mp2.upper())
 			# if not p:
 			# 	p = multiprocessing.Process(target=engineMove, args=(0,)).start()
 			# elif p:
@@ -1726,22 +1788,11 @@ def main():
 			# 		boardPieces.movePiece(mp1.upper(), mp2.upper())
 			# 		mp1 = ""
 			# 		mp2 = ""
-			co.put("color 0")
-			if boardPieces.outcomeGame() == 0:
-				mp = co.search(cfg.black_Max_Depth)
 
-				if mp != "HAHA":
-					mp1 = mp[0:2]
-					mp2 = mp[2:4]
-					print(mp)
-					boardPieces.movePiece(mp1.upper(), mp2.upper())
-			else:
-				mm = 3
 
 			# mm = boardPieces.minimax('white')
 			chessBoard = colorBoard(height, width, chessBoard, color_side, showValid)
 			boardPieces.show(chessBoard)
-			pg.display.flip()
 
 		if mm == 2:
 			print("White wins!")
@@ -1760,6 +1811,7 @@ def main():
 			# crashed = True
 
 
+		pg.display.flip()
 		clock.tick(144)
 
 
@@ -1769,4 +1821,5 @@ def main():
 
 
 if __name__=='__main__':
+	# asyncio.run(main())
     main()
