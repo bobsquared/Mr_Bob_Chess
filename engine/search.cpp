@@ -329,11 +329,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
   int origBeta = beta;
   bool nullMoves = true;
   bool isPV = false;
-  int R = 3 + (depth / 8); // Null move reduction.
-  if (depth < 5) {
-    R = 3;
-  }
-  // std::cout << "depth: " << depth << std::endl;
+  uint8_t R = 3 + (depth / 8); // Null move reduction.
 
   if (depth <= 0) {
     // return quiesceSearch(useMax, bitboard, alpha, beta);
@@ -365,7 +361,6 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
   Bitboard::Move bestMove = Bitboard::Move{};
   Bitboard::Move usedMoves[128];
   uint8_t usedMovesCount = 0;
-
 
   if (useMax) {
 
@@ -630,6 +625,7 @@ std::string alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDep
           bitboard.InsertKiller(move, depth);
         }
         bitboard.InsertLookup(move, ret, alpha, beta, depth, 1, hashF);
+        std::cout << beta << std::endl;
         return bestMove;
       }
 
@@ -644,6 +640,7 @@ std::string alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDep
       bitboard.InsertLookup(bestMoveM, ret, alpha, beta, depth, 0, hashF);
     }
 
+    std::cout << alpha << std::endl;
     return bestMove;
   }
   else {
@@ -684,6 +681,7 @@ std::string alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDep
         }
 
         bitboard.InsertLookup(move, ret, alpha, beta, depth, 2, hashF);
+        std::cout << alpha << std::endl;
         return bestMove;
       }
 
@@ -702,7 +700,7 @@ std::string alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDep
       // bitboard.PVMoves.push_back(bestMove);
 
     }
-
+    std::cout << beta << std::endl;
     return bestMove;
   }
 

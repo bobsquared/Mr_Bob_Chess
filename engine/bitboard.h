@@ -231,6 +231,9 @@ const int LSB_TABLE[64] = {
     int8_t capturePiece;
     bool color;
     bool promote;
+    bool kingMoved;
+    uint8_t rookMoved;
+    uint8_t castled;
   };
 
   std::unordered_map<uint8_t, uint64_t> pieces = {};
@@ -239,8 +242,19 @@ const int LSB_TABLE[64] = {
   uint64_t occupied;
 
   int materialScore;
+  bool kingMovedWhite;
+  bool kingMovedBlack;
+  bool rookMovedWhiteA;
+  bool rookMovedWhiteH;
+  bool rookMovedBlackA;
+  bool rookMovedBlackH;
+  bool whiteCastled;
+  bool blackCastled;
 
   std::vector<MoveStack> moveStack = {};
+
+  bool canCastleQ(bool isWhite);
+  bool canCastleK(bool isWhite);
 
 
 

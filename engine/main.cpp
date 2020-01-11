@@ -26,6 +26,12 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
   float branchingFactor = 0;
   int prevNodes = 0;
   std::string bestMove = "";
+  std::cout << "Evaluation: " << bitboard.evaluate() << std::endl;
+  std::vector<Bitboard::Move> mrMoves = bitboard.allValidMoves(1);
+  for (Bitboard::Move mrMove : mrMoves) {
+    std::cout << TO_ALG[mrMove.fromLoc] << TO_ALG[mrMove.toLoc] << " ";
+  }
+  std::cout << std::endl;
 
   for (uint8_t i = 1; i < depth + 1; i++) {
 
@@ -33,7 +39,8 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
     bestMove = alphabetaRoot(color, bitboard, i, depth);
     auto t2 = std::chrono::high_resolution_clock::now();
     std::cout << (double)(pruning) / (double)(pruningTotal) << std::endl;
-
+    pruning = 0;
+    pruningTotal = 0;
     // bool c = color;
     // for (uint8_t j = 0; j < i; j++) {
     //   std::string bestMovePV = alphabetaRoot(c, bitboard, j + 1);
@@ -187,6 +194,16 @@ int main() {
 
     if (move.substr(0, 4) == "undo") {
       x.undoMove();
+      continue;
+    }
+
+    if (move.substr(0, 11) == "white moves") {
+
+      std::vector<Bitboard::Move> mrMoves = x.allValidMoves(0);
+      for (Bitboard::Move mrMove : mrMoves) {
+        std::cout << TO_ALG[mrMove.fromLoc] << TO_ALG[mrMove.toLoc] << " ";
+      }
+      std::cout << std::endl;
       continue;
     }
 

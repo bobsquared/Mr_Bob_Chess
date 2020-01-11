@@ -35,6 +35,16 @@ Bitboard::Bitboard() {
   // lookup.rehash(357913941);
   materialScore = 0;
 
+  kingMovedWhite = false;
+  kingMovedBlack = false;
+  rookMovedWhiteA = false;
+  rookMovedWhiteH = false;
+  rookMovedBlackA = false;
+  rookMovedBlackH = false;
+
+  whiteCastled = false;
+  blackCastled = false;
+
   InitWhitePawnMoves();
   InitBlackPawnMoves();
   InitKnightMoves();
@@ -1066,6 +1076,7 @@ std::vector<uint8_t> Bitboard::validMovesWhite(uint8_t index) {
   }
   else if ((pieces[4] & whitesIndex) != 0) {
     uint64_t base = (bishopAttacksMask(occupied, index) | rookAttacksMask(occupied, index)) & ~whites;
+
     while (base != 0) {
       uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
       base ^= 1ULL << toApp;
@@ -1075,6 +1086,15 @@ std::vector<uint8_t> Bitboard::validMovesWhite(uint8_t index) {
   }
   else if ((pieces[5] & whitesIndex) != 0) {
     uint64_t base = kingMoves[index] & ~whites;
+
+    if (canCastleK(true)) {
+        ret.push_back(6);
+    }
+
+    if (canCastleQ(true)) {
+        ret.push_back(2);
+    }
+
     while (base != 0) {
       uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
       base ^= 1ULL << toApp;
@@ -1180,6 +1200,15 @@ std::vector<uint8_t>  Bitboard::validMovesBlack(uint8_t index) {
   }
   else if ((pieces[5] & blacksIndex) != 0) {
     uint64_t base = kingMoves[index] & ~blacks;
+
+    if (canCastleK(false)) {
+        ret.push_back(62);
+    }
+
+    if (canCastleQ(false)) {
+        ret.push_back(58);
+    }
+
     while (base != 0) {
       uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
       base ^= 1ULL << toApp;
@@ -1271,29 +1300,98 @@ void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
 
     if (whites & i1) {
       whites ^= i1i2;
+      uint8_t rookTypeMoved = 0;
+      uint8_t castled = 0;
+      bool kingMoved = false;
+
+      if (i == 5 && !kingMovedWhite && index2 == 6) {
+        whites ^= (1ULL << 7) | (1ULL << 5);
+        pieces[3] ^= (1ULL << 7) | (1ULL << 5);
+        occupied ^= (1ULL << 7) | (1ULL << 5);
+        whiteCastled = true;
+        castled = 1;
+      }
+
+      if (i == 5 && !kingMovedWhite && index2 == 2) {
+        whites ^= 1ULL | (1ULL << 3);
+        pieces[3] ^= 1ULL | (1ULL << 3);
+        occupied ^= 1ULL | (1ULL << 3);
+        whiteCastled = true;
+        castled = 2;
+      }
+
+      if (i == 5 && !kingMovedWhite) {
+        kingMovedWhite = true;
+        kingMoved = true;
+      }
+
+      if (i == 3 && !rookMovedWhiteA && index1 == 0) {
+        rookMovedWhiteA = true;
+        rookTypeMoved = 1;
+      }
+
+      if (i == 3 && !rookMovedWhiteH && index1 == 7) {
+        rookMovedWhiteH = true;
+        rookTypeMoved = 2;
+      }
+
 
       if (i == 0 && index2 > 55) {
         pieces[i] ^= i2;
         pieces[4] ^= i2;
-        moveStack.push_back((MoveStack){i1, i2, i, -1, 0, true});
+        moveStack.push_back((MoveStack){i1, i2, i, -1, 0, true, kingMoved, rookTypeMoved, castled});
         materialScore += pieceValues[4] - pieceValues[0];
       }
       else {
-        moveStack.push_back((MoveStack){i1, i2, i, -1, 0, false});
+        moveStack.push_back((MoveStack){i1, i2, i, -1, 0, false, kingMoved, rookTypeMoved, castled});
       }
 
     }
     else if (blacks & i1) {
       blacks ^= i1i2;
+      uint8_t rookTypeMoved = 0;
+      uint8_t castled = 0;
+      bool kingMoved = false;
+
+      if (i == 5 && !kingMovedBlack && index2 == 62) {
+        blacks ^= (1ULL << 63) | (1ULL << 61);
+        pieces[3] ^= (1ULL << 63) | (1ULL << 61);
+        occupied ^= (1ULL << 63) | (1ULL << 61);
+        blackCastled = true;
+        castled = 3;
+      }
+
+      if (i == 5 && !kingMovedBlack && index2 == 58) {
+        blacks ^= (1ULL << 56) | (1ULL << 59);
+        pieces[3] ^= (1ULL << 56) | (1ULL << 59);
+        occupied ^= (1ULL << 56) | (1ULL << 59);
+        blackCastled = true;
+        castled = 4;
+      }
+
+      if (i == 5 && !kingMovedBlack) {
+        kingMovedBlack = true;
+        kingMoved = true;
+      }
+
+      if (i == 3 && !rookMovedBlackA && index1 == 56) {
+        rookMovedBlackA = true;
+        rookTypeMoved = 3;
+      }
+
+      if (i == 3 && !rookMovedBlackH && index1 == 63) {
+        rookMovedBlackH = true;
+        rookTypeMoved = 4;
+      }
 
       if (i == 0 && index2 < 8) {
         pieces[i] ^= i2;
         pieces[4] ^= i2;
-        moveStack.push_back((MoveStack){i1, i2, i, -1, 1, true});
+        moveStack.push_back((MoveStack){i1, i2, i, -1, 1, true, kingMoved, rookTypeMoved, castled});
         materialScore -= pieceValues[4] - pieceValues[0];
       }
       else {
-        moveStack.push_back((MoveStack){i1, i2, i, -1, 1, false});
+        moveStack.push_back((MoveStack){i1, i2, i, -1, 1, false, kingMoved, rookTypeMoved, castled});
       }
 
 
@@ -1305,6 +1403,8 @@ void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
 
     if (whites & i1) {
       whites ^= i1i2;
+      uint8_t rookTypeMoved = 0;
+      bool kingMoved = false;
 
       if (blacks & i2) {
         int8_t k = -1;
@@ -1332,14 +1432,29 @@ void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
         pieces[k] ^= i2;
         blacks ^= i2;
 
+        if (i == 5 && !kingMovedWhite) {
+          kingMovedWhite = true;
+          kingMoved = true;
+        }
+
+        if (i == 3 && !rookMovedWhiteA && index1 == 0) {
+          rookMovedWhiteA = true;
+          rookTypeMoved = 1;
+        }
+
+        if (i == 3 && !rookMovedWhiteH && index1 == 7) {
+          rookMovedWhiteH = true;
+          rookTypeMoved = 2;
+        }
+
         if (i == 0 && index2 > 55) {
           pieces[i] ^= i2;
           pieces[4] ^= i2;
-          moveStack.push_back((MoveStack){i1, i2, i, k, 0, true});
+          moveStack.push_back((MoveStack){i1, i2, i, k, 0, true, kingMoved, rookTypeMoved ,0});
           materialScore += pieceValues[4] - pieceValues[0];
         }
         else {
-          moveStack.push_back((MoveStack){i1, i2, i, k, 0, false});
+          moveStack.push_back((MoveStack){i1, i2, i, k, 0, false, kingMoved, rookTypeMoved ,0});
         }
 
         materialScore += pieceValues[k];
@@ -1352,6 +1467,9 @@ void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
     }
     else if (blacks & i1) {
       blacks ^= i1i2;
+      uint8_t rookTypeMoved = 0;
+      bool kingMoved = false;
+
       if (whites & i2) {
         int8_t k = -1;
         if ((pieces[0] & i2) != 0) {
@@ -1378,15 +1496,30 @@ void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
         pieces[k] ^= i2;
         whites ^= i2;
 
+        if (i == 5 && !kingMovedBlack) {
+          kingMovedBlack = true;
+          kingMoved = true;
+        }
+
+        if (i == 3 && !rookMovedBlackA && index1 == 56) {
+          rookMovedBlackA = true;
+          rookTypeMoved = 3;
+        }
+
+        if (i == 3 && !rookMovedBlackH && index1 == 63) {
+          rookMovedBlackH = true;
+          rookTypeMoved = 4;
+        }
+
 
         if (i == 0 && index2 < 8) {
           pieces[i] ^= i2;
           pieces[4] ^= i2;
-          moveStack.push_back((MoveStack){i1, i2, i, k, 1, true});
+          moveStack.push_back((MoveStack){i1, i2, i, k, 1, true, kingMoved, rookTypeMoved ,0});
           materialScore -= pieceValues[4] - pieceValues[0];
         }
         else {
-          moveStack.push_back((MoveStack){i1, i2, i, k, 1, false});
+          moveStack.push_back((MoveStack){i1, i2, i, k, 1, false, kingMoved, rookTypeMoved ,0});
         }
 
         materialScore -= pieceValues[k];
@@ -1416,7 +1549,57 @@ void Bitboard::undoMove() {
   int8_t capturePiece = m.capturePiece;
   bool promotion = m.promote;
 
+  bool kingMoved = m.kingMoved;
+  uint8_t rookMoved = m.rookMoved;
+  uint8_t castled = m.castled;
+
   uint64_t i1i2 = fromLoc ^ toLoc;
+
+  if (castled == 1) {
+    whites ^= (1ULL << 7) | (1ULL << 5);
+    pieces[3] ^= (1ULL << 7) | (1ULL << 5);
+    occupied ^= (1ULL << 7) | (1ULL << 5);
+    whiteCastled = false;
+  }
+  else if (castled == 2) {
+    whites ^= 1ULL | (1ULL << 3);
+    pieces[3] ^= 1ULL | (1ULL << 3);
+    occupied ^= 1ULL | (1ULL << 3);
+    whiteCastled = false;
+  }
+  else if (castled == 3) {
+    blacks ^= (1ULL << 63) | (1ULL << 61);
+    pieces[3] ^= (1ULL << 63) | (1ULL << 61);
+    occupied ^= (1ULL << 63) | (1ULL << 61);
+    blackCastled = false;
+  }
+  else if (castled == 4) {
+    blacks ^= (1ULL << 56) | (1ULL << 59);
+    pieces[3] ^= (1ULL << 56) | (1ULL << 59);
+    occupied ^= (1ULL << 56) | (1ULL << 59);
+    blackCastled = false;
+  }
+
+  if (kingMoved && !m.color) {
+    kingMovedWhite = false;
+  }
+  else if (kingMoved && m.color) {
+    kingMovedBlack = false;
+  }
+
+  if (rookMoved == 1) {
+    rookMovedWhiteA = false;
+  }
+  else if (rookMoved == 2) {
+    rookMovedWhiteH = false;
+  }
+  else if (rookMoved == 3) {
+    rookMovedBlackA = false;
+  }
+  else if (rookMoved == 4) {
+    rookMovedBlackH = false;
+  }
+
 
   if (toLoc != fromLoc) {
     pieces[movePiece] ^= i1i2;
@@ -1481,6 +1664,12 @@ int Bitboard::evaluate() {
   // ret -= count_population(pieces[5] & blacks) * 2000;
 
   ret += evaluateMobility();
+  if (whiteCastled) {
+    ret += 8;
+  }
+  if (blackCastled) {
+    ret -= 8;
+  }
 
 
 
@@ -1637,261 +1826,154 @@ uint64_t Bitboard::hashBoard(bool turn) {
   return zobrist.hashBoard(pieces, occupied, blacks, turn);
 }
 
-
-
-
-// Classical approach : https://www.chessprogramming.org/Classical_Approach
-// For single pieces (super kings)
-uint64_t Bitboard::CRayAttacksN(uint64_t occupation, uint64_t index) {
-
-  uint64_t attacks = rayAttacks[0][index];
-  uint64_t blocker = attacks & occupied;
-  if (blocker) {
-    attacks ^= rayAttacks[0][1ULL << bitScanR(blocker)];
+bool Bitboard::canCastleQ(bool isWhite) {
+  if (isWhite) {
+    uint64_t canNotBeAttacked = 14ULL & occupied;
+    if (!kingMovedWhite && !rookMovedWhiteA && canNotBeAttacked == 0 && isAttacked(4, 0) && isAttacked(3, 0) && isAttacked(2, 0)) {
+      return true;
+    }
+  }
+  else {
+    uint64_t canNotBeAttacked = 1008806316530991104ULL & occupied;
+    if (!kingMovedBlack && !rookMovedBlackA && canNotBeAttacked == 0 && isAttacked(60, 1) && isAttacked(59, 1) && isAttacked(58, 1)) {
+      return true;
+    }
   }
 
-  return attacks;
-
+  return false;
 }
 
-// Classical approach : https://www.chessprogramming.org/Classical_Approach
-// For single pieces (super kings)
-uint64_t Bitboard::CRayAttacksNE(uint64_t occupation, uint64_t index) {
-
-  uint64_t attacks = rayAttacks[1][index];
-  uint64_t blocker = attacks & occupied;
-  if (blocker) {
-    attacks ^= rayAttacks[1][1ULL << bitScanF(blocker)];
+bool Bitboard::canCastleK(bool isWhite) {
+  if (isWhite) {
+    uint64_t canNotBeAttacked = 96ULL & occupied;
+    if (!kingMovedWhite && !rookMovedWhiteH && canNotBeAttacked == 0 && isAttacked(4, 0) && isAttacked(5, 0) && isAttacked(6, 0)) {
+      return true;
+    }
+  }
+  else {
+    uint64_t canNotBeAttacked = 6917529027641081856ULL & occupied;
+    if (!kingMovedBlack && !rookMovedBlackH && canNotBeAttacked == 0 && isAttacked(60, 1) && isAttacked(61, 1) && isAttacked(62, 1)) {
+      return true;
+    }
   }
 
-  return attacks;
-
-}
-
-// Classical approach : https://www.chessprogramming.org/Classical_Approach
-// For single pieces (super kings)
-uint64_t Bitboard::CRayAttacksE(uint64_t occupation, uint64_t index) {
-
-  uint64_t attacks = rayAttacks[2][index];
-  uint64_t blocker = attacks & occupied;
-  if (blocker) {
-    attacks ^= rayAttacks[2][1ULL << bitScanF(blocker)];
-  }
-
-  return attacks;
-
-}
-
-// Classical approach : https://www.chessprogramming.org/Classical_Approach
-// For single pieces (super kings)
-uint64_t Bitboard::CRayAttacksSE(uint64_t occupation, uint64_t index) {
-
-  uint64_t attacks = rayAttacks[3][index];
-  uint64_t blocker = attacks & occupied;
-  if (blocker) {
-    attacks ^= rayAttacks[3][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
-  }
-
-  return attacks;
-
-}
-
-// Classical approach : https://www.chessprogramming.org/Classical_Approach
-// For single pieces (super kings)
-uint64_t Bitboard::CRayAttacksS(uint64_t occupation, uint64_t index) {
-
-  uint64_t attacks = rayAttacks[4][index];
-  uint64_t blocker = attacks & occupied;
-  if (blocker) {
-    attacks ^= rayAttacks[4][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
-  }
-
-  return attacks;
-
-}
-
-// Classical approach : https://www.chessprogramming.org/Classical_Approach
-// For single pieces (super kings)
-uint64_t Bitboard::CRayAttacksSW(uint64_t occupation, uint64_t index) {
-
-  uint64_t attacks = rayAttacks[5][index];
-  uint64_t blocker = attacks & occupied;
-  if (blocker) {
-    attacks ^= rayAttacks[5][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
-  }
-
-  return attacks;
-
-}
-
-// Classical approach : https://www.chessprogramming.org/Classical_Approach
-// For single pieces (super kings)
-uint64_t Bitboard::CRayAttacksW(uint64_t occupation, uint64_t index) {
-
-  uint64_t attacks = rayAttacks[6][index];
-  uint64_t blocker = attacks & occupied;
-  if (blocker) {
-    attacks ^= rayAttacks[6][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
-  }
-
-  return attacks;
-
-}
-
-// Classical approach : https://www.chessprogramming.org/Classical_Approach
-// For single pieces (super kings)
-uint64_t Bitboard::CRayAttacksNW(uint64_t occupation, uint64_t index) {
-
-  uint64_t attacks = rayAttacks[7][index];
-  uint64_t blocker = attacks & occupied;
-  if (blocker) {
-    attacks ^= rayAttacks[7][1ULL << bitScanF(blocker)];
-  }
-
-  return attacks;
-
-}
-
-
-// Adapted from https://www.chessprogramming.org/DirGolem
-// Basically line by line while modifying it to fit code.
-void Bitboard::test() {
-
-  // uint64_t whiteKing = pieces[5] & whites;
-  // uint64_t blackPawns = pieces[0] & blacks;
-  // uint64_t blackRooks = pieces[3] & blacks;
-  // uint64_t blackBishops = pieces[2] & blacks;
-  // uint64_t blackQueens = pieces[4] & blacks;
-  //
-  // uint64_t blackAttacks = dumb7FloodingW(blackRooks | blackQueens, occupied ^ whiteKing);
-  // uint64_t blackAnyAttacks = blackAttacks;
-  // uint64_t whiteSupers = CRayAttacksE(whiteKing, occupied);
-  // uint64_t whiteSupersR = whiteSupers;
-  // uint64_t betweenH = whiteSupers & blackAttacks;
-  //
-  // blackAttacks = dumb7FloodingE(blackRooks | blackQueens, occupied ^ whiteKing);
-  // blackAnyAttacks |= blackAttacks;
-  // whiteSupers = CRayAttacksW(whiteKing, occupied);
-  // whiteSupersR |= whiteSupers;
-  // betweenH |= whiteSupers & blackAttacks;
-  //
-  // blackAttacks = dumb7FloodingN(blackRooks | blackQueens, occupied ^ whiteKing);
-  // blackAnyAttacks |= blackAttacks;
-  // whiteSupers = CRayAttacksS(whiteKing, occupied);
-  // whiteSupersR |= whiteSupers;
-  // uint64_t betweenV = whiteSupers & blackAttacks;
-  //
-  // blackAttacks = dumb7FloodingS(blackRooks | blackQueens, occupied ^ whiteKing);
-  // blackAnyAttacks |= blackAttacks;
-  // whiteSupers = CRayAttacksN(whiteKing, occupied);
-  // whiteSupersR |= whiteSupers;
-  // betweenV |= whiteSupers & blackAttacks;
-  //
-  // blackAttacks = dumb7FloodingNE(blackBishops | blackQueens, occupied ^ whiteKing);
-  // blackAnyAttacks |= blackAttacks;
-  // whiteSupers = CRayAttacksSW(whiteKing, occupied);
-  // uint64_t whiteSupersB = whiteSupers;
-  // uint64_t betweenD = whiteSupers & blackAttacks;
-  //
-  // blackAttacks = dumb7FloodingSW(blackBishops | blackQueens, occupied ^ whiteKing);
-  // blackAnyAttacks |= blackAttacks;
-  // whiteSupers = CRayAttacksNE(whiteKing, occupied);
-  // whiteSupersB |= whiteSupers;
-  // betweenD |= whiteSupers & blackAttacks;
-  //
-  // blackAttacks = dumb7FloodingNW(blackBishops | blackQueens, occupied ^ whiteKing);
-  // blackAnyAttacks |= blackAttacks;
-  // whiteSupers = CRayAttacksSE(whiteKing, occupied);
-  // whiteSupersB |= whiteSupers;
-  // uint64_t betweenA = whiteSupers & blackAttacks;
-  //
-  // blackAttacks = dumb7FloodingSE(blackBishops | blackQueens, occupied ^ whiteKing);
-  // blackAnyAttacks |= blackAttacks;
-  // whiteSupers = CRayAttacksNW(whiteKing, occupied);
-  // whiteSupersB |= whiteSupers;
-  // betweenA |= whiteSupers & blackAttacks;
-  //
-  // blackAnyAttacks |= pawnAttacksBlack(pieces[0] & blacks);
-  // blackAnyAttacks |= knightAttacks(pieces[1] & blacks);
-  // blackAnyAttacks |= kingMoves[bitScanF(pieces[5] & blacks)];
-  //
-  // uint64_t allBetween = betweenH | betweenV | betweenA | betweenD;
-  // uint64_t blocks = allBetween & ~occupied;
-  // uint64_t checkFrom = (whiteSupersR & (blackRooks | blackQueens)) | (whiteSupersB & (blackBishops | blackQueens)) | (knightAttacks(whiteKing) & blackKnights) | (pawnAttacksWhite(whiteKing) & blackPawns);
-  //
-  // int64_t nullIfCheck = ((int64_t)(blackAnyAttacks & whiteKing) - 1) >> 63;
-  // int64_t nullIfDoubleCheck = ((int64_t)(checkFrom & (checkFrom - 1)) - 1) >> 63;
-  //
-  // uint64_t checkTo = checkFrom | blocks | nullIfCheck;
-  // uint64_t targetMask = ~whites & checkTo & nullIfDoubleCheck;
-  // checkFrom = ()
-
-
-
-  /* horizontal rook and queen moves */
-  // uint64_t sliders = (whiteRooks | whiteQueens) & ~(allBetween ^ betweenH);
-  // m_moveTargets[eWest] = dumb7FloodingW (sliders, occupied) & targetMask;
-  // m_moveTargets[eEast] = dumb7FloodingE (sliders, occupied) & targetMask;
-  // /* vertical rook and queen moves*/
-  // sliders = (whiteRooks | whiteQueens) & ~(allBetween ^ betweenV);
-  // m_moveTargets[eNort] = dumb7FloodingN (sliders, occupied) & targetMask;
-  // m_moveTargets[eSout] = dumb7FloodingS (sliders, occupied) & targetMask;
-  // /* diagonal bishop and queen moves */
-  // sliders = (whiteBishops | whiteQueens) & ~(allBetween ^ betweenD);
-  // m_moveTargets[eNoEa] = dumb7FloodingNE (sliders, occupied) & targetMask;
-  // m_moveTargets[eSoWe] = dumb7FloodingSW (sliders, occupied) & targetMask;
-  // /* antidiagonal bishop and queen moves */
-  // sliders = (whiteBishops | whiteQueens) & ~(allBetween ^ betweenA);
-  // m_moveTargets[eNoWe] = dumb7FloodingNW (sliders, occupied) & targetMask;
-  // m_moveTargets[eSoEa] = dumb7FloodingSE (sliders, occupied) & targetMask;
-  //
-  // /* knight moves */
-  // _knights = m_wKnights & ~allInbetween;
-  // m_moveTargets[eNoNoEa] = noNoEa(_knights) & targetMask;
-  // m_moveTargets[eNoEaEa] = noEaEa(_knights) & targetMask;
-  // m_moveTargets[eSoEaEa] = soEaEa(_knights) & targetMask;
-  // m_moveTargets[eSoSoEa] = soSoEa(_knights) & targetMask;
-  // m_moveTargets[eNoNoWe] = noNoWe(_knights) & targetMask;
-  // m_moveTargets[eNoWeWe] = noWeWe(_knights) & targetMask;
-  // m_moveTargets[eSoWeWe] = soWeWe(_knights) & targetMask;
-  // m_moveTargets[eSoSoWe] = soSoWe(_knights) & targetMask;
-  // /* pawn captures and en passant */
-  // _targets = ( m_bPieces & targetMask) | (C64(1) << m_epTarget);
-  // _pawns   = m_wPans & ~(allInbetween ^ diaInbetween);
-  // m_moveTargets[eNoEa] |=  noEaOne (_pawns) & _targets ;
-  // _pawns   = m_wPans & ~(allInbetween ^ antInbetween);
-  // m_moveTargets[eNoWe] |= noWeOne(_pawns) & _targets;
-  // /* pawn pushes ... */
-  // _pawns   = m_wPans  & ~(allInbetween ^ verInbetween);
-  // _pawnPushs = nortOne (_pawns) & ~m_occ;
-  // m_moveTargets[eNort] |= _pawnPushs & targetMask;
-  // /* and double pushs */
-  // _rank4 = C64(0x00000000FF000000);
-  // m_moveTargets[eNort] |= nortOne (_pawnPushs) & ~m_occ & targetMask & _rank4;
-  // /* king moves */
-  // targetMask = ~(m_wPieces | bAnyAttacks);
-  // m_moveTargets[eWest] |= westOne (m_wKbb) & targetMask;
-  // m_moveTargets[eEast] |= eastOne (m_wKbb) & targetMask;
-  // m_moveTargets[eNort] |= nortOne (m_wKbb) & targetMask;
-  // m_moveTargets[eSout] |= soutOne (m_wKbb) & targetMask;
-  // m_moveTargets[eNoEa] |= noEaOne (m_wKbb) & targetMask;
-  // m_moveTargets[eSoWe] |= soWeOne (m_wKbb) & targetMask;
-  // m_moveTargets[eNoWe] |= noWeOne (m_wKbb) & targetMask;
-  // m_moveTargets[eSoEa] |= soEaOne (m_wKbb) & targetMask;
-
-
+  return false;
 }
 
 
 
 
-
-
-
-
-
-
-
+// // Classical approach : https://www.chessprogramming.org/Classical_Approach
+// // For single pieces (super kings)
+// uint64_t Bitboard::CRayAttacksN(uint64_t occupation, uint64_t index) {
+//
+//   uint64_t attacks = rayAttacks[0][index];
+//   uint64_t blocker = attacks & occupied;
+//   if (blocker) {
+//     attacks ^= rayAttacks[0][1ULL << bitScanR(blocker)];
+//   }
+//
+//   return attacks;
+//
+// }
+//
+// // Classical approach : https://www.chessprogramming.org/Classical_Approach
+// // For single pieces (super kings)
+// uint64_t Bitboard::CRayAttacksNE(uint64_t occupation, uint64_t index) {
+//
+//   uint64_t attacks = rayAttacks[1][index];
+//   uint64_t blocker = attacks & occupied;
+//   if (blocker) {
+//     attacks ^= rayAttacks[1][1ULL << bitScanF(blocker)];
+//   }
+//
+//   return attacks;
+//
+// }
+//
+// // Classical approach : https://www.chessprogramming.org/Classical_Approach
+// // For single pieces (super kings)
+// uint64_t Bitboard::CRayAttacksE(uint64_t occupation, uint64_t index) {
+//
+//   uint64_t attacks = rayAttacks[2][index];
+//   uint64_t blocker = attacks & occupied;
+//   if (blocker) {
+//     attacks ^= rayAttacks[2][1ULL << bitScanF(blocker)];
+//   }
+//
+//   return attacks;
+//
+// }
+//
+// // Classical approach : https://www.chessprogramming.org/Classical_Approach
+// // For single pieces (super kings)
+// uint64_t Bitboard::CRayAttacksSE(uint64_t occupation, uint64_t index) {
+//
+//   uint64_t attacks = rayAttacks[3][index];
+//   uint64_t blocker = attacks & occupied;
+//   if (blocker) {
+//     attacks ^= rayAttacks[3][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
+//   }
+//
+//   return attacks;
+//
+// }
+//
+// // Classical approach : https://www.chessprogramming.org/Classical_Approach
+// // For single pieces (super kings)
+// uint64_t Bitboard::CRayAttacksS(uint64_t occupation, uint64_t index) {
+//
+//   uint64_t attacks = rayAttacks[4][index];
+//   uint64_t blocker = attacks & occupied;
+//   if (blocker) {
+//     attacks ^= rayAttacks[4][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
+//   }
+//
+//   return attacks;
+//
+// }
+//
+// // Classical approach : https://www.chessprogramming.org/Classical_Approach
+// // For single pieces (super kings)
+// uint64_t Bitboard::CRayAttacksSW(uint64_t occupation, uint64_t index) {
+//
+//   uint64_t attacks = rayAttacks[5][index];
+//   uint64_t blocker = attacks & occupied;
+//   if (blocker) {
+//     attacks ^= rayAttacks[5][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
+//   }
+//
+//   return attacks;
+//
+// }
+//
+// // Classical approach : https://www.chessprogramming.org/Classical_Approach
+// // For single pieces (super kings)
+// uint64_t Bitboard::CRayAttacksW(uint64_t occupation, uint64_t index) {
+//
+//   uint64_t attacks = rayAttacks[6][index];
+//   uint64_t blocker = attacks & occupied;
+//   if (blocker) {
+//     attacks ^= rayAttacks[6][1ULL << MSB_TABLE[((blocker ^ (blocker - 1)) * 0x03f79d71b4cb0a89) >> 58]];
+//   }
+//
+//   return attacks;
+//
+// }
+//
+// // Classical approach : https://www.chessprogramming.org/Classical_Approach
+// // For single pieces (super kings)
+// uint64_t Bitboard::CRayAttacksNW(uint64_t occupation, uint64_t index) {
+//
+//   uint64_t attacks = rayAttacks[7][index];
+//   uint64_t blocker = attacks & occupied;
+//   if (blocker) {
+//     attacks ^= rayAttacks[7][1ULL << bitScanF(blocker)];
+//   }
+//
+//   return attacks;
+//
+// }
 
 
 
