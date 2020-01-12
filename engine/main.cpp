@@ -27,12 +27,6 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
   float branchingFactor = 0;
   int prevNodes = 0;
   std::string bestMove = "";
-  std::cout << "Evaluation: " << bitboard.evaluate() << std::endl;
-  std::vector<Bitboard::Move> mrMoves = bitboard.allValidMoves(1);
-  for (Bitboard::Move mrMove : mrMoves) {
-    std::cout << TO_ALG[mrMove.fromLoc] << TO_ALG[mrMove.toLoc] << " ";
-  }
-  std::cout << std::endl;
 
   for (uint8_t i = 1; i < depth + 1; i++) {
 
