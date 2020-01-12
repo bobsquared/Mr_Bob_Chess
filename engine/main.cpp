@@ -26,67 +26,26 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
 
   float branchingFactor = 0;
   int prevNodes = 0;
+  std::string prevBestMove = "";
   std::string bestMove = "";
 
   for (uint8_t i = 1; i < depth + 1; i++) {
-
+    if (exit_thread_flag) {
+      bestMove = prevBestMove;
+      break;
+    }
     auto t1 = std::chrono::high_resolution_clock::now();
     bestMove = alphabetaRoot(color, bitboard, i, depth);
+
+    if (!exit_thread_flag) {
+      prevBestMove = bestMove;
+    }
+
+
     auto t2 = std::chrono::high_resolution_clock::now();
     std::cout << (double)(pruning) / (double)(pruningTotal) << std::endl;
     pruning = 0;
     pruningTotal = 0;
-    // bool c = color;
-    // for (uint8_t j = 0; j < i; j++) {
-    //   std::string bestMovePV = alphabetaRoot(c, bitboard, j + 1);
-    //   c = !c;
-    //   std::cout << bestMovePV << " ";
-    //
-    //   std::string bestMoveNum1 = bestMovePV.substr(0, 2);
-    //   std::string bestMoveNum2 = bestMovePV.substr(2, 2);
-    //   bitboard.movePiece(TO_NUM[bestMoveNum1], TO_NUM[bestMoveNum2]);
-    //
-    // }
-    //
-    // for (uint8_t j = 0; j < i; j++) {
-    //   bitboard.undoMove();
-    //
-    // }
-
-
-    // std::string bestMoveNum1 = bestMove.substr(0, 2);
-    // std::string bestMoveNum2 = bestMove.substr(2, 2);
-    // std::cout << bestMoveNum1 << bestMoveNum2 << unsigned(TO_NUM[bestMoveNum1]) << unsigned(TO_NUM[bestMoveNum2]) << std::endl;
-    // bitboard.movePiece(TO_NUM[bestMoveNum1], TO_NUM[bestMoveNum1]);
-    //
-    // bitboard.PVMoves.push_back(Bitboard::Move{TO_NUM[bestMoveNum1], TO_NUM[bestMoveNum2]});
-    // std::cout << TO_ALG[bitboard.PVMoves[0].fromLoc] << TO_ALG[bitboard.PVMoves[0].toLoc] << " ";
-    //
-    // bool c = color;
-    // uint64_t hashF = bitboard.hashBoard(c);
-    // c = !c;
-    // int toundo = 1;
-    //
-    // while (bitboard.lookup.find(hashF) != bitboard.lookup.end()) {
-    //   std::cout << "hey" << std::endl;
-    //   bitboard.PVMoves.push_back(bitboard.lookup[hashF].move);
-    //
-    //
-    //   bitboard.movePiece(bitboard.lookup[hashF].move.fromLoc, bitboard.lookup[hashF].move.toLoc);
-    //   hashF = bitboard.hashBoard(c);
-    //   c = !c;
-    //   toundo++;
-    // }
-
-
-    // for (uint64_t j = 0; j < bitboard.PVMoves.size(); j++) {
-    //   std::cout << TO_ALG[bitboard.PVMoves[i].fromLoc] << TO_ALG[bitboard.PVMoves[i].toLoc] << " ";
-    // }
-    // std::cout << std::endl;
-    //
-    // if (bitboard.PVMoves.size() > 0){
-    //   bitboard.PVMoves.clear();
-    // }
 
 
     if (branchingFactor == 0.0) {
@@ -104,7 +63,9 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
 
   }
 
-
+  if (exit_thread_flag) {
+    bestMove = prevBestMove;
+  }
   // std::cout << bitboard.lookup.bucket_count() << std::endl;
   // std::cout << bitboard.lookup.max_size() << std::endl;
   std::cout << "end" << std::endl;
@@ -141,6 +102,7 @@ int main() {
 
   std::regex r("\\d+");
   bool color = true;
+  std::thread th1;
 
   // std::vector<Bitboard::Move> moves = x.allValidMoves(1);
   // x.sortMoves(moves, (Bitboard::Move){53, 37});
@@ -180,18 +142,26 @@ int main() {
       continue;
     }
 
+    if (move.substr(0, 11) == "stop") {
+      exit_thread_flag = true;
+      th1.join();
+      exit_thread_flag = false;
+      continue;
+    }
+
     if (move.substr(0, 11) == "go infinite") {
       // std::thread th1(search,x,  std::stoi(m[0]), color);
-      search(x, 512, color);
+      th1 = std::thread(search, std::ref(x),  512, color);
       continue;
     }
 
     if (move.substr(0, 2) == "go") {
       std::cout << move << std::endl;
       std::regex_search(move, m, r);
-      // std::thread th1(search,x,  std::stoi(m[0]), color);
+      th1 = std::thread(search, std::ref(x),  std::stoi(m[0]), color);
+      th1.join();
       // search(x, std::stoi(m[0]), color);
-      search(x, 10, color);
+      // search(x, 10, color);
       continue;
     }
 
@@ -232,12 +202,12 @@ int main() {
       continue;
     }
 
-    if (move.length() >= 4) {
-      std::string loc = move.substr(0, 2);
-      std::string loc2 = move.substr(2, 2);
-      x.movePiece(TO_NUM[loc], TO_NUM[loc2]);
-
-    }
+    // if (move.length() >= 4) {
+    //   std::string loc = move.substr(0, 2);
+    //   std::string loc2 = move.substr(2, 2);
+    //   x.movePiece(TO_NUM[loc], TO_NUM[loc2]);
+    //
+    // }
 
 
   }

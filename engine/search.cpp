@@ -2,12 +2,15 @@
 #include <string>
 #include <iostream>
 #include <algorithm>
+#include <atomic>
 #include "bitboard.h"
 #include "zobrist_hashing.h"
 
 uint64_t traversedNodes = 0;
 uint64_t pruning = 0;
 uint64_t pruningTotal = 0;
+
+std::atomic<bool> exit_thread_flag{false};
 
 const std::string TO_ALG[64] = {
   "a1",
@@ -330,7 +333,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
   bool nullMoves = true;
   uint8_t R = 3 + (depth / 8); // Null move reduction.
 
-  if (depth <= 0) {
+  if (depth <= 0 || exit_thread_flag) {
     // return quiesceSearch(useMax, bitboard, alpha, beta);
     return bitboard.evaluate();
   }
