@@ -7,6 +7,7 @@
 #include <regex>
 #include <vector>
 #include "search.h"
+#include <thread>
 
 
 
@@ -113,10 +114,27 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
   // std::cout << bitboard.lookup.bucket_count() << std::endl;
   // std::cout << bitboard.lookup.max_size() << std::endl;
   std::cout << "end" << std::endl;
+  std::cout << "bestmove " << bestMove << std::endl;
 
   bitboard.lookup.clear();
   return bestMove;
 
+}
+
+void startPosMoves(bool &color, Bitboard & bitboard, std::string moves) {
+  bitboard.resetBoard();
+  color = true;
+  while (moves.find(' ') != std::string::npos) {
+    // std::cout << moves.substr(0, moves.find(' ')) << std::endl;
+    bitboard.movePiece(TO_NUM[moves.substr(0, 2)], TO_NUM[moves.substr(2, 2)]);
+    color = !color;
+    moves = moves.erase(0, moves.find(' ') + 1);
+  }
+
+  if (moves.find(' ') == std::string::npos && (moves.size() >= 4)) {
+    bitboard.movePiece(TO_NUM[moves.substr(0, 2)], TO_NUM[moves.substr(2, 2)]);
+    color = !color;
+  }
 }
 
 
@@ -178,7 +196,20 @@ int main() {
       std::cout << move << std::endl;
       std::regex_search(move, m, r);
       // std::thread th1(search,x,  std::stoi(m[0]), color);
-      search(x, std::stoi(m[0]), color);
+      // search(x, std::stoi(m[0]), color);
+      search(x, 10, color);
+      continue;
+    }
+
+    if (move == "position startpos") {
+      color = true;
+      x.resetBoard();
+      continue;
+    }
+
+    if (move.substr(0, 24) == "position startpos moves ") {
+      color = true;
+      startPosMoves(color, x, move.substr(24, move.size() - 24));
       continue;
     }
 

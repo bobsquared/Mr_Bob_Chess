@@ -59,6 +59,7 @@ public:
 
   int evaluate();
   int evaluateMobility();
+  void resetBoard();
 
   uint64_t rookAttacksMask(uint64_t occupations, uint8_t index);
   uint64_t bishopAttacksMask(uint64_t occupations, uint8_t index);
@@ -234,6 +235,7 @@ const int LSB_TABLE[64] = {
     bool kingMoved;
     uint8_t rookMoved;
     uint8_t castled;
+    uint8_t enpassant;
   };
 
   std::unordered_map<uint8_t, uint64_t> pieces = {};
@@ -252,6 +254,9 @@ const int LSB_TABLE[64] = {
   bool blackCastled;
 
   std::vector<MoveStack> moveStack = {};
+  uint8_t enpasssantFlag;
+  uint8_t enpassantConditions(bool isWhite, uint8_t pawnLocation);
+
 
   bool canCastleQ(bool isWhite);
   bool canCastleK(bool isWhite);
