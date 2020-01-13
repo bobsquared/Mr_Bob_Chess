@@ -361,8 +361,6 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
   }
 
   Bitboard::Move bestMove = Bitboard::Move{};
-  Bitboard::Move usedMoves[128];
-  uint8_t usedMovesCount = 0;
 
   if (useMax) {
 
@@ -371,7 +369,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
 
     std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(0);
 
-    bitboard.sortMoves(vMoves, usedMoves, usedMovesCount, hashedBoard.move, depth);
+    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
 
     uint8_t iteration = 0;
     for (Bitboard::Move move : vMoves) {
@@ -464,7 +462,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
     bool isCheck = !bitboard.filterCheck(1);
 
     std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(1);
-    bitboard.sortMoves(vMoves, usedMoves, usedMovesCount, hashedBoard.move, depth);
+    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
     int iteration = 0;
     for (Bitboard::Move move : vMoves) {
 
@@ -566,8 +564,6 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
 std::string alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDepth, int alpha=-1000000, int beta=1000000) {
   int origBeta = beta;
   int origAlpha = alpha;
-  Bitboard::Move usedMoves[128];
-  uint8_t usedMovesCount = 0;
 
   uint64_t hashF = bitboard.hashBoard(useMax);
   Bitboard::ZobristVal hashedBoard = Bitboard::ZobristVal();
@@ -593,7 +589,7 @@ std::string alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDep
     int ret = -1000000;
 
     std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(0);
-    bitboard.sortMoves(vMoves, usedMoves, usedMovesCount, hashedBoard.move, depth);
+    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
 
     for (Bitboard::Move move : vMoves) {
 
@@ -645,7 +641,7 @@ std::string alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDep
 
     int ret = 1000000;
     std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(1);
-    bitboard.sortMoves(vMoves, usedMoves, usedMovesCount, hashedBoard.move, depth);
+    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
 
     for (Bitboard::Move move : vMoves) {
 

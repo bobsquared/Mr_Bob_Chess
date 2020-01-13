@@ -22,7 +22,7 @@ void printInfo(int depth, std::string move, float branchingFactor, long long int
   }
 }
 
-void printInfoUCI(int depth, std::string move, float branchingFactor, long long int time) {
+void printInfoUCI(int depth, long long int time) {
   std::cout << "info depth " << depth << " nodes " << traversedNodes << " nps " << (uint64_t)(traversedNodes / (double)(time / 1000000000.0)) << " time " <<  time / 1000000.0 << std::endl;
     // std::cout << "	Best move found: " << move <<  " Effective Branching Factor: " << branchingFactor << std::endl;
 
@@ -64,7 +64,7 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
     }
 
     auto diff = std::chrono::duration_cast<std::chrono::nanoseconds> (t2 - t1).count();
-    printInfoUCI(i, bestMove, branchingFactor, diff);
+    printInfoUCI(i, diff);
     traversedNodes = 0;
 
   }
@@ -149,9 +149,11 @@ int main() {
     }
 
     if (move.substr(0, 11) == "stop") {
-      exit_thread_flag = true;
-      th1.join();
-      exit_thread_flag = false;
+      if (th1.joinable()) {
+        exit_thread_flag = true;
+        th1.join();
+        exit_thread_flag = false;
+      }
       continue;
     }
 

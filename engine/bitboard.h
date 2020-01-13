@@ -53,7 +53,7 @@ public:
 
   bool isAttacked(uint8_t index, bool color);
   bool filterCheck(bool color);
-  uint8_t sortMoves(std::vector<Move> &moveList, Move *usedMoves, uint8_t count, Move move, int depth);
+  uint8_t sortMoves(std::vector<Move> &moveList, Move move, int depth);
   void movePiece(uint8_t index1, uint8_t index2);
   void undoMove();
 
@@ -255,6 +255,7 @@ const int LSB_TABLE[64] = {
 
   std::vector<MoveStack> moveStack = {};
   uint8_t enpasssantFlag;
+  bool endgameFlag;
   uint8_t enpassantConditions(bool isWhite, uint8_t pawnLocation);
 
 
