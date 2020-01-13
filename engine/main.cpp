@@ -136,7 +136,7 @@ int main() {
     }
 
     if (move.substr(0, 3) == "uci") {
-      std::cout << "id name 'Mr Bob' v0.1.1" << std::endl;
+      std::cout << "id name 'Mr Bob' v0.2.1" << std::endl;
       std::cout << "id author Vincent Yu" << std::endl;
       std::cout << "uciok" << std::endl;
       continue;
