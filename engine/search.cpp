@@ -660,9 +660,8 @@ std::string alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDep
         continue;
       }
 
-      ret = alphabetaR(true, bitboard, depth - 1, alpha, beta, maxDepth);
-
-
+      // ret = alphabetaR(true, bitboard, depth - 1, alpha, beta, maxDepth);
+      ret = std::min(ret, alphabetaR(true, bitboard, depth - 1, alpha, beta, maxDepth));
       bitboard.undoMove();
 
       if (ret < beta) {
@@ -670,8 +669,6 @@ std::string alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDep
         bestMove = TO_ALG[move.fromLoc] + TO_ALG[move.toLoc];
         bestMoveM = move;
       }
-
-
 
       if (ret <= alpha) {
         if (move.quiet) {
