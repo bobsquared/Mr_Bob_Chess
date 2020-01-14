@@ -56,6 +56,7 @@ public:
   uint8_t sortMoves(std::vector<Move> &moveList, Move move, int depth);
   void movePiece(uint8_t index1, uint8_t index2);
   void undoMove();
+  bool canNullMove();
 
   int evaluate();
   int evaluateMobility();

@@ -8,6 +8,7 @@
 #include <vector>
 #include "search.h"
 #include <thread>
+#include <cmath>
 
 
 
@@ -22,8 +23,14 @@ void printInfo(int depth, std::string move, float branchingFactor, long long int
   }
 }
 
-void printInfoUCI(int depth, long long int time) {
-  std::cout << "info depth " << depth << " nodes " << traversedNodes << " nps " << (uint64_t)(traversedNodes / (double)(time / 1000000000.0)) << " time " <<  time / 1000000.0 << std::endl;
+void printInfoUCI(int depth, long long int time, int cp, int mateInPlies) {
+  std::cout << "info depth " << depth << " score cp " << cp;
+
+  if (mateInPlies) {
+    std::cout << " score mate " << std::ceil((double)(mateInPlies / 2.0));
+  }
+
+  std::cout << " nodes " << traversedNodes << " nps " << (uint64_t)(traversedNodes / (double)(time / 1000000000.0)) << " time " <<  time / 1000000.0 << std::endl;
     // std::cout << "	Best move found: " << move <<  " Effective Branching Factor: " << branchingFactor << std::endl;
 
 }
@@ -34,17 +41,32 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
   int prevNodes = 0;
   std::string prevBestMove = "";
   std::string bestMove = "";
+  int cp;
+  int prevCp;
+  int mateInPlies;
+  int prevMateInPlies;
+  ReturnInfo bMove;
 
   for (uint8_t i = 1; i < depth + 1; i++) {
     if (exit_thread_flag) {
-      bestMove = prevBestMove;
       break;
     }
     auto t1 = std::chrono::high_resolution_clock::now();
-    bestMove = alphabetaRoot(color, bitboard, i, depth);
+    bMove = alphabetaRoot(color, bitboard, i, depth);
+    bestMove = bMove.bestMove;
+    cp = bMove.score * 10.0;
+
+    if (bMove.mateIn) {
+      mateInPlies = depth + 1 - bMove.mateIn;
+    }
+    else {
+      mateInPlies = 0;
+    }
 
     if (!exit_thread_flag) {
       prevBestMove = bestMove;
+      prevCp = cp;
+      prevMateInPlies = mateInPlies;
     }
 
 
@@ -64,13 +86,15 @@ std::string search(Bitboard &bitboard, int depth, bool color) {
     }
 
     auto diff = std::chrono::duration_cast<std::chrono::nanoseconds> (t2 - t1).count();
-    printInfoUCI(i, diff);
+    printInfoUCI(i, diff, cp, mateInPlies);
     traversedNodes = 0;
 
   }
 
   if (exit_thread_flag) {
     bestMove = prevBestMove;
+    cp = prevCp;
+    mateInPlies = prevMateInPlies;
   }
   // std::cout << bitboard.lookup.bucket_count() << std::endl;
   // std::cout << bitboard.lookup.max_size() << std::endl;
@@ -104,24 +128,12 @@ void startPosMoves(bool &color, Bitboard & bitboard, std::string moves) {
 int main() {
   srand(time(NULL));
   Bitboard x = Bitboard();
-  // search(x, 10, 0);
 
   std::regex r("\\d+");
   bool color = true;
   std::thread th1;
 
-  // std::vector<Bitboard::Move> moves = x.allValidMoves(1);
-  // x.sortMoves(moves, (Bitboard::Move){53, 37});
-  // uint8_t s = moves.size();
-  //
-  // for (uint8_t i = 0; i < s; i++) {
-  //   std::cout << unsigned((moves.back()).fromLoc) << " " << unsigned((moves.back()).toLoc) << std::endl;
-  //   moves.pop_back();
-  // }
-  // x.printBoard(knightAttacks(1 | 1ULL << 21));
-
-
-  // return 0;
+  std::cout << "'Mr Bob' UCI engine by Vincent Yu" << std::endl;
 
   while (1) {
 

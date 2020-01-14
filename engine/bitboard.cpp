@@ -1987,6 +1987,14 @@ uint8_t Bitboard::enpassantConditions(bool isWhite, uint8_t pawnLocation) {
   return 0;
 }
 
+bool Bitboard::canNullMove() {
+  if (count_population(occupied) <= 12) {
+    return false;
+  }
+
+  return true;
+}
+
 // std::string Bitboard::posToFEN() {
 //
 //   std::string fen = "";
