@@ -11,6 +11,7 @@ class Bitboard{
 public:
 
   const int pieceValues[6] = {10, 30, 30, 50, 90, 2000};
+  const std::string NUM_TO_STR[9] = {"0", "1", "2", "3", "4", "5", "6", "7", "8"};
 
   struct Move {
     uint8_t fromLoc;
@@ -18,6 +19,8 @@ public:
     bool quiet;
     int pieceFrom;
     int pieceTo;
+
+    // Move(uint8_t fromLoc, uint8_t toLoc, bool quiet, int pieceFrom, int pieceTo) : fromLoc(fromLoc), toLoc(toLoc), quiet(quiet), pieceFrom(pieceFrom), pieceTo(pieceTo) {}
   };
 
   struct KillerMove {
@@ -55,12 +58,14 @@ public:
   bool filterCheck(bool color);
   uint8_t sortMoves(std::vector<Move> &moveList, Move move, int depth);
   void movePiece(uint8_t index1, uint8_t index2);
+  // void movePiece(Move& move);
   void undoMove();
   bool canNullMove();
 
   int evaluate();
   int evaluateMobility();
   void resetBoard();
+  bool isThreeFold();
 
   uint64_t rookAttacksMask(uint64_t occupations, uint8_t index);
   uint64_t bishopAttacksMask(uint64_t occupations, uint8_t index);
@@ -75,6 +80,9 @@ public:
   uint64_t hashBoard(bool turn);
 
   std::vector<Move> PVMoves = {};
+  std::string posToFEN();
+  uint64_t getPosKey();
+
 
 
 
@@ -237,6 +245,9 @@ const int LSB_TABLE[64] = {
     uint8_t rookMoved;
     uint8_t castled;
     uint8_t enpassant;
+
+    MoveStack(uint64_t fromLoc, uint64_t toLoc, int8_t movePiece, int8_t capturePiece, bool color, bool promote, bool kingMoved, uint8_t rookMoved, uint8_t castled, uint8_t enpassant) :
+      fromLoc(fromLoc), toLoc(toLoc), movePiece(movePiece), capturePiece(capturePiece), color(color), promote(promote), kingMoved(kingMoved), rookMoved(rookMoved), castled(castled), enpassant(enpassant) {}
   };
 
   std::unordered_map<uint8_t, uint64_t> pieces = {};
@@ -255,9 +266,12 @@ const int LSB_TABLE[64] = {
   bool blackCastled;
 
   std::vector<MoveStack> moveStack = {};
+  std::vector<uint64_t> prevPositions = {};
   uint8_t enpasssantFlag;
   bool endgameFlag;
+  bool whiteToMove;
   uint8_t enpassantConditions(bool isWhite, uint8_t pawnLocation);
+
 
 
   bool canCastleQ(bool isWhite);

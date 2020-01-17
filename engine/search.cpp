@@ -332,15 +332,18 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
   int origAlpha = alpha;
   int origBeta = beta;
   uint8_t R = 3 + (depth / 8); // Null move reduction.
+  bool hashed = false;
 
   if (depth <= 0 || exit_thread_flag) {
     // return quiesceSearch(useMax, bitboard, alpha, beta);
     return bitboard.evaluate();
   }
 
-  uint64_t hashF = bitboard.hashBoard(useMax);
+  uint64_t hashF = bitboard.getPosKey();
   Bitboard::ZobristVal hashedBoard = Bitboard::ZobristVal();
+  // if (std::find(bitboard.lookup.begin() + insertIndex, bitboard.lookup.end(), bitboard.lookup[hashF])) {
   if (bitboard.lookup.find(hashF) != bitboard.lookup.end()) {
+    hashed = true;
     hashedBoard = bitboard.lookup[hashF];
 
     if (hashedBoard.depth >= depth) {
@@ -360,7 +363,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
     }
   }
 
-  Bitboard::Move bestMove = Bitboard::Move{};
+  Bitboard::Move bestMove;
 
   if (useMax) {
     bool nullMoves = true;
@@ -390,7 +393,10 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
       if (move.fromLoc == 65 && move.toLoc == 65) {
         ret = std::max(ret, alphabetaR(false, bitboard, depth - R - 1, alpha, beta, maxDepth));
       }
-      else if (maxDepth >= 3 && iteration > 1 && move.quiet && !isCheck){
+      else if (bitboard.isThreeFold()) {
+        ret = std::max(ret, 0);
+      }
+      else if (maxDepth >= 3 && iteration > 0 && move.quiet && !isCheck){
         ret = std::max(ret, alphabetaR(false, bitboard, depth - 2, alpha, beta, maxDepth));
 
         if (ret > alpha) {
@@ -486,7 +492,10 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
       if (move.fromLoc == 65 && move.toLoc == 65) {
         ret = std::min(ret, alphabetaR(true, bitboard, depth - R - 1, alpha, beta, maxDepth));
       }
-      else if (maxDepth >= 3 && iteration > 1 && move.quiet && !isCheck) {
+      else if (bitboard.isThreeFold()) {
+        ret = std::min(ret, 0);
+      }
+      else if (maxDepth >= 3 && iteration > 0 && move.quiet && !isCheck) {
         ret = std::min(ret, alphabetaR(true, bitboard, depth - 2, alpha, beta, maxDepth));
 
         if (ret < beta) {
@@ -578,11 +587,13 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
 
   std::string bestMove = "HAHA";
   int mateIn = 0;
+  bool hashed = false;
 
 
-  uint64_t hashF = bitboard.hashBoard(useMax);
+  uint64_t hashF = bitboard.getPosKey();
   Bitboard::ZobristVal hashedBoard = Bitboard::ZobristVal();
   if (bitboard.lookup.find(hashF) != bitboard.lookup.end()) {
+    hashed = true;
     hashedBoard = bitboard.lookup[hashF];
 
     if (hashedBoard.depth >= depth) {
@@ -688,6 +699,7 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
   else {
 
     int ret = 10000000;
+
     std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(1);
     bitboard.sortMoves(vMoves, hashedBoard.move, depth);
 

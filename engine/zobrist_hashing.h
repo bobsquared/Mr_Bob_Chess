@@ -7,7 +7,7 @@ class Zobrist {
 
 public:
   Zobrist();
-  uint64_t hashBoard(std::unordered_map<uint8_t, uint64_t> pieces, uint64_t occupied, uint64_t blacks, bool turn);
+  uint64_t hashBoard(std::unordered_map<uint8_t, uint64_t>& pieces, uint64_t& occupied, uint64_t& blacks, bool turn);
 
 private:
 

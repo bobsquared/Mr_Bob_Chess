@@ -130,6 +130,7 @@ int main() {
   Bitboard x = Bitboard();
 
   std::regex r("\\d+");
+  std::regex r2("go\\swtime\\s(\\d+)\\sbtime\\s(\\d+)");
   bool color = true;
   std::thread th1;
 
@@ -175,6 +176,27 @@ int main() {
       continue;
     }
 
+    if (std::regex_search(move, m, r2)) {
+
+      unsigned int time = 0;
+      if (color) {
+        time = std::stoi(m[1]);
+      }
+      else {
+        time = std::stoi(m[2]);
+      }
+
+      th1 = std::thread(search, std::ref(x),  512, color);
+      std::this_thread::sleep_for(std::chrono::milliseconds(time / 30));
+      if (th1.joinable()) {
+        exit_thread_flag = true;
+        th1.join();
+        exit_thread_flag = false;
+      }
+
+      continue;
+    }
+
     if (move.substr(0, 2) == "go") {
       std::cout << move << std::endl;
       std::regex_search(move, m, r);
@@ -198,6 +220,11 @@ int main() {
       continue;
     }
 
+    if (move.substr(0, 9) == "print fen") {
+      std::cout << x.posToFEN() << std::endl;
+      continue;
+    }
+
     if (move.substr(0, 5) == "print") {
       x.printPretty();
       continue;
@@ -212,6 +239,9 @@ int main() {
       x.undoMove();
       continue;
     }
+
+
+
 
     if (move.substr(0, 11) == "white moves") {
 
