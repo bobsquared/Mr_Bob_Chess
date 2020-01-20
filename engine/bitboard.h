@@ -9,8 +9,10 @@
 class Bitboard{
 
 public:
-
-  const int pieceValues[6] = {10, 30, 30, 50, 90, 2000};
+  uint8_t count_population(uint64_t bitboard);
+  uint8_t bitScanF(uint64_t bitboard);
+  uint8_t bitScanR(uint64_t bitboard);
+  const int pieceValues[6] = {100, 300, 325, 500, 900, 20000};
   const std::string NUM_TO_STR[9] = {"0", "1", "2", "3", "4", "5", "6", "7", "8"};
 
   struct Move {
@@ -19,8 +21,9 @@ public:
     bool quiet;
     int pieceFrom;
     int pieceTo;
-
+    int score;
     // Move(uint8_t fromLoc, uint8_t toLoc, bool quiet, int pieceFrom, int pieceTo) : fromLoc(fromLoc), toLoc(toLoc), quiet(quiet), pieceFrom(pieceFrom), pieceTo(pieceTo) {}
+    bool operator<(const Move& a) const { return score > a.score; }
   };
 
   struct KillerMove {
@@ -35,6 +38,7 @@ public:
     int beta;
     int depth;
     uint8_t flag;
+    uint64_t positionKey;
   };
 
   struct SortMove {
@@ -64,13 +68,14 @@ public:
 
   int evaluate();
   int evaluateMobility();
+  int evaluateKingSafety();
   void resetBoard();
   bool isThreeFold();
 
   uint64_t rookAttacksMask(uint64_t occupations, uint8_t index);
   uint64_t bishopAttacksMask(uint64_t occupations, uint8_t index);
-
-
+  uint8_t manhattanArray[64][64];
+  uint8_t chebyshevArray[64][64];
 
   std::unordered_map<uint64_t, ZobristVal> lookup = {}; // Transpostion table
   // std::vector<ZobristVal> lookup = {}; // Transpostion table
@@ -82,6 +87,7 @@ public:
   std::vector<Move> PVMoves = {};
   std::string posToFEN();
   uint64_t getPosKey();
+  uint32_t history[64][64];
 
 
 
@@ -190,8 +196,8 @@ const int LSB_TABLE[64] = {
 
 
 
-  uint8_t bitScanF(uint64_t bitboard);
-  uint8_t bitScanR(uint64_t bitboard);
+  // uint8_t bitScanF(uint64_t bitboard);
+  // uint8_t bitScanR(uint64_t bitboard);
   uint64_t bitCombinations(uint64_t index, uint64_t bitboard);
 
 
@@ -270,7 +276,18 @@ const int LSB_TABLE[64] = {
   uint8_t enpasssantFlag;
   bool endgameFlag;
   bool whiteToMove;
+
+  int whitePawnTable[64];
+  int blackPawnTable[64];
+  int whiteKnightTable[64];
+  int blackKnightTable[64];
+  int whiteBishopTable[64];
+  int blackBishopTable[64];
+  void InitPieceBoards();
+  void InitDistanceArray();
   uint8_t enpassantConditions(bool isWhite, uint8_t pawnLocation);
+
+
 
 
 
@@ -296,7 +313,7 @@ const int LSB_TABLE[64] = {
   void test();
 
 
-  uint8_t count_population(uint64_t bitboard);
+  // uint8_t count_population(uint64_t bitboard);
 
 
 

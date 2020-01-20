@@ -26,28 +26,20 @@ def search(depth):
     start = time.time() * 1000
     bestMove = ""
 
-    s = "go " + str(depth)
+    s = "go"
     print(s)
     engine.stdin.write(s + "\n")  # Include '\n'
     engine.stdin.flush()
     # engine.stdin.flush()
     while True:
 
-        end = time.time() * 1000
-
-        if (end - start) > 10000000:
-            return bestMove
-
-
-
         response = engine.stdout.readline().strip()
 
-        if response.startswith("Best move found:"):
-            bestMove = response[17:21]
+        if response.startswith("bestmove "):
+            bestMove = response[9:13]
             print(response)
-            # print(bestMove)
-        elif response == 'end':
             break
+            # print(bestMove)
         elif response != '':
             i = 0
             print ("Process response:", response)

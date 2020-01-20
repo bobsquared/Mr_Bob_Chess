@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <string>
 #include <algorithm>
+#include "piecesquaretable.h"
+#include <cmath>
 
 
 bool operator==(const Bitboard::Move& lhs, const Bitboard::Move& rhs) {
@@ -47,7 +49,8 @@ Bitboard::Bitboard() {
   whiteCastled = false;
   blackCastled = false;
 
-
+  InitPieceBoards();
+  InitDistanceArray();
   InitWhitePawnMoves();
   InitBlackPawnMoves();
   InitKnightMoves();
@@ -148,8 +151,45 @@ Bitboard::Bitboard() {
 
   moveStack.reserve(1024);
   prevPositions.reserve(1024);
-  lookup.reserve(20000000);
+  lookup.reserve(16777215);
   prevPositions.emplace_back(hashBoard(whiteToMove));
+
+  for (uint8_t i = 0; i < 64; i++) {
+    for (uint8_t j = 0; j < 64; j++) {
+      history[i][j] = 0;
+    }
+  }
+
+}
+
+void Bitboard::InitDistanceArray() {
+
+  for (uint8_t i = 0; i < 64; i++) {
+    for (uint8_t j = 0; j < 64; j++) {
+      uint8_t colI = i % 8;
+      uint8_t rowI = std::floor(i / 8);
+      uint8_t colJ = j % 8;
+      uint8_t rowJ = std::floor(j / 8);
+      manhattanArray[i][j] = abs(colI - colJ) + abs(rowI - rowJ);
+      chebyshevArray[i][j] = std::max(abs(colI - colJ), abs(rowI - rowJ));
+    }
+  }
+
+}
+
+void Bitboard::InitPieceBoards() {
+
+  for (uint8_t i = 0; i < 8; i++) {
+    for (uint8_t j = 0; j < 8; j++) {
+      whitePawnTable[i * 8 + j] = WHITE_PAWN_TABLE[(7 - i) * 8 + j];
+      blackPawnTable[i * 8 + j] = BLACK_PAWN_TABLE[(7 - i) * 8 + j];
+      whiteKnightTable[i * 8 + j] = WHITE_KNIGHT_TABLE[(7 - i) * 8 + j];
+      blackKnightTable[i * 8 + j] = BLACK_KNIGHT_TABLE[(7 - i) * 8 + j];
+      whiteBishopTable[i * 8 + j] = WHITE_BISHOP_TABLE[(7 - i) * 8 + j];
+      blackBishopTable[i * 8 + j] = BLACK_BISHOP_TABLE[(7 - i) * 8 + j];
+    }
+  }
+
 }
 
 void Bitboard::InitRayAttacks() {
@@ -199,6 +239,12 @@ void Bitboard::resetBoard() {
 
   moveStack = {};
   prevPositions = {};
+
+  for (uint8_t i = 0; i < 64; i++) {
+    for (uint8_t j = 0; j < 64; j++) {
+      history[i][j] = 0;
+    }
+  }
 
 
   for (uint16_t i = 0; i < 1024; i++) {
@@ -931,6 +977,7 @@ std::vector<Bitboard::Move> Bitboard::allValidMoves(bool color) {
   bool quiet = true;
   int pieceFC = -1;
   int pieceTC = -1;
+  int score = 0;
 
   if (color == 0){
 
@@ -979,12 +1026,14 @@ std::vector<Bitboard::Move> Bitboard::allValidMoves(bool color) {
           else if (((1ULL << j) & pieces[5]) != 0) {
             pieceTC = 5;
           }
+
         }
         else {
           quiet = true;
           pieceTC = -1;
+          score = 0;
         }
-        Move mv = {i, j, quiet, pieceFC, pieceTC};
+        Move mv = {i, j, quiet, pieceFC, pieceTC, score};
         ret.emplace_back(mv);
       }
 
@@ -1038,12 +1087,14 @@ std::vector<Bitboard::Move> Bitboard::allValidMoves(bool color) {
           else if (((1ULL << j) & pieces[5]) != 0) {
             pieceTC = 5;
           }
+
         }
         else {
           quiet = true;
           pieceTC = -1;
+          score = 0;
         }
-        Move mv = {i, j, quiet, pieceFC, pieceTC};
+        Move mv = {i, j, quiet, pieceFC, pieceTC, score};
         ret.emplace_back(mv);
       }
 
@@ -1061,7 +1112,7 @@ std::vector<uint8_t> Bitboard::whitePiecesLoc() {
   ret.reserve(32);
   uint64_t bitboard = whites;
   while (bitboard != 0){
-    uint8_t toApp = LSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+    uint8_t toApp = MSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89U) >> 58];
     bitboard ^= 1ULL << toApp;
     ret.emplace_back(toApp);
   }
@@ -1074,7 +1125,7 @@ std::vector<uint8_t> Bitboard::blackPiecesLoc() {
   ret.reserve(32);
   uint64_t bitboard = blacks;
   while (bitboard != 0){
-    uint8_t toApp = LSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89U) >> 58];
+    uint8_t toApp = MSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89U) >> 58];
     bitboard ^= 1ULL << toApp;
     ret.emplace_back(toApp);
   }
@@ -1463,6 +1514,7 @@ void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
   uint64_t i2 = 1ULL << index2;
   uint64_t i1i2 = i1 ^ i2;
 
+  int8_t k = -1;
   int8_t i = -1;
   if ((pieces[0] & i1) != 0) {
     i = 0;
@@ -1635,7 +1687,6 @@ void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
 
       assert((blacks & i2) != 0);
       if (blacks & i2) {
-        int8_t k = -1;
         if ((pieces[0] & i2) != 0) {
           k = 0;
         }
@@ -1697,7 +1748,7 @@ void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
 
       assert((whites & i2) != 0);
       if (whites & i2) {
-        int8_t k = -1;
+
         if ((pieces[0] & i2) != 0) {
           k = 0;
         }
@@ -1758,8 +1809,8 @@ void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
     pieces[i] ^= i1i2;
 
   }
-
-  prevPositions.emplace_back(hashBoard(whiteToMove));
+  // prevPositions.emplace_back(zobrist.hashBoard(pieces, occupied, blacks, whiteToMove));
+  prevPositions.emplace_back(zobrist.hashBoardM(prevPositions.back(), index1, index2, i, k, whiteToMove));
 
 }
 
@@ -1896,29 +1947,71 @@ void Bitboard::undoMove() {
 
 int Bitboard::evaluate() {
   int ret = materialScore;
-  // ret += count_population(pieces[0] & whites);
-  // ret += count_population(pieces[1] & whites) * 30;
-  // ret += count_population(pieces[2] & whites) * 30;
-  // ret += count_population(pieces[3] & whites) * 50;
-  // ret += count_population(pieces[4] & whites) * 90;
-  // ret += count_population(pieces[5] & whites) * 2000;
-  //
-  // ret -= count_population(pieces[0] & blacks);
-  // ret -= count_population(pieces[1] & blacks) * 30;
-  // ret -= count_population(pieces[2] & blacks) * 30;
-  // ret -= count_population(pieces[3] & blacks) * 50;
-  // ret -= count_population(pieces[4] & blacks) * 90;
-  // ret -= count_population(pieces[5] & blacks) * 2000;
 
   ret += evaluateMobility();
+  ret += evaluateKingSafety();
   if (whiteCastled) {
-    ret += 8;
+    ret += 80;
   }
   if (blackCastled) {
-    ret -= 8;
+    ret -= 80;
   }
 
+  return ret;
+}
 
+int Bitboard::evaluateKingSafety() {
+  int ret = 0;
+  uint8_t whiteKingIndex = bitScanF(whites & pieces[5]);
+  uint8_t blackKingIndex = bitScanF(blacks & pieces[5]);
+
+  uint64_t whiteKnights = whites & pieces[1];
+  uint64_t blackKnights = blacks & pieces[1];
+  while (whiteKnights) {
+    ret -= (chebyshevArray[blackKingIndex][bitScanF(whiteKnights)] * pieceValues[1]) >> 10;
+    whiteKnights &= whiteKnights - 1;
+  }
+
+  while (blackKnights) {
+    ret += (chebyshevArray[whiteKingIndex][bitScanF(blackKnights)] * pieceValues[1]) >> 10;
+    blackKnights &= blackKnights - 1;
+  }
+
+  uint64_t whiteBishops = whites & pieces[2];
+  uint64_t blackBishops = blacks & pieces[2];
+  while (whiteBishops) {
+    ret -= (chebyshevArray[blackKingIndex][bitScanF(whiteBishops)] * pieceValues[2]) >> 10;
+    whiteBishops &= whiteBishops - 1;
+  }
+
+  while (blackBishops) {
+    ret += (chebyshevArray[whiteKingIndex][bitScanF(blackBishops)] * pieceValues[2]) >> 10;
+    blackBishops &= blackBishops - 1;
+  }
+
+  uint64_t whiteRooks = whites & pieces[3];
+  uint64_t blackRooks = blacks & pieces[3];
+  while (whiteRooks) {
+    ret -= (manhattanArray[blackKingIndex][bitScanF(whiteRooks)] * pieceValues[3]) >> 10;
+    whiteRooks &= whiteRooks - 1;
+  }
+
+  while (blackRooks) {
+    ret += (manhattanArray[whiteKingIndex][bitScanF(blackRooks)] * pieceValues[3]) >> 10;
+    blackRooks &= blackRooks - 1;
+  }
+
+  uint64_t whiteQueens = whites & pieces[4];
+  uint64_t blackQueens = blacks & pieces[4];
+  while (whiteQueens) {
+    ret -= (chebyshevArray[blackKingIndex][bitScanF(whiteQueens)] * pieceValues[4]) >> 10;
+    whiteQueens &= whiteQueens - 1;
+  }
+
+  while (blackQueens) {
+    ret += (chebyshevArray[whiteKingIndex][bitScanF(blackQueens)] * pieceValues[4]) >> 10;
+    blackQueens &= blackQueens - 1;
+  }
 
   return ret;
 }
@@ -1926,31 +2019,75 @@ int Bitboard::evaluate() {
 int Bitboard::evaluateMobility() {
 
   int ret = 0;
-  ret += count_population(knightAttacks(whites & pieces[1]) & whites) * 1.5;
-  ret -= count_population(knightAttacks(blacks & pieces[1]) & blacks) * 1.5;
+  int board = 0;
+
+  uint64_t pawnsW = whites & pieces[0];
+  uint64_t pawnsB = blacks & pieces[0];
+
+  uint8_t countPiece = count_population(pawnsW);
+  for (uint8_t i = 0; i < countPiece; i++) {
+    board += whitePawnTable[bitScanR(pawnsW)];
+    pawnsW &= pawnsW - 1;
+  }
+
+
+  countPiece = count_population(pawnsB);
+  for (uint8_t i = 0; i < countPiece; i++) {
+    board -= blackPawnTable[bitScanR(pawnsB)];
+    pawnsB &= pawnsB - 1;
+  }
+
+  uint64_t knightsW = whites & pieces[1];
+  uint64_t knightsB = blacks & pieces[1];
+  ret += count_population(knightAttacks(knightsW) & (pawnAttacksBlack(blacks) ^ ALL_ONES));
+  ret -= count_population(knightAttacks(knightsB) & (pawnAttacksWhite(whites) ^ ALL_ONES));
+
+  countPiece = count_population(knightsW);
+  for (uint8_t i = 0; i < countPiece; i++) {
+    board += whiteKnightTable[bitScanR(knightsW)];
+    knightsW &= knightsW - 1;
+  }
+
+  countPiece = count_population(knightsB);
+  for (uint8_t i = 0; i < countPiece; i++) {
+    board -= blackKnightTable[bitScanR(knightsB)];
+    knightsB &= knightsB - 1;
+  }
+
 
   uint64_t bishopsW = whites & pieces[2];
   uint64_t bishopsB = blacks & pieces[2];
-  for (uint8_t i = 0; i < count_population(bishopsW); i++) {
-    ret += count_population(bishopAttacksMask(occupied, bitScanF(bishopsW))) * 1.25;
-    bishopsW &= (bishopsW - 1);
+
+  countPiece = count_population(bishopsW);
+  for (uint8_t i = 0; i < countPiece; i++) {
+    uint8_t bscan = bitScanR(bishopsW);
+    ret += count_population(bishopAttacksMask(occupied, bscan));
+    board += whiteBishopTable[bscan];
+    bishopsW &= bishopsW - 1;
   }
 
-  for (uint8_t i = 0; i < count_population(bishopsB); i++) {
-    ret -= count_population(bishopAttacksMask(occupied, bitScanF(bishopsB))) * 1.25;
-    bishopsB &= (bishopsW - 1);
+  countPiece = count_population(bishopsB);
+  for (uint8_t i = 0; i < countPiece; i++) {
+    uint8_t bscan = bitScanR(bishopsB);
+    ret -= count_population(bishopAttacksMask(occupied, bscan));
+    board -= blackBishopTable[bscan];
+    bishopsB &= bishopsB - 1;
   }
 
   uint64_t rooksW = whites & pieces[3];
   uint64_t rooksB = blacks & pieces[3];
-  for (uint8_t i = 0; i < count_population(rooksW); i++) {
-    ret += count_population(rookAttacksMask(occupied, bitScanF(rooksW))) / 2;
-    rooksW &= (rooksW - 1);
+  countPiece = count_population(rooksW);
+  for (uint8_t i = 0; i < countPiece; i++) {
+    uint8_t bscan = bitScanR(rooksW);
+    ret += count_population(rookAttacksMask(occupied, bscan));
+    rooksW &= rooksW - 1;
   }
 
-  for (uint8_t i = 0; i < count_population(rooksB); i++) {
-    ret -= count_population(rookAttacksMask(occupied, bitScanF(rooksB))) / 2;
-    rooksB &= (rooksB - 1);
+  countPiece = count_population(rooksB);
+  for (uint8_t i = 0; i < countPiece; i++) {
+    uint8_t bscan = bitScanR(rooksB);
+    ret -= count_population(rookAttacksMask(occupied, bscan));
+    rooksB &= rooksB - 1;
   }
 
   // uint64_t queensW = whites & pieces[4];
@@ -1965,9 +2102,10 @@ int Bitboard::evaluateMobility() {
   //   ret -= count_population(rookAttacksMask(occupied, c) | bishopAttacksMask(occupied, c)) / 3.5;
   // }
 
-  return ret;
+  return ret + board;
 
 }
+
 
 
 uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move move, int depth) {
@@ -1981,13 +2119,15 @@ uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move move, int depth) {
   // }
 
   uint8_t insertIndex = 0;
-  std::vector<Move>::iterator p = std::find(moveList.begin(), moveList.end(), move);
-  // std::vector<Move>::iterator p;
-  if (p != moveList.end()) {
-    std::swap(*p, moveList[insertIndex]);
-    insertIndex++;
-  }
+  std::vector<Move>::iterator p;
 
+  // if (move != Move()) {
+  //   p = std::find(moveList.begin(), moveList.end(), move);
+  //   if (p != moveList.end()) {
+  //     std::swap(*p, moveList[insertIndex]);
+  //     insertIndex++;
+  //   }
+  // }
   // std::vector<Move>::iterator p;
   //MVV/LVA
   int8_t val = 0;
@@ -1998,41 +2138,48 @@ uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move move, int depth) {
         val = moveList[i].pieceTo - moveList[i].pieceFrom;
       }
     }
+    moveList[i].score = history[moveList[i].fromLoc][moveList[i].toLoc];
 
 
   }
-
+  //
   for (uint8_t i = insertIndex; i < moveList.size() && insertIndex < moveList.size(); i++) {
 
     if (!moveList[i].quiet){
       if (moveList[i].pieceTo - moveList[i].pieceFrom == val) {
-        p = std::find(moveList.begin() + insertIndex, moveList.end(), moveList[i]);
-        if (p != moveList.end()) {
-          std::swap(*p, moveList[insertIndex]);
-          insertIndex++;
-        }
+        moveList[i].score = 1500000;
       }
     }
   }
 
-
-  // Killers
-  p = std::find(moveList.begin() + insertIndex, moveList.end(), killerMoves[depth][0].move);
-  if (p != moveList.end() && !(*p == moveList[0])) {
-    std::swap(*p, moveList[insertIndex]);
-    insertIndex++;
+  if (move != Move()) {
+    p = std::find(moveList.begin(), moveList.end(), move);
+    if (p != moveList.end()) {
+      p->score = 2000000;
+    }
   }
-
-  p = std::find(moveList.begin() + insertIndex, moveList.end(), killerMoves[depth][1].move);
-  if (p != moveList.end() && !(*p == moveList[0]) && !(*p == moveList[1])) {
-    std::swap(*p, moveList[insertIndex]);
-    insertIndex++;
-  }
+  //
+  //
+  // // Killers
+  // p = std::find(moveList.begin() + insertIndex, moveList.end(), killerMoves[depth][0].move);
+  // if (p != moveList.end() && !(*p == moveList[0])) {
+  //   std::swap(*p, moveList[insertIndex]);
+  //   insertIndex++;
+  // }
+  //
+  // p = std::find(moveList.begin() + insertIndex, moveList.end(), killerMoves[depth][1].move);
+  // if (p != moveList.end() && !(*p == moveList[0]) && !(*p == moveList[1])) {
+  //   std::swap(*p, moveList[insertIndex]);
+  //   insertIndex++;
+  // }
 
   // Null Move
-  Move nm = {65, 65, 10, 0, false};
-  moveList.insert(moveList.begin() + insertIndex, nm);
+  Move nm = {65, 65, 10, 0, false, 500000};
+  moveList.push_back(nm);
   insertIndex++;
+
+
+  std::sort(moveList.begin(), moveList.end());
 
   return insertIndex;
 
@@ -2043,23 +2190,20 @@ uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move move, int depth) {
 void Bitboard::InsertKiller(Move move, int depth) {
   KillerMove val = KillerMove();
 
-  if (killerMoves[depth][0] == val) {
-    val.move = move;
-    val.depth = depth;
-    killerMoves[depth][0] = val;
-  }
-  else if (killerMoves[depth][1] == val) {
-    killerMoves[depth][1] = killerMoves[depth][0];
-    val.move = move;
-    val.depth = depth;
-    killerMoves[depth][0] = val;
-  }
+  killerMoves[depth][1] = killerMoves[depth][0];
+  killerMoves[depth][1].move.score = 900000;
+  move.score = 1000000;
+  val.move = move;
+  val.depth = depth;
+  killerMoves[depth][0] = val;
+
 
 }
 
 
 void Bitboard::InsertLookup(Move move, int score, int alpha, int beta, int depth, uint8_t flag, uint64_t key) {
   ZobristVal val = ZobristVal();
+  move.score = 2000000;
   val.move = move;
   val.score = score;
   val.alpha = alpha;
@@ -2074,6 +2218,7 @@ void Bitboard::InsertLookup(Move move, int score, int alpha, int beta, int depth
 uint64_t Bitboard::hashBoard(bool turn) {
   return zobrist.hashBoard(pieces, occupied, blacks, turn);
 }
+
 
 bool Bitboard::canCastleQ(bool isWhite) {
   if (isWhite) {

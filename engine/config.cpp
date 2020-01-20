@@ -1,16 +1,9 @@
+// Configuration file
+
+#include "config.h"
+#include <string>
+#include <iostream>
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-const uint8_t maxDepth = 1024;
-bool debugMode = false;
+std::string engineName = "'Mr Bob'";
+std::string version = "v0.2.1";

@@ -1,3 +1,8 @@
+
+// Algorithms adapted from https://www.chessprogramming.org/Dumb7Fill#OccludedFill
+// Used to initialize magic bitboards
+// Fill ones in a certain direction until a piece is blocking the way.
+
 #include <iostream>
 #include "dumb7flooding.h"
 
