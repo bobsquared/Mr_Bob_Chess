@@ -336,7 +336,17 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
       }
       // Late move reduction
       else if (maxDepth >= 3 && iteration > 0 && move.quiet && !isCheck){
-        ret = std::max(ret, alphabetaR(false, bitboard, depth - 1 - 1, alpha, beta, maxDepth));
+
+        if (iteration > 10) {
+          ret = std::max(ret, alphabetaR(false, bitboard, depth - R - 1, alpha, beta, maxDepth));
+        }
+        else if (iteration > 6) {
+          ret = std::max(ret, alphabetaR(false, bitboard, depth - 2 - 1, alpha, beta, maxDepth));
+        }
+        else {
+          ret = std::max(ret, alphabetaR(false, bitboard, depth - 1 - 1, alpha, beta, maxDepth));
+        }
+
 
         if (ret > alpha) {
           ret = std::max(ret, alphabetaR(false, bitboard, depth - 1, alpha, beta, maxDepth));
@@ -357,6 +367,9 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
         // Insert killer moves is move is a quiet one
         if (move.quiet) {
           bitboard.InsertKiller(move, depth);
+          if (bestMove.quiet && bestMove.fromLoc < 64 && bestMove.toLoc < 64) {
+            bitboard.history[bestMove.fromLoc][bestMove.toLoc] += depth * depth;
+          }
         }
         // If it's not a null move, insert into transposition table
         if (move.fromLoc != 65 && move.toLoc != 65) { //lower bound
@@ -387,6 +400,9 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
       if (ret > alpha) {
         alpha = ret;
         bestMove = move;
+        if (bestMove.quiet && bestMove.fromLoc < 64 && bestMove.toLoc < 64) {
+          bitboard.history[bestMove.fromLoc][bestMove.toLoc] += depth;
+        }
       }
 
     }
@@ -412,7 +428,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
     // PV Node
     else {
       //exact
-      if (bestMove.fromLoc < 64 && bestMove.toLoc < 64) {
+      if (bestMove.quiet && bestMove.fromLoc < 64 && bestMove.toLoc < 64) {
         bitboard.history[bestMove.fromLoc][bestMove.toLoc] += depth * depth;
       }
 
@@ -463,7 +479,17 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
       }
       // Late move reduction
       else if (maxDepth >= 3 && iteration > 0 && move.quiet && !isCheck) {
-        ret = std::min(ret, alphabetaR(true, bitboard, depth - 1 - 1, alpha, beta, maxDepth));
+
+        if (iteration > 10) {
+          ret = std::min(ret, alphabetaR(true, bitboard, depth - R - 1, alpha, beta, maxDepth));
+        }
+        else if (iteration > 6) {
+          ret = std::min(ret, alphabetaR(true, bitboard, depth - 2 - 1, alpha, beta, maxDepth));
+        }
+        else {
+          ret = std::min(ret, alphabetaR(true, bitboard, depth - 1 - 1, alpha, beta, maxDepth));
+        }
+
 
         if (ret < beta) {
           ret = std::min(ret, alphabetaR(true, bitboard, depth - 1, alpha, beta, maxDepth));
@@ -485,6 +511,9 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
         // Insert killer moves is move is a quiet one
         if (move.quiet) {
           bitboard.InsertKiller(move, depth);
+          if (bestMove.quiet && bestMove.fromLoc < 64 && bestMove.toLoc < 64) {
+            bitboard.history[bestMove.fromLoc][bestMove.toLoc] += depth * depth;
+          }
         }
 
         // If it's not a null move, insert into transposition table
@@ -518,6 +547,9 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
       if (ret < beta) {
         beta = ret;
         bestMove = move;
+        if (bestMove.quiet && bestMove.fromLoc < 64 && bestMove.toLoc < 64) {
+          bitboard.history[bestMove.fromLoc][bestMove.toLoc] += depth;
+        }
       }
 
     }
@@ -547,7 +579,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
     // PV node
     else {
       //exact
-      if (bestMove.fromLoc < 64 && bestMove.toLoc < 64) {
+      if (bestMove.quiet && bestMove.fromLoc < 64 && bestMove.toLoc < 64) {
         bitboard.history[bestMove.fromLoc][bestMove.toLoc] += depth * depth;
       }
       bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 0, hashF);
@@ -655,6 +687,9 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
         alpha = ret;
         bestMove = TO_ALG[move.fromLoc] + TO_ALG[move.toLoc];
         bestMoveM = move;
+        if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
+          bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth;
+        }
       }
 
 
@@ -663,6 +698,9 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
 
         if (move.quiet) {
           bitboard.InsertKiller(move, depth);
+          if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
+            bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth * depth;
+          }
         }
 
         bitboard.InsertLookup(move, ret, alpha, beta, depth, 1, hashF);
@@ -685,7 +723,7 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
     }
     else {
       //exact
-      if (bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
+      if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
         bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth * depth;
       }
       bitboard.InsertLookup(bestMoveM, ret, alpha, beta, depth, 0, hashF);
@@ -730,11 +768,17 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
         beta = ret;
         bestMove = TO_ALG[move.fromLoc] + TO_ALG[move.toLoc];
         bestMoveM = move;
+        if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
+          bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth;
+        }
       }
 
       if (ret <= alpha) {
         if (move.quiet) {
           bitboard.InsertKiller(move, depth);
+          if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
+            bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth * depth;
+          }
         }
 
         bitboard.InsertLookup(move, ret, alpha, beta, depth, 2, hashF);
@@ -757,7 +801,7 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
     }
     else {
       //exact
-      if (bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
+      if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
         bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth * depth;
       }
       bitboard.InsertLookup(bestMoveM, ret, alpha, beta, depth, 0, hashF);

@@ -2114,21 +2114,11 @@ uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move move, int depth) {
     return 0;
   }
 
-  // for (uint8_t i = 0; i < count; i++) {
-  //   std::remove(moveList.begin(), moveList.end(), usedMoves[i]);
-  // }
 
   uint8_t insertIndex = 0;
   std::vector<Move>::iterator p;
 
-  // if (move != Move()) {
-  //   p = std::find(moveList.begin(), moveList.end(), move);
-  //   if (p != moveList.end()) {
-  //     std::swap(*p, moveList[insertIndex]);
-  //     insertIndex++;
-  //   }
-  // }
-  // std::vector<Move>::iterator p;
+
   //MVV/LVA
   int8_t val = 0;
   for (uint8_t i = insertIndex; i < moveList.size() && insertIndex < moveList.size(); i++) {
@@ -2138,8 +2128,18 @@ uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move move, int depth) {
         val = moveList[i].pieceTo - moveList[i].pieceFrom;
       }
     }
-    moveList[i].score = history[moveList[i].fromLoc][moveList[i].toLoc];
 
+    if (moveList[i].quiet) {
+      if (moveList[i] == killerMoves[depth][0].move) {
+        moveList[i].score = 1000000;
+      }
+      else if (moveList[i] == killerMoves[depth][1].move) {
+        moveList[i].score = 900000;
+      }
+      else {
+        moveList[i].score = history[moveList[i].fromLoc][moveList[i].toLoc];
+      }
+    }
 
   }
   //
@@ -2158,23 +2158,10 @@ uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move move, int depth) {
       p->score = 2000000;
     }
   }
-  //
-  //
-  // // Killers
-  // p = std::find(moveList.begin() + insertIndex, moveList.end(), killerMoves[depth][0].move);
-  // if (p != moveList.end() && !(*p == moveList[0])) {
-  //   std::swap(*p, moveList[insertIndex]);
-  //   insertIndex++;
-  // }
-  //
-  // p = std::find(moveList.begin() + insertIndex, moveList.end(), killerMoves[depth][1].move);
-  // if (p != moveList.end() && !(*p == moveList[0]) && !(*p == moveList[1])) {
-  //   std::swap(*p, moveList[insertIndex]);
-  //   insertIndex++;
-  // }
+
 
   // Null Move
-  Move nm = {65, 65, 10, 0, false, 500000};
+  Move nm = {65, 65, 10, 0, false, 1700000};
   moveList.push_back(nm);
   insertIndex++;
 
@@ -2191,8 +2178,6 @@ void Bitboard::InsertKiller(Move move, int depth) {
   KillerMove val = KillerMove();
 
   killerMoves[depth][1] = killerMoves[depth][0];
-  killerMoves[depth][1].move.score = 900000;
-  move.score = 1000000;
   val.move = move;
   val.depth = depth;
   killerMoves[depth][0] = val;
