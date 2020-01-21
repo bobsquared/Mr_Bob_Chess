@@ -33,7 +33,7 @@ void printInfo(int depth, std::string move, float branchingFactor, long long int
 
 // Info printing for Universal Chess Interface.
 // This function is used to communicate searching info to the chess GUI
-void printInfoUCI(int depth, long long int time, int cp, int mateInPlies) {
+void printInfoUCI(int depth, long long int time, int cp, int mateInPlies, std::string pv) {
 
   // Print the score in centipawns
   // positive cp indicates that the engine is at an advantage, does not matter if engine is playing white or black.
@@ -48,7 +48,7 @@ void printInfoUCI(int depth, long long int time, int cp, int mateInPlies) {
   }
 
   // Search efficiency and principal variation
-  std::cout << " nodes " << traversedNodes << " nps " << (uint64_t)(traversedNodes / (double)(time / 1000000000.0)) << " time " <<  (uint64_t)(time / 1000000.0) << " pv b1c3" << std::endl;
+  std::cout << " nodes " << traversedNodes << " nps " << (uint64_t)(traversedNodes / (double)(time / 1000000000.0)) << " time " <<  (uint64_t)(time / 1000000.0) << " pv " << pv << std::endl;
 
 }
 
@@ -162,10 +162,10 @@ void search(Bitboard &bitboard, int depth, bool color) {
     // If stop is not called, then print the info
     if (!exit_thread_flag) {
       if (!color) {
-        printInfoUCI(i, diff, -cp, -mateInPlies);
+        printInfoUCI(i, diff, -cp, -mateInPlies, bestMove);
       }
       else {
-        printInfoUCI(i, diff, cp, mateInPlies);
+        printInfoUCI(i, diff, cp, mateInPlies, bestMove);
       }
     }
 
