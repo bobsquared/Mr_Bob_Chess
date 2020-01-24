@@ -127,7 +127,7 @@ void search(Bitboard &bitboard, int depth, bool color) {
 
     // If checkmate is found, store in variable to print later.
     if (bMove.mateIn) {
-      mateInPlies = depth + 1 - bMove.mateIn;
+      mateInPlies = i - bMove.mateIn;
     }
     else {
       mateInPlies = 0;
@@ -162,10 +162,10 @@ void search(Bitboard &bitboard, int depth, bool color) {
     // If stop is not called, then print the info
     if (!exit_thread_flag) {
       if (!color) {
-        printInfoUCI(i, diff, -cp, -mateInPlies, bestMove);
+        printInfoUCI(i, diff, -cp, 0, bestMove);
       }
       else {
-        printInfoUCI(i, diff, cp, mateInPlies, bestMove);
+        printInfoUCI(i, diff, cp, 0, bestMove);
       }
     }
 

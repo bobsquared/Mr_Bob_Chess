@@ -3,15 +3,14 @@
 #include <unordered_map>
 #include <vector>
 #include "zobrist_hashing.h"
+#include "magic_bitboards.h"
 
 
 
 class Bitboard{
 
 public:
-  uint8_t count_population(uint64_t bitboard);
-  uint8_t bitScanF(uint64_t bitboard);
-  uint8_t bitScanR(uint64_t bitboard);
+
   const int pieceValues[6] = {100, 300, 325, 500, 900, 20000};
   const std::string NUM_TO_STR[9] = {"0", "1", "2", "3", "4", "5", "6", "7", "8"};
 
@@ -103,16 +102,6 @@ private:
 
 
 
-  // std::unordered_map<uint8_t, uint8_t> LSB_TABLE = {
-  //   {0, 63},{1, 30},{2, 3},{3, 32},{4, 59},{5, 14},{6, 11},{7, 33},
-  //   {8, 60},{9, 24},{10, 50},{11, 37},{12, 55},{13, 19},{14, 21},{15, 34},
-  //   {16, 61},{17, 29},{18, 2},{19, 53},{20, 51},{21, 23},{22, 41},{23, 18},
-  //   {24, 56},{25, 28},{26, 1},{27, 43},{28, 46},{29, 27},{30, 0},{31, 35},
-  //   {32, 62},{33, 31},{34, 58},{35, 4},{36, 5},{37, 49},{38, 54},{39, 6},
-  //   {40, 15},{41, 52},{42, 12},{43, 43},{44, 7},{45, 42},{46, 45},{47, 16},
-  //   {48, 25},{49, 57},{50, 48},{51, 13},{52, 10},{53, 39},{54, 8},{55, 44},
-  //   {56, 20},{57, 47},{58, 38},{59, 22},{60, 17},{61, 37},{62, 36},{63, 26}
-  // };
 
   const int MSB_TABLE[64] = {
     0, 47,  1, 56, 48, 27,  2, 60,
@@ -137,16 +126,6 @@ const int LSB_TABLE[64] = {
 };
 
 
-  // std::unordered_map<uint8_t, uint8_t> MSB_TABLE = {
-  //   {0, 0},{1, 47},{2, 1},{3, 56},{4, 48},{5, 27},{6, 2},{7, 60},
-  //   {8, 57},{9, 49},{10, 41},{11, 37},{12, 28},{13, 16},{14, 3},{15, 61},
-  //   {16, 54},{17, 58},{18, 35},{19, 52},{20, 50},{21, 42},{22, 21},{23, 44},
-  //   {24, 38},{25, 32},{26, 29},{27, 23},{28, 17},{29, 11},{30, 4},{31, 62},
-  //   {32, 46},{33, 55},{34, 26},{35, 59},{36, 40},{37, 36},{38, 15},{39, 53},
-  //   {40, 34},{41, 51},{42, 20},{43, 43},{44, 31},{45, 22},{46, 10},{47, 45},
-  //   {48, 25},{49, 39},{50, 14},{51, 33},{52, 19},{53, 30},{54, 9},{55, 24},
-  //   {56, 13},{57, 18},{58, 8},{59, 12},{60, 7},{61, 6},{62, 5},{63, 63}
-  // };
 
 
   // Moves
@@ -196,30 +175,8 @@ const int LSB_TABLE[64] = {
 
 
 
-  // uint8_t bitScanF(uint64_t bitboard);
-  // uint8_t bitScanR(uint64_t bitboard);
-  uint64_t bitCombinations(uint64_t index, uint64_t bitboard);
-
-
-  // Magic Bitboards -------------
-
-  struct MagicPro {
-    uint64_t bitboard;
-    uint32_t shift;
-    uint64_t magic;
-    uint64_t mask;
-  };
-
-  std::unordered_map<uint8_t, uint64_t> shiftR = {};
-  std::unordered_map<uint8_t, uint64_t> shiftB = {};
-  std::unordered_map<uint8_t, uint64_t> magicR = {};
-  std::unordered_map<uint8_t, uint64_t> magicB = {};
-
-  std::unordered_map<uint8_t, MagicPro> attacksR = {};
-  std::unordered_map<uint8_t, MagicPro> attacksB = {};
-
-  std::unordered_map<uint8_t, std::unordered_map<uint64_t, uint64_t>> rookComb = {};
-  std::unordered_map<uint8_t, std::unordered_map<uint64_t, uint64_t>> bishopComb = {};
+  uint8_t bitScanF(uint64_t bitboard);
+  uint8_t bitScanR(uint64_t bitboard);
 
 
 
@@ -283,9 +240,15 @@ const int LSB_TABLE[64] = {
   int blackKnightTable[64];
   int whiteBishopTable[64];
   int blackBishopTable[64];
+  int whiteRookTable[64];
+  int blackRookTable[64];
+  int whiteQueenTable[64];
+  int blackQueenTable[64];
   void InitPieceBoards();
   void InitDistanceArray();
   uint8_t enpassantConditions(bool isWhite, uint8_t pawnLocation);
+
+  Magics magics;
 
 
 
@@ -313,7 +276,7 @@ const int LSB_TABLE[64] = {
   void test();
 
 
-  // uint8_t count_population(uint64_t bitboard);
+  uint8_t count_population(uint64_t bitboard);
 
 
 
