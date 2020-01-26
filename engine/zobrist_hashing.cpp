@@ -93,6 +93,9 @@ uint64_t Zobrist::hashBoardM(uint64_t board, int8_t pieceFrom, int8_t pieceTo, i
 
   // Change the turn to move no matter what.
   uint64_t ret = board ^ blackTurn;
+  if (pieceFrom == 65 && pieceTo == 65) {
+    return ret;
+  }
 
   // If it's white's turn
   if (turn) {

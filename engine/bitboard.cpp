@@ -599,6 +599,10 @@ bool Bitboard::filterCheck(bool color) {
 
       uint64_t indexP = pieces[5] & blacks;
       uint8_t index = bitScanR(indexP);
+      if (!((1ULL << index) == indexP)) {
+        printBoard(indexP);
+        std::cout << index << " " << indexP << std::endl;
+      }
       assert ((1ULL << index) == indexP);
 
       uint64_t bishopAttacksMaskI = magics.bishopAttacksMask(occupied, index);
@@ -917,27 +921,42 @@ bool Bitboard::IsMoveWhite(uint8_t index, uint8_t index2) {
     if ((occupied & (1ULL << (index + 8))) != 0){
       base &= (1ULL << (index + 16)) ^ 18446744073709551615U;
     }
-    return (base & indexP2) > 0;
+
+    uint8_t enpass = enpassantConditions(true, index);
+    if (enpass && index2 == enpass) {
+      return true;
+    }
+
+    return (base & indexP2) != 0;
   }
   else if ((pieces[1] & whitesIndex) != 0) {
     uint64_t base = knightMoves[index] & ~whites;
-    return (base & indexP2) > 0;
+    return (base & indexP2) != 0;
   }
   else if ((pieces[2] & whitesIndex) != 0) {
     uint64_t base = magics.bishopAttacksMask(occupied, index) & ~whites;
-    return (base & indexP2) > 0;
+    return (base & indexP2) != 0;
   }
   else if ((pieces[3] & whitesIndex) != 0) {
     uint64_t base = magics.rookAttacksMask(occupied, index) & ~whites;
-    return (base & indexP2) > 0;
+    return (base & indexP2) != 0;
   }
   else if ((pieces[4] & whitesIndex) != 0) {
     uint64_t base = (magics.bishopAttacksMask(occupied, index) | magics.rookAttacksMask(occupied, index)) & ~whites;
-    return (base & indexP2) > 0;
+    return (base & indexP2) != 0;
   }
   else if ((pieces[5] & whitesIndex) != 0) {
     uint64_t base = kingMoves[index] & ~whites;
-    return (base & indexP2) > 0;
+
+    if (canCastleK(true) && index2 == 6) {
+        return true;
+    }
+
+    if (canCastleQ(true) && index2 == 2) {
+        return true;
+    }
+
+    return (base & indexP2) != 0;
   }
 
   return false;
@@ -1032,34 +1051,48 @@ bool Bitboard::IsMoveBlack(uint8_t index, uint8_t index2) {
   uint64_t indexP = 1ULL << index;
   uint64_t indexP2 = 1ULL << index2;
   uint64_t blacksIndex = indexP & blacks;
-  std::vector<uint8_t> ret = {};
 
   if ((pieces[0] & blacksIndex) != 0) {
     uint64_t base = (blackPawnAttacks[index] & whites) | (blackPawnMoves[index] & ~occupied);
     if ((index >= 16 && (occupied & (1ULL << (index - 8))) != 0)){
       base &= (1ULL << (index - 16)) ^ 18446744073709551615U;
     }
-    return (base & indexP2) > 0;
+
+    uint8_t enpass = enpassantConditions(false, index);
+    if (enpass && index2 == enpass) {
+      return true;
+    }
+
+    return (base & indexP2) != 0;
   }
   else if ((pieces[1] & blacksIndex) != 0) {
     uint64_t base = knightMoves[index] & ~blacks;
-    return (base & indexP2) > 0;
+    return (base & indexP2) != 0;
   }
   else if ((pieces[2] & blacksIndex) != 0) {
     uint64_t base = magics.bishopAttacksMask(occupied, index) & ~blacks;
-    return (base & indexP2) > 0;
+    return (base & indexP2) != 0;
   }
   else if ((pieces[3] & blacksIndex) != 0) {
     uint64_t base = magics.rookAttacksMask(occupied, index) & ~blacks;
-    return (base & indexP2) > 0;
+    return (base & indexP2) != 0;
   }
   else if ((pieces[4] & blacksIndex) != 0) {
     uint64_t base = (magics.bishopAttacksMask(occupied, index) | magics.rookAttacksMask(occupied, index)) & ~blacks;
-    return (base & indexP2) > 0;
+    return (base & indexP2) != 0;
   }
   else if ((pieces[5] & blacksIndex) != 0) {
     uint64_t base = kingMoves[index] & ~blacks;
-    return (base & indexP2) > 0;
+
+    if (canCastleK(false) && index2 == 62) {
+        return true;
+    }
+
+    if (canCastleQ(false) && index2 == 58) {
+        return true;
+    }
+
+    return (base & indexP2) != 0;
   }
 
   return false;
@@ -1193,7 +1226,7 @@ void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
 
   whiteToMove = !whiteToMove;
   if (index1 == 65 && index2 == 65) {
-    prevPositions.emplace_back(hashBoard(whiteToMove));
+    prevPositions.emplace_back(zobrist.hashBoardM(prevPositions.back(), index1, index2, 0, 0, whiteToMove));
     moveStack.emplace_back(65, 65, 10, 10, 0, false, false, false, 0, 0);
     return;
   }
@@ -1515,6 +1548,12 @@ void Bitboard::undoMove() {
   MoveStack m = moveStack.back();
   uint64_t fromLoc = m.fromLoc;
   uint64_t toLoc = m.toLoc;
+
+  if (fromLoc == 65 && toLoc == 65) {
+    moveStack.pop_back();
+    prevPositions.pop_back();
+    return;
+  }
   int8_t movePiece = m.movePiece;
   int8_t capturePiece = m.capturePiece;
   bool promotion = m.promote;
@@ -1812,6 +1851,13 @@ uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move move, int depth) {
   uint8_t insertIndex = 0;
   std::vector<Move>::iterator p;
 
+  p = std::find(moveList.begin(), moveList.end(), move);
+  if (p != moveList.end()) {
+    *p = std::move(moveList.back());
+    moveList.pop_back();
+  }
+
+
 
   //MVV/LVA
   int8_t val = 0;
@@ -1846,12 +1892,12 @@ uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move move, int depth) {
     }
   }
 
-  if (move != Move()) {
-    p = std::find(moveList.begin(), moveList.end(), move);
-    if (p != moveList.end()) {
-      p->score = 2000000;
-    }
-  }
+  // if (move != Move()) {
+  //   p = std::find(moveList.begin(), moveList.end(), move);
+  //   if (p != moveList.end()) {
+  //     p->score = 2000000;
+  //   }
+  // }
 
 
   // Null Move
