@@ -56,6 +56,7 @@ public:
   bool IsMoveWhite(uint8_t index, uint8_t index2);
   bool IsMoveBlack(uint8_t index, uint8_t index2);
   std::vector<Move> allValidMoves(bool color);
+  std::vector<Move> allValidCaptures(bool color);
 
   bool isAttacked(uint8_t index, bool color);
   bool filterCheck(bool color);
@@ -66,8 +67,10 @@ public:
   bool canNullMove();
 
   int evaluate();
-  int evaluateMobility();
-  int evaluateKingSafety();
+  int evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_t whiteKnights, uint64_t blackKnights,
+    uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens);
+  int evaluateKingSafety(uint8_t whiteKingIndex, uint8_t blackKingIndex, uint64_t whiteKnights, uint64_t blackKnights,
+    uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens);
   void resetBoard();
   bool isThreeFold();
 
@@ -233,6 +236,21 @@ const int LSB_TABLE[64] = {
   uint8_t enpasssantFlag;
   bool endgameFlag;
   bool whiteToMove;
+
+  uint8_t countPawnsW;
+  uint8_t countPawnsB;
+
+  uint8_t countKnightsW;
+  uint8_t countKnightsB;
+
+  uint8_t countBishopsW;
+  uint8_t countBishopsB;
+
+  uint8_t countRooksW;
+  uint8_t countRooksB;
+
+  uint8_t countQueensW;
+  uint8_t countQueensB;
 
   int whitePawnTable[64];
   int blackPawnTable[64];

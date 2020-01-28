@@ -23,10 +23,10 @@ def put(command):
 def search(depth):
 	# using the 'isready' command (engine has to answer 'readyok')
 	# to indicate current last line of stdout
-    start = time.time() * 1000
+
     bestMove = ""
 
-    s = "go"
+    s = "go wtime 1500 btime 1500"
     print(s)
     engine.stdin.write(s + "\n")  # Include '\n'
     engine.stdin.flush()

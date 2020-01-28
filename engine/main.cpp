@@ -135,7 +135,7 @@ void search(Bitboard &bitboard, int depth, bool color) {
 
 
     // If stop is not called, then store current variables in previous variables (update)
-    if (!exit_thread_flag) {
+    if (!exit_thread_flag || prevBestMove == "") {
       prevBestMove = bestMove;
     }
 
@@ -280,8 +280,8 @@ int main() {
         time = std::stoi(m[2]);
       }
 
-      th1 = std::thread(search, std::ref(x),  512, color);
-      std::this_thread::sleep_for(std::chrono::milliseconds(time / 30));
+      th1 = std::thread(search, std::ref(x),  99, color);
+      std::this_thread::sleep_for(std::chrono::milliseconds(time / 32));
       if (th1.joinable()) {
         exit_thread_flag = true;
         th1.join();

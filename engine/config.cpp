@@ -6,4 +6,4 @@
 
 
 std::string engineName = "'Mr Bob'";
-std::string version = "v0.3.0";
+std::string version = "v0.4.0";

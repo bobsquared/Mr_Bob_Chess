@@ -705,6 +705,7 @@ class Board:
 		self.prevMove = None
 		self.killerMovesWhite = dict()
 		self.killerMovesBlack = dict()
+		self.moveStack = []
 
 
 		kms = max(cfg.white_Max_Depth, cfg.black_Max_Depth)
@@ -955,7 +956,11 @@ class Board:
 
 
 		self.updateLocation()
-		co.put((loc1 + loc2).lower())
+		self.moveStack.append((loc1 + loc2).lower())
+		moveString = ""
+		for move in self.moveStack:
+			moveString += " " + move
+		co.put("position startpos moves" + moveString)
 		self.prevMove = (params.TO_NUM[loc1], params.TO_NUM[loc2])
 		# print("Move:1")
 		# self.bitboard.printPretty()
@@ -1775,12 +1780,12 @@ def main():
 
 			boardPieces.prevPiece = None
 
-			mp = engineMove(0)
-
-			mp1 = mp[0:2]
-			mp2 = mp[2:4]
-
-			boardPieces.movePiece(mp1.upper(), mp2.upper())
+			# mp = engineMove(0)
+			#
+			# mp1 = mp[0:2]
+			# mp2 = mp[2:4]
+			mm = boardPieces.minimax('white')
+			# boardPieces.movePiece(mp1.upper(), mp2.upper())
 			# if not p:
 			# 	p = multiprocessing.Process(target=engineMove, args=(0,)).start()
 			# elif p:

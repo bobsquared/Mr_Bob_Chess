@@ -57,52 +57,157 @@ struct ReturnInfo {
 
 // Quiesce Search is needed to minimize the horizon effect.
 // Adapted from https://www.chessprogramming.org/Quiescence_Search
-int quiesceSearch(bool useMax, Bitboard &bitboard, int alpha, int beta, int depth=2) {
+int quiesceSearch(bool useMax, Bitboard &bitboard, int alpha, int beta, int depth=0) {
+  int origAlpha = alpha;
+  int origBeta = beta;
   traversedNodes++;
 
-  if (depth <= 0) {
-    return bitboard.evaluate();
+  if (exit_thread_flag) {
+    return 0;
   }
+
+  // Transposition table:
+  // Get the hash key
+  uint64_t hashF = bitboard.getPosKey();
+  Bitboard::ZobristVal hashedBoard = Bitboard::ZobristVal();
+  if (bitboard.lookup.find(hashF) != bitboard.lookup.end()) {
+    // Store the hash table value
+    hashedBoard = bitboard.lookup[hashF];
+
+    // Ensure hashedBoard depth >= current depth
+    if (hashedBoard.depth >= depth) {
+
+      if (hashedBoard.flag == 0) { //Exact
+        return hashedBoard.score;
+      }
+      else if (hashedBoard.flag == 1) { // Low bound
+        alpha = std::max(alpha, hashedBoard.score);
+      }
+      else if (hashedBoard.flag == 2) { // Upper bound
+        beta = std::min(beta, hashedBoard.score);
+      }
+
+      if (alpha >= beta) {
+        return hashedBoard.score;
+      }
+
+    }
+  }
+
 
   int stand_pat = bitboard.evaluate();
-  if (stand_pat >= beta) {
-    return beta;
-  }
-
-  if (alpha < stand_pat) {
-    alpha = stand_pat;
-  }
-
-  std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!useMax);
-  int ret = stand_pat;
-  for (Bitboard::Move move : vMoves) {
-
-    if (move.quiet) {
-      continue;
-    }
-
-    bitboard.movePiece(move.fromLoc, move.toLoc);
-
-    if (!bitboard.filterCheck(!useMax)) {
-      bitboard.undoMove();
-      continue;
-    }
-
-    ret = -quiesceSearch(!useMax, bitboard, -beta, -alpha, depth - 1);
-    bitboard.undoMove();
-
-    if (ret >= beta) {
+  if (useMax) {
+    if (stand_pat >= beta) {
       return beta;
     }
 
-    if (ret > alpha) {
-      alpha = ret;
+    if (alpha < stand_pat) {
+      alpha = stand_pat;
     }
 
+    std::vector<Bitboard::Move> vMoves = bitboard.allValidCaptures(0);
+    std::sort(vMoves.begin(), vMoves.end());
+    Bitboard::Move bestMove;
+    int ret = stand_pat;
+    for (Bitboard::Move move : vMoves) {
+
+
+      bitboard.movePiece(move.fromLoc, move.toLoc);
+
+      if (!bitboard.filterCheck(0)) {
+        bitboard.undoMove();
+        continue;
+      }
+
+      ret = std::max(ret, quiesceSearch(false, bitboard, alpha, beta, depth - 1));
+      bitboard.undoMove();
+
+      if (ret >= beta) {
+        bitboard.InsertLookup(move, ret, alpha, beta, depth, 1, hashF);
+        return beta;
+      }
+
+      if (ret > alpha) {
+        alpha = ret;
+        bestMove = move;
+      }
+
+    }
+
+    //All Nodes
+    if (alpha == origAlpha) {
+      //upper bound
+      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 2, hashF);
+
+    }
+    // PV Node
+    else {
+      //exact
+
+      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 0, hashF);
+    }
+
+    return alpha;
+
+  }
+  else {
+
+    if (stand_pat <= alpha) {
+      return alpha;
+    }
+
+    if (beta > stand_pat) {
+      beta = stand_pat;
+    }
+
+    std::vector<Bitboard::Move> vMoves = bitboard.allValidCaptures(1);
+    std::sort(vMoves.begin(), vMoves.end());
+    Bitboard::Move bestMove;
+    int ret = stand_pat;
+    for (Bitboard::Move move : vMoves) {
+
+
+      bitboard.movePiece(move.fromLoc, move.toLoc);
+
+      if (!bitboard.filterCheck(1)) {
+        bitboard.undoMove();
+        continue;
+      }
+
+      ret = std::min(ret, quiesceSearch(true, bitboard, alpha, beta, depth - 1));
+      bitboard.undoMove();
+
+      if (ret <= alpha) {
+        bitboard.InsertLookup(move, ret, alpha, beta, depth, 2, hashF);
+        return alpha;
+      }
+
+      if (ret < beta) {
+        beta = ret;
+        bestMove = move;
+      }
+
+    }
+
+    //All Nodes
+    if (beta == origBeta) {
+      //upper bound
+      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 1, hashF);
+
+    }
+    // PV node
+    else {
+      //exact
+      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 0, hashF);
+      // bitboard.PVMoves.push_back(bestMove);
+
+    }
+
+    return beta;
 
   }
 
-  return alpha;
+
 
 }
 
@@ -244,13 +349,19 @@ std::string minimaxRoot(bool useMax, Bitboard &bitboard, int depth) {
 // Return only the score, and return more info in the root node
 int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, int maxDepth) {
 
-  traversedNodes++;
+
+
+  if (exit_thread_flag) {
+    return 0;
+  }
 
   // If depth <= 0 or stop command is called, then evaluate and return
-  if (depth <= 0 || exit_thread_flag) {
-    // return quiesceSearch(!useMax, bitboard, alpha, beta);
-    return bitboard.evaluate();
+  if (depth <= 0) {
+    return quiesceSearch(useMax, bitboard, alpha, beta);
+    // return bitboard.evaluate();
   }
+
+  traversedNodes++;
 
   // Original alpha and beta for transposition table
   int origAlpha = alpha;
@@ -331,11 +442,15 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
             }
           }
 
+          pruning++;
+          pruningTotal++;
+
           bitboard.InsertLookup(hashedBoard.move, ret, alpha, beta, depth, 1, hashF);
 
           return beta;
         }
 
+        pruningTotal++;
         nullMoves = false;
 
         // Update the best move and alpha
@@ -356,6 +471,10 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
     // Loop through all moves
     for (Bitboard::Move move : vMoves) {
 
+      if (exit_thread_flag) {
+        return 0;
+      }
+
       if (move.fromLoc == 65 && move.toLoc == 65 && isCheck && !bitboard.canNullMove()) { // If It's null move and in check
         continue;
       }
@@ -364,8 +483,8 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
       bitboard.movePiece(move.fromLoc, move.toLoc);
 
       // If player is in check, undo move and continue
-      bool checkMove = !bitboard.filterCheck(0);
-      if (checkMove) {
+      bool giveCheck = !bitboard.filterCheck(1);
+      if (!bitboard.filterCheck(0)) {
         bitboard.undoMove();
         continue;
       }
@@ -376,7 +495,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
         ret = std::max(ret, 0);
       }
       // extend if there's a check
-      else if (!bitboard.filterCheck(1)) {
+      else if (giveCheck) {
         ret = std::max(ret, alphabetaR(false, bitboard, depth, alpha, beta, maxDepth));
       }
       // If null move is found, reduce the depth of the search
@@ -384,7 +503,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
         ret = std::max(ret, alphabetaR(false, bitboard, depth - R - 1, alpha, beta, maxDepth));
       }
       // Late move reduction
-      else if (maxDepth >= 3 && iteration > 0 && move.quiet && !isCheck){
+      else if (maxDepth >= 3 && iteration > 0 && move.quiet && !isCheck && !giveCheck){
 
         if (iteration > 25) {
           ret = std::max(ret, alphabetaR(false, bitboard, depth - R - 1, alpha, beta, maxDepth));
@@ -520,11 +639,14 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
             }
           }
 
+          pruning++;
+          pruningTotal++;
+
           bitboard.InsertLookup(hashedBoard.move, ret, alpha, beta, depth, 2, hashF);
 
           return alpha;
         }
-
+        pruningTotal++;
         nullMoves = false;
 
         // Update the best move and alpha
@@ -547,6 +669,10 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
     // Loop through all moves
     for (Bitboard::Move move : vMoves) {
 
+      if (exit_thread_flag) {
+        return 0;
+      }
+
       if (move.fromLoc == 65 && move.toLoc == 65 && isCheck && !bitboard.canNullMove()) {
         continue;
       }
@@ -555,6 +681,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
       bitboard.movePiece(move.fromLoc, move.toLoc);
 
       // If player is in check, undo move and continue
+      bool giveCheck = !bitboard.filterCheck(0);
       if (!bitboard.filterCheck(1)) {
         bitboard.undoMove();
         continue;
@@ -565,7 +692,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
       if (bitboard.isThreeFold()) {
         ret = std::min(ret, 0);
       }
-      else if (!bitboard.filterCheck(0)) {
+      else if (giveCheck) {
         ret = std::min(ret, alphabetaR(true, bitboard, depth, alpha, beta, maxDepth));
       }
       // If null move is found, reduce the depth of the search
@@ -573,7 +700,7 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
         ret = std::min(ret, alphabetaR(true, bitboard, depth - R - 1, alpha, beta, maxDepth));
       }
       // Late move reduction
-      else if (maxDepth >= 3 && iteration > 0 && move.quiet && !isCheck) {
+      else if (maxDepth >= 3 && iteration > 0 && move.quiet && !isCheck && !giveCheck) {
 
         if (iteration > 25) {
           ret = std::min(ret, alphabetaR(true, bitboard, depth - R - 1, alpha, beta, maxDepth));
@@ -624,8 +751,6 @@ int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, 
 
         return alpha;
       }
-
-
 
 
       if (iteration == 1) {
@@ -713,14 +838,26 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
 
         if (hashedBoard.score <= MATE_VALUE - 100) {
           mateIn = (hashedBoard.score - MATE_VALUE);
-          return ReturnInfo{TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc], hashedBoard.score, mateIn};
+          bestMove = TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc];
+          if (hashedBoard.move.pieceFrom == 0 && hashedBoard.move.toLoc >= 56) {
+            bestMove += "q";
+          }
+          return ReturnInfo{bestMove, hashedBoard.score, mateIn};
         }
         else if (hashedBoard.score >= -MATE_VALUE + 100) {
           mateIn = (hashedBoard.score + MATE_VALUE);
-          return ReturnInfo{TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc], hashedBoard.score, mateIn};
+          bestMove = TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc];
+          if (hashedBoard.move.pieceFrom == 0 && hashedBoard.move.toLoc >= 56) {
+            bestMove += "q";
+          }
+          return ReturnInfo{bestMove, hashedBoard.score, mateIn};
         }
         else {
-          return ReturnInfo{TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc], hashedBoard.score, 0};
+          bestMove = TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc];
+          if (hashedBoard.move.pieceFrom == 0 && hashedBoard.move.toLoc >= 56) {
+            bestMove += "q";
+          }
+          return ReturnInfo{bestMove, hashedBoard.score, 0};
         }
 
       }
@@ -786,6 +923,10 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
             mateIn = (ret - MATE_VALUE);
           }
 
+          if (hashedBoard.move.pieceFrom == 0 && hashedBoard.move.toLoc >= 56) {
+            bestMove += "q";
+          }
+
           return ReturnInfo{bestMove, ret, mateIn};
         }
 
@@ -846,6 +987,10 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
           mateIn = (ret - MATE_VALUE);
         }
 
+        if (move.pieceFrom == 0 && move.toLoc >= 56) {
+          bestMove += "q";
+        }
+
         return ReturnInfo{bestMove, ret, mateIn};
       }
 
@@ -868,6 +1013,10 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
     }
     else if (ret >= MATE_VALUE - 100) {
       mateIn = (ret - MATE_VALUE);
+    }
+
+    if (bestMoveM.pieceFrom == 0 && bestMoveM.toLoc >= 56) {
+      bestMove += "q";
     }
 
     return ReturnInfo{bestMove, ret, mateIn};
@@ -915,6 +1064,10 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
           }
           else if (ret >= MATE_VALUE - 100) {
             mateIn = (ret - MATE_VALUE);
+          }
+
+          if (hashedBoard.move.pieceFrom == 0 && hashedBoard.move.toLoc <= 7) {
+            bestMove += "q";
           }
 
           return ReturnInfo{bestMove, ret, mateIn};
@@ -970,6 +1123,10 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
           mateIn = (ret - MATE_VALUE);
         }
 
+        if (move.pieceFrom == 0 && move.toLoc <= 7) {
+          bestMove += "q";
+        }
+
         return ReturnInfo{bestMove, ret, mateIn};
       }
 
@@ -994,6 +1151,10 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
     }
     else if (ret >= MATE_VALUE - 100) {
       mateIn = (ret - MATE_VALUE);
+    }
+
+    if (bestMoveM.pieceFrom == 0 && bestMoveM.toLoc <= 7) {
+      bestMove += "q";
     }
 
     return ReturnInfo{bestMove, ret, mateIn};
