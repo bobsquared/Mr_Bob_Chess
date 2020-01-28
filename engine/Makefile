@@ -1,3 +1,3 @@
 
 all: main.cpp bitboard.cpp dumb7flooding.cpp zobrist_hashing.cpp piecesquaretable.cpp config.cpp magic_bitboards.cpp
-	g++ -O3 -Wall -Wextra -std=c++11 -static -pthread -o "../Mr Bob2" main.cpp bitboard.cpp dumb7flooding.cpp zobrist_hashing.cpp piecesquaretable.cpp config.cpp magic_bitboards.cpp
+	g++ -O3 -Wall -Wextra -std=c++11 -static -pthread -o "../Mr Bob" main.cpp bitboard.cpp dumb7flooding.cpp zobrist_hashing.cpp piecesquaretable.cpp config.cpp magic_bitboards.cpp
