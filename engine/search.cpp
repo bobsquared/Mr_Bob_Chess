@@ -97,6 +97,7 @@ int quiesceSearch(bool useMax, Bitboard &bitboard, int alpha, int beta, int dept
 
   int stand_pat = bitboard.evaluate();
   if (useMax) {
+
     if (stand_pat >= beta) {
       return beta;
     }
@@ -819,6 +820,7 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
   // Keep track of origina beta and alpha
   int origBeta = beta;
   int origAlpha = alpha;
+  uint8_t numMoves = 0;
   bool hashed = false;
 
   // Store best move and mate in somewhere
@@ -887,7 +889,7 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
         bitboard.undoMove();
       }
       else {
-
+        numMoves++;
         // If three fold repetition, score a zero
         if (bitboard.isThreeFold()) {
           ret = std::max(ret, 0);
@@ -954,7 +956,7 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
         bitboard.undoMove();
         continue;
       }
-
+      numMoves++;
       // Continue search
       ret = std::max(ret, alphabetaR(false, bitboard, depth - 1, alpha, beta, maxDepth));
 
@@ -1019,6 +1021,10 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
       bestMove += "q";
     }
 
+    if (numMoves == 1) {
+      exit_thread_flag = true;
+    }
+
     return ReturnInfo{bestMove, ret, mateIn};
   }
   else {
@@ -1031,7 +1037,7 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
         bitboard.undoMove();
       }
       else {
-
+        numMoves++;
         // If three fold repetition, score a zero
         if (bitboard.isThreeFold()) {
           ret = std::min(ret, 0);
@@ -1095,7 +1101,7 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
         bitboard.undoMove();
         continue;
       }
-
+      numMoves++;
       ret = std::min(ret, alphabetaR(true, bitboard, depth - 1, alpha, beta, maxDepth));
 
       bitboard.undoMove();
@@ -1155,6 +1161,10 @@ ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDept
 
     if (bestMoveM.pieceFrom == 0 && bestMoveM.toLoc <= 7) {
       bestMove += "q";
+    }
+
+    if (numMoves == 1) {
+      exit_thread_flag = true;
     }
 
     return ReturnInfo{bestMove, ret, mateIn};

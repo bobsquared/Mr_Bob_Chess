@@ -87,7 +87,7 @@ void startPosMoves(bool &color, Bitboard & bitboard, std::string moves) {
 // Search for the best move in the position.
 // print the best move and the info for the search.
 // Position to search is the position of the bitboard reference passed in.
-void search(Bitboard &bitboard, int depth, bool color) {
+void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocated) {
 
   float branchingFactor = 0;
   int prevNodes = 0;
@@ -98,6 +98,7 @@ void search(Bitboard &bitboard, int depth, bool color) {
 
   int cp;
   int mateInPlies;
+  uint8_t numBestMove = 0;
 
   ReturnInfo bMove;
 
@@ -133,6 +134,13 @@ void search(Bitboard &bitboard, int depth, bool color) {
       mateInPlies = 0;
     }
 
+    if (prevBestMove == bestMove) {
+      numBestMove++;
+    }
+    else {
+      numBestMove = 0;
+    }
+
 
     // If stop is not called, then store current variables in previous variables (update)
     if (!exit_thread_flag || prevBestMove == "") {
@@ -158,6 +166,8 @@ void search(Bitboard &bitboard, int depth, bool color) {
 
     // Get the time the search took in nanoseconds
     auto diff = std::chrono::duration_cast<std::chrono::nanoseconds> (t2 - t1).count();
+    auto diff2 = std::chrono::duration_cast<std::chrono::milliseconds> (t2 - t1).count();
+
 
     // If stop is not called, then print the info
     if (!exit_thread_flag) {
@@ -169,11 +179,20 @@ void search(Bitboard &bitboard, int depth, bool color) {
       }
     }
 
+    if (diff2 >= (timeAllocated / 2)) {
+      exit_thread_flag = true;
+    }
+
+    if (numBestMove == 8 && timeAllocated != 0xFFFFFFFFU) {
+      exit_thread_flag = true;
+    }
 
     // Reset this variable and restart search
     traversedNodes = 0;
 
   }
+
+
 
   // Print the best move and clear the transposition table
   std::cout << "bestmove " << prevBestMove << std::endl;
@@ -265,7 +284,7 @@ int main() {
 
     // Search (virtually) forever.
     if (command == "go infinite") {
-      th1 = std::thread(search, std::ref(x),  512, color);
+      th1 = std::thread(search, std::ref(x),  512, color, 0xFFFFFFFFU);
       continue;
     }
 
@@ -280,7 +299,8 @@ int main() {
         time = std::stoi(m[2]);
       }
 
-      th1 = std::thread(search, std::ref(x),  99, color);
+
+      th1 = std::thread(search, std::ref(x),  99, color, time);
       std::this_thread::sleep_for(std::chrono::milliseconds(time / 32));
       if (th1.joinable()) {
         exit_thread_flag = true;
@@ -295,7 +315,7 @@ int main() {
     if (command.substr(0, 2) == "go") {
       std::cout << command << std::endl;
       std::regex_search(command, m, r);
-      th1 = std::thread(search, std::ref(x),  10, color);
+      th1 = std::thread(search, std::ref(x),  10, color, 0xFFFFFFFFU);
       th1.join();
       continue;
     }
