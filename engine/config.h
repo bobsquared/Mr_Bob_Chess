@@ -8,3 +8,4 @@
 
 extern std::string version;
 extern std::string engineName;
+extern int hashSize;

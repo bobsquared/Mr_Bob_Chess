@@ -7,3 +7,6 @@
 
 std::string engineName = "'Mr Bob'";
 std::string version = "v0.4.0";
+
+
+int hashSize = 2048;

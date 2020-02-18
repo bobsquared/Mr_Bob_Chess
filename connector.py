@@ -26,7 +26,7 @@ def search(depth):
 
     bestMove = ""
 
-    s = "go wtime 1500 btime 1500"
+    s = "go wtime 15000 btime 15000"
     print(s)
     engine.stdin.write(s + "\n")  # Include '\n'
     engine.stdin.flush()

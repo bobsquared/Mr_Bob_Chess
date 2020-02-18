@@ -11,6 +11,7 @@ class Bitboard{
 
 public:
 
+  void updateHalfMove();
   const int pieceValues[6] = {100, 300, 325, 500, 900, 20000};
   const std::string NUM_TO_STR[9] = {"0", "1", "2", "3", "4", "5", "6", "7", "8"};
 
@@ -18,26 +19,33 @@ public:
     uint8_t fromLoc;
     uint8_t toLoc;
     bool quiet;
-    int pieceFrom;
-    int pieceTo;
+    int8_t pieceFrom;
+    int8_t pieceTo;
     int score;
+    uint8_t promotion;
+    bool isEnpassant;
     // Move(uint8_t fromLoc, uint8_t toLoc, bool quiet, int pieceFrom, int pieceTo) : fromLoc(fromLoc), toLoc(toLoc), quiet(quiet), pieceFrom(pieceFrom), pieceTo(pieceTo) {}
     bool operator<(const Move& a) const { return score > a.score; }
+    bool operator==(const Move& rhs) {
+      return (fromLoc == rhs.fromLoc) && (toLoc == rhs.toLoc);
+    }
+    Move() :
+      fromLoc(0), toLoc(0), quiet(true), pieceFrom(0), pieceTo(-1), score(0), promotion(0), isEnpassant(false) {}
+    Move(uint8_t fromLoc, uint8_t toLoc, bool quiet, int8_t pieceFrom, int8_t pieceTo, int score, uint8_t promotion, bool isEnpassant) :
+      fromLoc(fromLoc), toLoc(toLoc), quiet(quiet), pieceFrom(pieceFrom), pieceTo(pieceTo), score(score), promotion(promotion), isEnpassant(isEnpassant) {}
   };
 
-  struct KillerMove {
-    Move move;
-    int depth;
-  };
 
   struct ZobristVal {
     Move move;
     int score;
-    int alpha;
-    int beta;
     int depth;
     uint8_t flag;
-    uint64_t positionKey;
+    uint64_t posKey;
+    uint16_t halfMove;
+
+    ZobristVal() :
+      move(Move()), score(0), depth(0), flag(0), posKey(0), halfMove(0) {}
   };
 
   struct SortMove {
@@ -46,6 +54,7 @@ public:
   };
 
   Bitboard();
+  ~Bitboard();
   void printBoard(uint64_t board);
   void printPretty();
 
@@ -53,23 +62,22 @@ public:
   std::vector<uint8_t> blackPiecesLoc();
   std::vector<uint8_t> validMovesWhite(uint8_t index);
   std::vector<uint8_t> validMovesBlack(uint8_t index);
-  bool IsMoveWhite(uint8_t index, uint8_t index2);
-  bool IsMoveBlack(uint8_t index, uint8_t index2);
+  bool IsMoveWhite(Move &move);
+  bool IsMoveBlack(Move &move);
   std::vector<Move> allValidMoves(bool color);
   std::vector<Move> allValidCaptures(bool color);
 
   bool isAttacked(uint8_t index, bool color);
   bool filterCheck(bool color);
-  uint8_t sortMoves(std::vector<Move> &moveList, Move move, int depth);
-  void movePiece(uint8_t index1, uint8_t index2);
-  // void movePiece(Move& move);
+  uint8_t sortMoves(std::vector<Move> &moveList, Move &move, int depth);
+  void movePiece(Move& move);
   void undoMove();
   bool canNullMove();
 
-  int evaluate();
+  int evaluate(int alpha, int beta);
   int evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_t whiteKnights, uint64_t blackKnights,
-    uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens);
-  int evaluateKingSafety(uint8_t whiteKingIndex, uint8_t blackKingIndex, uint64_t whiteKnights, uint64_t blackKnights,
+    uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens, bool endgame);
+  int evaluateKingSafety(uint8_t whiteKingIndex, uint8_t blackKingIndex, uint8_t whitePawns, uint8_t blackPawns, uint64_t whiteKnights, uint64_t blackKnights,
     uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens);
   void resetBoard();
   bool isThreeFold();
@@ -80,16 +88,18 @@ public:
   uint8_t chebyshevArray[64][64];
 
   std::unordered_map<uint64_t, ZobristVal> lookup = {}; // Transpostion table
-  // std::vector<ZobristVal> lookup = {}; // Transpostion table
-  KillerMove killerMoves[1024][2];  // Killer Moves
+  ZobristVal *lookup2; // Transpostion table
+  Move killerMoves[2][1024][2];  // Killer Moves
   void InsertKiller(Move move, int depth);
-  void InsertLookup(Move move, int score, int alpha, int beta, int depth, uint8_t flag, uint64_t key);
+  void InsertLookup(Move move, int score, int depth, uint8_t flag, uint64_t key);
   uint64_t hashBoard(bool turn);
 
   std::vector<Move> PVMoves = {};
   std::string posToFEN();
   uint64_t getPosKey();
-  uint32_t history[64][64];
+  uint32_t history[2][64][64];
+
+  uint64_t numHashes;
 
 
 
@@ -102,6 +112,18 @@ private:
   const uint64_t LEFT_MASK = 18374403900871474942U;
   const uint64_t DOWN_MASK = 18446744073709551360U;
   const uint64_t UP_MASK = 72057594037927935U;
+
+  const uint8_t attackWeight[8] = {
+    0, 0, 50, 75, 88, 94, 97, 99
+};
+
+  const int8_t knightWeight[9] = {
+    -20, -16, -12, -8, -4, 0, 4, 8, 12
+  };
+
+  const int8_t rookWeight[9] = {
+    15, 12, 9, 6, 3, 0, -3, -6, -9
+  };
 
 
 
@@ -194,6 +216,8 @@ const int LSB_TABLE[64] = {
 
   std::unordered_map<uint8_t, std::unordered_map<uint64_t, uint64_t>> rayAttacks = {};
   void InitRayAttacks();
+  void InitMvvLva();
+  uint16_t mvvlva[6][6];
 
   // ---------------------------------------------
 
@@ -254,6 +278,8 @@ const int LSB_TABLE[64] = {
 
   int whitePawnTable[64];
   int blackPawnTable[64];
+  int whitePawnTableEG[64];
+  int blackPawnTableEG[64];
   int whiteKnightTable[64];
   int blackKnightTable[64];
   int whiteBishopTable[64];
@@ -262,6 +288,8 @@ const int LSB_TABLE[64] = {
   int blackRookTable[64];
   int whiteQueenTable[64];
   int blackQueenTable[64];
+  int whiteKingTable[64];
+  int blackKingTable[64];
   void InitPieceBoards();
   void InitDistanceArray();
   uint8_t enpassantConditions(bool isWhite, uint8_t pawnLocation);
@@ -295,6 +323,7 @@ const int LSB_TABLE[64] = {
 
 
   uint8_t count_population(uint64_t bitboard);
+  uint16_t halfMove;
 
 
 

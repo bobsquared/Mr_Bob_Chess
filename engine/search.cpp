@@ -1,23 +1,14 @@
-#include <vector>
-#include <string>
-#include <iostream>
-#include <algorithm>
-#include <atomic>
-#include "bitboard.h"
-#include "zobrist_hashing.h"
-#include <cassert>
+#include "search.h"
 
 
-uint64_t traversedNodes = 0;
-const int MATE_VALUE = 100000;
 
 // Debugging variables
+uint64_t traversedNodes = 0;
+std::atomic<bool> exit_thread_flag;
 uint64_t pruning = 0;
 uint64_t pruningTotal = 0;
-//---------------------
-
-// Atomic boolean for multithreading stop command
-std::atomic<bool> exit_thread_flag{false};
+uint64_t pruningTT = 0;
+uint64_t pruningTotalTT = 0;
 
 
 // Number to algebra
@@ -44,35 +35,30 @@ std::unordered_map<std::string, uint8_t> TO_NUM = {
   {"a8", 56},{"b8", 57},{"c8", 58},{"d8", 59},{"e8", 60},{"f8", 61},{"g8", 62},{"h8", 63}
 };
 
-struct ReturnInfo {
-  std::string bestMove;
-  int score;
-  int mateIn;
-};
-
-
-
-
-
 
 // Quiesce Search is needed to minimize the horizon effect.
 // Adapted from https://www.chessprogramming.org/Quiescence_Search
-int quiesceSearch(bool useMax, Bitboard &bitboard, int alpha, int beta, int depth=0) {
+int quiesceSearchR(bool whiteMove, Bitboard &bitboard, int alpha, int beta, int depth=-1) {
   int origAlpha = alpha;
-  int origBeta = beta;
   traversedNodes++;
 
   if (exit_thread_flag) {
     return 0;
   }
 
+  if (bitboard.isThreeFold() && alpha < 0) {
+    if (beta <= 0) {
+      return 0;
+    }
+  }
+
   // Transposition table:
   // Get the hash key
   uint64_t hashF = bitboard.getPosKey();
   Bitboard::ZobristVal hashedBoard = Bitboard::ZobristVal();
-  if (bitboard.lookup.find(hashF) != bitboard.lookup.end()) {
+  if (bitboard.lookup2[hashF % bitboard.numHashes].posKey == hashF) {
     // Store the hash table value
-    hashedBoard = bitboard.lookup[hashF];
+    hashedBoard = bitboard.lookup2[hashF % bitboard.numHashes];
 
     // Ensure hashedBoard depth >= current depth
     if (hashedBoard.depth >= depth) {
@@ -95,187 +81,390 @@ int quiesceSearch(bool useMax, Bitboard &bitboard, int alpha, int beta, int dept
   }
 
 
-  int stand_pat = bitboard.evaluate();
-  if (useMax) {
+  int ret = bitboard.evaluate(alpha, beta);
+  if (ret >= beta) {
+    return ret;
+  }
 
-    if (stand_pat >= beta) {
-      return beta;
-    }
-
-    if (alpha < stand_pat) {
-      alpha = stand_pat;
-    }
-
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidCaptures(0);
-    std::sort(vMoves.begin(), vMoves.end());
-    Bitboard::Move bestMove;
-    int ret = stand_pat;
-    for (Bitboard::Move move : vMoves) {
+  if (ret > alpha) {
+    alpha = ret;
+  }
 
 
-      bitboard.movePiece(move.fromLoc, move.toLoc);
+  Bitboard::Move bestMove;
 
-      if (!bitboard.filterCheck(0)) {
-        bitboard.undoMove();
-        continue;
-      }
+  // bool isCheck = !bitboard.filterCheck(!whiteMove);
+  std::vector<Bitboard::Move> vMoves;
 
-      ret = std::max(ret, quiesceSearch(false, bitboard, alpha, beta, depth - 1));
+
+  // if (isCheck) {
+  //   vMoves = bitboard.allValidMoves(!whiteMove);
+  //   bitboard.sortMoves(vMoves, bestMove, depth);
+  // }
+  // else {
+    // vMoves = bitboard.allValidCaptures(!whiteMove);
+    // bitboard.sortMoves(vMoves, bestMove, depth);
+    // std::sort(vMoves.begin(), vMoves.end());
+  // }
+
+  vMoves = bitboard.allValidCaptures(!whiteMove);
+  bitboard.sortMoves(vMoves, bestMove, depth);
+
+
+  for (Bitboard::Move move : vMoves) {
+
+
+    bitboard.movePiece(move);
+
+    if (!bitboard.filterCheck(!whiteMove)) {
       bitboard.undoMove();
+      continue;
+    }
 
+    ret = std::max(ret, -quiesceSearchR(!whiteMove, bitboard, -beta, -alpha, depth - 1));
+    bitboard.undoMove();
+
+
+    if (ret > alpha) {
       if (ret >= beta) {
-        bitboard.InsertLookup(move, ret, alpha, beta, depth, 1, hashF);
-        return beta;
+        bitboard.InsertLookup(move, ret, depth, 1, hashF);
+        return ret;
       }
-
-      if (ret > alpha) {
-        alpha = ret;
-        bestMove = move;
-      }
-
+      alpha = ret;
+      bestMove = move;
     }
 
-    //All Nodes
-    if (alpha == origAlpha) {
-      //upper bound
-      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 2, hashF);
+  }
 
-    }
-    // PV Node
-    else {
-      //exact
-
-      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 0, hashF);
-    }
-
-    return alpha;
-
+  if (origAlpha != alpha) {
+    bitboard.InsertLookup(bestMove, ret, depth, 0, hashF);
   }
   else {
-
-    if (stand_pat <= alpha) {
-      return alpha;
-    }
-
-    if (beta > stand_pat) {
-      beta = stand_pat;
-    }
-
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidCaptures(1);
-    std::sort(vMoves.begin(), vMoves.end());
-    Bitboard::Move bestMove;
-    int ret = stand_pat;
-    for (Bitboard::Move move : vMoves) {
-
-
-      bitboard.movePiece(move.fromLoc, move.toLoc);
-
-      if (!bitboard.filterCheck(1)) {
-        bitboard.undoMove();
-        continue;
-      }
-
-      ret = std::min(ret, quiesceSearch(true, bitboard, alpha, beta, depth - 1));
-      bitboard.undoMove();
-
-      if (ret <= alpha) {
-        bitboard.InsertLookup(move, ret, alpha, beta, depth, 2, hashF);
-        return alpha;
-      }
-
-      if (ret < beta) {
-        beta = ret;
-        bestMove = move;
-      }
-
-    }
-
-    //All Nodes
-    if (beta == origBeta) {
-      //upper bound
-      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 1, hashF);
-
-    }
-    // PV node
-    else {
-      //exact
-      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 0, hashF);
-      // bitboard.PVMoves.push_back(bestMove);
-
-    }
-
-    return beta;
-
+    bitboard.InsertLookup(bestMove, ret, depth, 2, hashF);
   }
 
 
+  return ret;
 
 }
 
 
 
 
+// OKAY LETS START FROM SCRATCH
+// WE'RE DOING THINGS PROPERLY THIS TIME
+// FAIL SOFT ARCHITECTURE
+int searchR(bool whiteMove, Bitboard &bitboard, int depth, int alpha, int beta, bool nullMoves) {
 
 
-// Minimax algorithm
-int minimaxR(bool useMax, Bitboard &bitboard, int depth) {
+  bool IsPv = beta != alpha + 1;
+
+  // Atomic Boolean flag will return 0 if the search has ran out of time.
+  if (exit_thread_flag) {
+    return 0;
+  }
+
+  // Check for any draws (currently checks threefold repetition)
+  // If there is a draw, return 0.
+  if (bitboard.isThreeFold() && alpha < 0) {
+    if (beta <= 0) {
+      return 0;
+    }
+  }
+
+
+  // Transposition table for duplicate detection:
+  // Get the hash key
+  uint64_t hashF = bitboard.getPosKey();
+  bool hashed = false;
+  Bitboard::ZobristVal hashedBoard = Bitboard::ZobristVal();
+  if (bitboard.lookup2[hashF % bitboard.numHashes].posKey == hashF) {
+    hashed = true;
+    // Store the hash table value
+    hashedBoard = bitboard.lookup2[hashF % bitboard.numHashes];
+
+    // Ensure hashedBoard depth >= current depth
+    if (hashedBoard.depth >= depth) {
+
+      if (hashedBoard.flag == 0) { //Exact
+        traversedNodes++;
+        return hashedBoard.score;
+      }
+      else if (hashedBoard.flag == 1) { // Low bound
+        alpha = std::max(alpha, hashedBoard.score);
+      }
+      else if (hashedBoard.flag == 2) { // Upper bound
+        beta = std::min(beta, hashedBoard.score);
+      }
+
+      if (alpha >= beta) {
+        traversedNodes++;
+        return hashedBoard.score;
+      }
+
+    }
+  }
+
+
+
+  // If depth goes to zero, go into quiescence search.
+  if (depth <= 0) {
+    return quiesceSearchR(whiteMove, bitboard, alpha, beta);
+  }
+
   traversedNodes++;
 
-  if (depth <= 0) {
-    return bitboard.evaluate();
-  }
+
+  int ret = alpha;
+  int moveNumber = 0;
+  int origAlpha = alpha;
+  int newDepth = depth;
+  bool hasMove = false;
+  Bitboard::Move bestMove;
+  int eval = bitboard.evaluate(alpha, beta);
+  // Determine if player is in check.
+  bool isCheck = !bitboard.filterCheck(!whiteMove);
 
 
-  if (useMax) {
-    int res = -1000000;
+  // if (depth == 1 && eval >= beta + 325 && eval < 900) {
+  //   return eval;
+  // }
+  //
+  // if (depth == 2 && eval >= beta + 550 && eval < 900) {
+  //   return eval;
+  // }
 
+  // SEARCHING STEP 1: Null Move Pruning:
+  // Skip the player's turn and search the other player's turn using a reduced depth.
+  // This can be used to detect threats or mates.
+  if (!IsPv && !nullMoves && depth >= 1 && !isCheck && eval >= beta - 50) {
+    int R = 3 + depth / 8;
+    Bitboard::Move nullMove = Bitboard::Move{65, 65, true, 0, 0, 0, 0, false};
 
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(0);
+    bitboard.movePiece(nullMove);
+    int nullRet = -searchR(!whiteMove, bitboard, depth - R - 1, -beta, -beta + 1, true);
+    bitboard.undoMove();
 
-    for (Bitboard::Move loc : vMoves) {
+    if (nullRet >= beta) {
 
-      bitboard.movePiece(loc.fromLoc, loc.toLoc);
-
-      if (!bitboard.filterCheck(0)) {
-        bitboard.undoMove();
-        continue;
+      if (abs(nullRet) >= MATE_VALUE) {
+        nullRet = beta;
       }
-
-      int ret = minimaxR(false, bitboard, depth - 1);
-      bitboard.undoMove();
-
-      if (ret > res) {
-        res = ret;
+      int v = searchR(!whiteMove, bitboard, depth - R - 1, beta - 1, beta, false);
+      if (v >= beta) {
+        return nullRet;
       }
 
     }
 
-    return res;
+  }
+
+
+
+  // SEARCHING STEP 2: Transposition Principal variation search:
+  // If there is a TT hit for this position, try this move first.
+  // Many cutoffs will occur in doing this.
+  hasMove = whiteMove? bitboard.IsMoveWhite(hashedBoard.move) : bitboard.IsMoveBlack(hashedBoard.move);
+  if (hashed && hasMove) {
+    bitboard.movePiece(hashedBoard.move);
+    if (!bitboard.filterCheck(!whiteMove)) {
+      bitboard.undoMove();
+    }
+    else {
+
+      bool giveCheck = !bitboard.filterCheck(whiteMove);
+
+      // Extend if there is a check given.
+      if (giveCheck) {
+        newDepth = depth + 1;
+      }
+
+      ret = std::max(ret, -searchR(!whiteMove, bitboard, newDepth - 1, -beta, -alpha, nullMoves));
+      bitboard.undoMove();
+
+
+      if (ret > alpha) {
+        if (ret >= beta) { //Cut off
+
+          // Update killer moves and history heuristic
+          if (hashedBoard.move.quiet) {
+            bitboard.InsertKiller(hashedBoard.move, depth);
+            bitboard.history[whiteMove][hashedBoard.move.fromLoc][hashedBoard.move.toLoc] += depth * depth;
+          }
+
+          ++pruning;
+          ++pruningTotal;
+
+          bitboard.InsertLookup(hashedBoard.move, ret, depth, 1, hashF);
+          return beta;
+        }
+
+        alpha = ret;
+        bestMove = hashedBoard.move;
+      }
+
+      ++pruningTotal;
+      ++moveNumber;
+      hasMove = true;
+    }
+  }
+
+
+
+
+
+  // Generate all pseudo-legal moves from this position and sort them.
+  std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!whiteMove);
+
+
+
+
+
+  // SEARCHING STEP 3: Internal Iterative Deepening
+  // If there is no TT hit, then we can search for the best move in this position at a reduced depth
+  // and search that move first.
+  if (!hashed && depth >= 6) {
+
+    // Bitboard::Move iidMove = searchRoot(whiteMove, bitboard, depth - 4, vMoves, alpha, beta, false).move;
+    // for (uint8_t i = 0; i < vMoves.size(); i++) {
+    //   if (vMoves[i] == iidMove) {
+    //     vMoves[i].score = 3000000;
+    //     break;
+    //   }
+    // }
+    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
   }
   else {
-    int res = 1000000;
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(true);
+    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
+  }
 
-    for (Bitboard::Move loc : vMoves) {
 
-      bitboard.movePiece(loc.fromLoc, loc.toLoc);
 
-      if (!bitboard.filterCheck(1)) {
-        bitboard.undoMove();
-        continue;
+
+  // Loop through all the moves.
+  for (Bitboard::Move move : vMoves) {
+    int reduction = 1;
+    newDepth = depth;
+    bitboard.movePiece(move);
+
+    if (!bitboard.filterCheck(!whiteMove)) {
+      bitboard.undoMove();
+      continue;
+    }
+
+    bool giveCheck = !bitboard.filterCheck(whiteMove);
+
+    // Extensions
+    if (giveCheck) {
+      newDepth = depth + 1;
+    }
+
+
+
+    // SEARCHING STEP 4: PV search
+    // Assume the first move in this list is the principal variation. The rest of the moves will be serached with null window.
+    if (moveNumber == 0) {
+      ret = std::max(ret, -searchR(!whiteMove, bitboard, newDepth - 1, -beta, -alpha, nullMoves));
+    }
+    else {
+
+
+
+      // SERACHING STEP 5: Late Move Reduction:
+      // We can also reduce the depth of late moves to reduce the size of the tree.
+      // Again, this is assuming that the good moves are on the front of the list.
+      if (moveNumber >= 3 && depth >= 3 && !isCheck && move.quiet && !giveCheck) {
+
+
+
+
+        if (moveNumber > 6) {
+          reduction += 1;
+        }
+
+
+        // Reduce reduction if in PV
+        if (IsPv) {
+          reduction--;
+        }
+
+
+        reduction = std::max(0, reduction);
+        ret = std::max(ret, -searchR(!whiteMove, bitboard, newDepth - reduction - 1, -alpha-1, -alpha, nullMoves));
+
+        // If the result is greater than alpha, then we have to research at full depth.
+        if (ret > alpha && reduction <= 0) {
+          ret = std::max(ret, -searchR(!whiteMove, bitboard, newDepth - 1, -alpha-1, -alpha, nullMoves));
+        }
+
+      }
+      else {
+        ret = std::max(ret, -searchR(!whiteMove, bitboard, newDepth - 1, -alpha-1, -alpha, nullMoves));
       }
 
-      int ret = minimaxR(true, bitboard, depth - 1);
-      bitboard.undoMove();
-
-      if (ret < res) {
-        res = ret;
+      // If the result is greater than alpha and less than beta, then research with full window.
+      if (ret > alpha && ret < beta) {
+        ret = std::max(ret, -searchR(!whiteMove, bitboard, newDepth - 1, -beta, -alpha, nullMoves));
       }
 
     }
+    bitboard.undoMove();
 
-    return res;
+
+    if (ret > alpha) {
+
+
+      if (ret >= beta) {
+        // Update killer moves and history heuristic
+        if (move.quiet) {
+          bitboard.InsertKiller(move, depth);
+          bitboard.history[whiteMove][move.pieceFrom][move.toLoc] += depth * depth;
+        }
+        bitboard.InsertLookup(move, ret, depth, 1, hashF);
+
+        if (moveNumber == 0) {
+          ++pruning;
+          ++pruningTotal;
+        }
+
+        return ret;
+      }
+
+      alpha = ret;
+      bestMove = move;
+    }
+
+    if (moveNumber == 0) {
+      ++pruningTotal;
+    }
+    hasMove = true;
+    ++moveNumber;
   }
+
+  // If no legal move is found then a check should be done to see if king is in check
+  // If king is in check, then this is check mate.
+  // Else it is stalemate
+  if (!hasMove) {
+    if (isCheck) {
+      return -MATE_VALUE - depth;
+    }
+    else {
+      return 0;
+    }
+  }
+
+  // Update transposition table.
+  if (origAlpha != alpha) {
+    if (bestMove.quiet) {
+      bitboard.history[whiteMove][bestMove.pieceFrom][bestMove.toLoc] += depth;
+    }
+    bitboard.InsertLookup(bestMove, ret, depth, 0, hashF);
+  }
+  else {
+    bitboard.InsertLookup(bestMove, ret, depth, 2, hashF);
+  }
+
+  return ret;
 
 }
 
@@ -285,889 +474,100 @@ int minimaxR(bool useMax, Bitboard &bitboard, int depth) {
 
 
 // Minimax root node
-std::string minimaxRoot(bool useMax, Bitboard &bitboard, int depth) {
+ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, int depth, std::vector<Bitboard::Move> &vMoves, int alpha, int beta, bool isMain) {
 
-  std::string bestMove = "";
-  if (useMax) {
-    int res = -1000000;
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(0);
-
-    for (Bitboard::Move loc : vMoves) {
-
-      bitboard.movePiece(loc.fromLoc, loc.toLoc);
-
-      if (!bitboard.filterCheck(0)) {
-        bitboard.undoMove();
-        continue;
-      }
-
-      int ret = minimaxR(false, bitboard, depth - 1);
-      bitboard.undoMove();
-
-      if (ret > res) {
-        res = ret;
-        bestMove = TO_ALG[loc.fromLoc] + TO_ALG[loc.toLoc];
-      }
-
-
-    }
-    return bestMove;
-  }
-  else {
-    int res = 1000000;
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(1);
-
-    for (Bitboard::Move loc : vMoves) {
-
-      bitboard.movePiece(loc.fromLoc, loc.toLoc);
-
-      if (!bitboard.filterCheck(1)) {
-        bitboard.undoMove();
-        continue;
-      }
-
-      int ret = minimaxR(true, bitboard, depth - 1);
-      bitboard.undoMove();
-
-      if (ret < res) {
-        res = ret;
-        bestMove = TO_ALG[loc.fromLoc] + TO_ALG[loc.toLoc];
-      }
-
-    }
-
-    return bestMove;
-  }
-
-}
-
-
-
-
-
-
-// Alpha beta pruning to find the best move
-// Return only the score, and return more info in the root node
-int alphabetaR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta, int maxDepth) {
-
-
-
-  if (exit_thread_flag) {
-    return 0;
-  }
-
-  // If depth <= 0 or stop command is called, then evaluate and return
-  if (depth <= 0) {
-    return quiesceSearch(useMax, bitboard, alpha, beta);
-    // return bitboard.evaluate();
-  }
-
-  traversedNodes++;
-
-  // Original alpha and beta for transposition table
-  int origAlpha = alpha;
-  int origBeta = beta;
-  bool hashed = false;
-
-  // How much to reduce depth by.
-  uint8_t R = 3 + (depth / 8);
-
-  // Store the best move
-  Bitboard::Move bestMove;
-
-
-  // Transposition table:
-  // Get the hash key
+  ReturnInfo retInfo = ReturnInfo{};
   uint64_t hashF = bitboard.getPosKey();
-  Bitboard::ZobristVal hashedBoard = Bitboard::ZobristVal();
-  if (bitboard.lookup.find(hashF) != bitboard.lookup.end()) {
-    hashed = true;
-    // Store the hash table value
-    hashedBoard = bitboard.lookup[hashF];
-
-    // Ensure hashedBoard depth >= current depth
-    if (hashedBoard.depth >= depth) {
-
-      if (hashedBoard.flag == 0) { //Exact
-        return hashedBoard.score;
-      }
-      else if (hashedBoard.flag == 1) { // Low bound
-        alpha = std::max(alpha, hashedBoard.score);
-      }
-      else if (hashedBoard.flag == 2) { // Upper bound
-        beta = std::min(beta, hashedBoard.score);
-      }
-
-      if (alpha >= beta) {
-        return hashedBoard.score;
-      }
-
-    }
-  }
-
-
-
-  // If it is white to move
-  if (useMax) {
-
-    // Flag to check if a legal move is found (true = at least one legal move)
-    bool nullMoves = true;
-    int ret = -10000000;
-    uint8_t iteration = 0;
-
-    if (hashed && bitboard.IsMoveWhite(hashedBoard.move.fromLoc, hashedBoard.move.toLoc)) {
-      bitboard.movePiece(hashedBoard.move.fromLoc, hashedBoard.move.toLoc);
-      if (!bitboard.filterCheck(0)) {
-        bitboard.undoMove();
-      }
-      else {
-
-        // If three fold repetition, score a zero
-        if (bitboard.isThreeFold()) {
-          ret = std::max(ret, 0);
-        }
-        else {
-          ret = std::max(ret, alphabetaR(false, bitboard, depth - 1, alpha, beta, maxDepth));
-        }
-
-        iteration++;
-        bitboard.undoMove();
-
-        if (ret >= beta) { //Cut off
-
-          // Insert killer moves is move is a quiet one
-          if (hashedBoard.move.quiet) {
-            bitboard.InsertKiller(hashedBoard.move, depth);
-            if (hashedBoard.move.quiet && hashedBoard.move.fromLoc < 64 && hashedBoard.move.toLoc < 64) {
-              bitboard.history[hashedBoard.move.fromLoc][hashedBoard.move.toLoc] += depth * depth;
-            }
-          }
-
-          pruning++;
-          pruningTotal++;
-
-          bitboard.InsertLookup(hashedBoard.move, ret, alpha, beta, depth, 1, hashF);
-
-          return beta;
-        }
-
-        pruningTotal++;
-        nullMoves = false;
-
-        // Update the best move and alpha
-        if (ret > alpha) {
-          alpha = ret;
-          bestMove = hashedBoard.move;
-        }
-      }
-    }
-
-    // Is player currently in check
-    bool isCheck = !bitboard.filterCheck(0);
-
-    // Generate and sort all moves
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(0);
-    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
-
-    // Loop through all moves
-    for (Bitboard::Move move : vMoves) {
-
-      if (exit_thread_flag) {
-        return 0;
-      }
-
-      if (move.fromLoc == 65 && move.toLoc == 65 && isCheck && !bitboard.canNullMove()) { // If It's null move and in check
-        continue;
-      }
-
-      // Move piece
-      bitboard.movePiece(move.fromLoc, move.toLoc);
-
-      // If player is in check, undo move and continue
-      bool giveCheck = !bitboard.filterCheck(1);
-      if (!bitboard.filterCheck(0)) {
-        bitboard.undoMove();
-        continue;
-      }
-
-
-      // If three fold repetition, score a zero
-      if (bitboard.isThreeFold()) {
-        ret = std::max(ret, 0);
-      }
-      // extend if there's a check
-      else if (giveCheck) {
-        ret = std::max(ret, alphabetaR(false, bitboard, depth, alpha, beta, maxDepth));
-      }
-      // If null move is found, reduce the depth of the search
-      else if (move.fromLoc == 65 && move.toLoc == 65) {
-        ret = std::max(ret, alphabetaR(false, bitboard, depth - R - 1, alpha, beta, maxDepth));
-      }
-      // Late move reduction
-      else if (maxDepth >= 3 && iteration > 0 && move.quiet && !isCheck && !giveCheck){
-
-        if (iteration > 25) {
-          ret = std::max(ret, alphabetaR(false, bitboard, depth - R - 1, alpha, beta, maxDepth));
-        }
-        else if (iteration > 15) {
-          ret = std::max(ret, alphabetaR(false, bitboard, depth - 2 - 1, alpha, beta, maxDepth));
-        }
-        else {
-          ret = std::max(ret, alphabetaR(false, bitboard, depth - 1 - 1, alpha, beta, maxDepth));
-        }
-
-
-        if (ret > alpha) {
-          ret = std::max(ret, alphabetaR(false, bitboard, depth - 1, alpha, beta, maxDepth));
-        }
-      }
-      // Else do a normal search
-      else {
-        ret = std::max(ret, alphabetaR(false, bitboard, depth - 1, alpha, beta, maxDepth));
-      }
-
-      // undo move
-      iteration++;
-      bitboard.undoMove();
-
-
-      if (ret >= beta) { //Cut off
-
-        if (move.fromLoc != 65 && move.toLoc != 65) {
-          // Insert killer moves is move is a quiet one
-          if (move.quiet) {
-            bitboard.InsertKiller(move, depth);
-            if (move.quiet && move.fromLoc < 64 && move.toLoc < 64) {
-              bitboard.history[move.fromLoc][move.toLoc] += depth * depth;
-            }
-          }
-          // If it's not a null move, insert into transposition table
-          //lower bound
-          bitboard.InsertLookup(move, ret, alpha, beta, depth, 1, hashF);
-        }
-
-        if (iteration == 1) {
-          pruning++;
-          pruningTotal++;
-        }
-
-        return beta;
-      }
-
-      if (iteration == 1) {
-        pruningTotal++;
-      }
-
-
-      // If it's a null move, continue as we do not want to save this move as the best move
-      if (move.fromLoc == 65 && move.toLoc == 65) {
-        continue;
-      }
-
-      nullMoves = false;
-
-      // Update the best move and alpha
-      if (ret > alpha) {
-        alpha = ret;
-        bestMove = move;
-      }
-
-    }
-
-    // If no legal move is found then a check should be done to see if king is in check
-    // If king is in check, then this is check mate.
-    // Else it is stalemate
-    if (nullMoves) {
-      if (isCheck) {
-        return -MATE_VALUE - depth;
-      }
-      else {
-        return 0;
-      }
-    }
-
-    //All Nodes
-    if (alpha == origAlpha) {
-      //upper bound
-      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 2, hashF);
-
-    }
-    // PV Node
-    else {
-      //exact
-      if (bestMove.quiet && bestMove.fromLoc < 64 && bestMove.toLoc < 64) {
-        bitboard.history[bestMove.fromLoc][bestMove.toLoc] += depth * depth;
-      }
-
-      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 0, hashF);
-    }
-
-    return alpha;
-  }
-  // Else player is black
-  else {
-
-    // Flag to check if a legal move is found (true = at least one legal move)
-    bool nullMoves = true;
-    int ret = 10000000;
-    int iteration = 0;
-
-    if (hashed && bitboard.IsMoveBlack(hashedBoard.move.fromLoc, hashedBoard.move.toLoc)) {
-      bitboard.movePiece(hashedBoard.move.fromLoc, hashedBoard.move.toLoc);
-      if (!bitboard.filterCheck(1)) {
-        bitboard.undoMove();
-      }
-      else {
-
-        // If three fold repetition, score a zero
-        if (bitboard.isThreeFold()) {
-          ret = std::min(ret, 0);
-        }
-        else {
-          ret = std::min(ret, alphabetaR(true, bitboard, depth - 1, alpha, beta, maxDepth));
-        }
-
-        iteration++;
-        bitboard.undoMove();
-
-        if (ret <= alpha) { //Cut off
-
-          // Insert killer moves is move is a quiet one
-          if (hashedBoard.move.quiet) {
-            bitboard.InsertKiller(hashedBoard.move, depth);
-            if (hashedBoard.move.quiet && hashedBoard.move.fromLoc < 64 && hashedBoard.move.toLoc < 64) {
-              bitboard.history[hashedBoard.move.fromLoc][hashedBoard.move.toLoc] += depth * depth;
-            }
-          }
-
-          pruning++;
-          pruningTotal++;
-
-          bitboard.InsertLookup(hashedBoard.move, ret, alpha, beta, depth, 2, hashF);
-
-          return alpha;
-        }
-        pruningTotal++;
-        nullMoves = false;
-
-        // Update the best move and alpha
-        if (ret < beta) {
-          beta = ret;
-          bestMove = hashedBoard.move;
-        }
-      }
-    }
-
-
-
-    // Is player currently in check
-    bool isCheck = !bitboard.filterCheck(1);
-
-    // Generate and sort all moves
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(1);
-    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
-
-    // Loop through all moves
-    for (Bitboard::Move move : vMoves) {
-
-      if (exit_thread_flag) {
-        return 0;
-      }
-
-      if (move.fromLoc == 65 && move.toLoc == 65 && isCheck && !bitboard.canNullMove()) {
-        continue;
-      }
-
-      // Move piece
-      bitboard.movePiece(move.fromLoc, move.toLoc);
-
-      // If player is in check, undo move and continue
-      bool giveCheck = !bitboard.filterCheck(0);
-      if (!bitboard.filterCheck(1)) {
-        bitboard.undoMove();
-        continue;
-      }
-
-
-      // If three fold repetition, score a zero
-      if (bitboard.isThreeFold()) {
-        ret = std::min(ret, 0);
-      }
-      else if (giveCheck) {
-        ret = std::min(ret, alphabetaR(true, bitboard, depth, alpha, beta, maxDepth));
-      }
-      // If null move is found, reduce the depth of the search
-      else if (move.fromLoc == 65 && move.toLoc == 65) {
-        ret = std::min(ret, alphabetaR(true, bitboard, depth - R - 1, alpha, beta, maxDepth));
-      }
-      // Late move reduction
-      else if (maxDepth >= 3 && iteration > 0 && move.quiet && !isCheck && !giveCheck) {
-
-        if (iteration > 25) {
-          ret = std::min(ret, alphabetaR(true, bitboard, depth - R - 1, alpha, beta, maxDepth));
-        }
-        else if (iteration > 15) {
-          ret = std::min(ret, alphabetaR(true, bitboard, depth - 2 - 1, alpha, beta, maxDepth));
-        }
-        else {
-          ret = std::min(ret, alphabetaR(true, bitboard, depth - 1 - 1, alpha, beta, maxDepth));
-        }
-
-
-        if (ret < beta) {
-          ret = std::min(ret, alphabetaR(true, bitboard, depth - 1, alpha, beta, maxDepth));
-        }
-      }
-      // Else do a normal search
-      else {
-        ret = std::min(ret, alphabetaR(true, bitboard, depth - 1, alpha, beta, maxDepth));
-      }
-
-      // undo move
-      iteration++;
-      bitboard.undoMove();
-
-
-      // Cutoff
-      if (ret <= alpha) {
-
-        if (move.fromLoc != 65 && move.toLoc != 65) {
-          // Insert killer moves is move is a quiet one
-          if (move.quiet) {
-            bitboard.InsertKiller(move, depth);
-            if (move.quiet && move.fromLoc < 64 && move.toLoc < 64) {
-              bitboard.history[move.fromLoc][move.toLoc] += depth * depth;
-            }
-          }
-
-          // If it's not a null move, insert into transposition table
-
-          bitboard.InsertLookup(move, ret, alpha, beta, depth, 2, hashF);
-        }
-
-        if (iteration == 1) {
-          pruning++;
-          pruningTotal++;
-        }
-
-        return alpha;
-      }
-
-
-      if (iteration == 1) {
-        pruningTotal++;
-      }
-
-      // If it's a null move, continue as we do not want to save this move as the best move
-      if (move.fromLoc == 65 && move.toLoc == 65) {
-        continue;
-      }
-
-      nullMoves = false;
-
-      // Update the best move and beta
-      if (ret < beta) {
-        beta = ret;
-        bestMove = move;
-      }
-
-    }
-
-
-    // If no legal move is found then a check should be done to see if king is in check
-    // If king is in check, then this is check mate.
-    // Else it is stalemate
-    if (nullMoves) {
-
-      if (isCheck) {
-        return MATE_VALUE + depth;
-      }
-      else {
-        return 0;
-      }
-    }
-
-
-
-    //All Nodes
-    if (beta == origBeta) {
-      //upper bound
-      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 1, hashF);
-
-    }
-    // PV node
-    else {
-      //exact
-      if (bestMove.quiet && bestMove.fromLoc < 64 && bestMove.toLoc < 64) {
-        bitboard.history[bestMove.fromLoc][bestMove.toLoc] += depth * depth;
-      }
-      bitboard.InsertLookup(bestMove, ret, alpha, beta, depth, 0, hashF);
-      // bitboard.PVMoves.push_back(bestMove);
-
-    }
-    return beta;
-
-  }
-
-}
-
-
-
-
-
-ReturnInfo alphabetaRoot(bool useMax, Bitboard &bitboard, int depth, int maxDepth, int alpha=-1000000, int beta=1000000) {
-
-  // Keep track of origina beta and alpha
-  int origBeta = beta;
+  int ret = alpha;
   int origAlpha = alpha;
   uint8_t numMoves = 0;
-  bool hashed = false;
-
-  // Store best move and mate in somewhere
-  std::string bestMove = "";
-  int mateIn = 0;
+  bool isCheck = !bitboard.filterCheck(!whiteMove);
+  int newDepth = depth;
 
 
-  // Transposition table
-  uint64_t hashF = bitboard.getPosKey();
-  Bitboard::ZobristVal hashedBoard = Bitboard::ZobristVal();
-  if (bitboard.lookup.find(hashF) != bitboard.lookup.end()) {
-    hashed = true;
-    hashedBoard = bitboard.lookup[hashF];
 
-    if (hashedBoard.depth >= depth) {
-      if (hashedBoard.flag == 0) { //Exact
 
-        if (hashedBoard.score <= MATE_VALUE - 100) {
-          mateIn = (hashedBoard.score - MATE_VALUE);
-          bestMove = TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc];
-          if (hashedBoard.move.pieceFrom == 0 && hashedBoard.move.toLoc >= 56) {
-            bestMove += "q";
-          }
-          return ReturnInfo{bestMove, hashedBoard.score, mateIn};
+  Bitboard::Move bestMove;
+  // std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!whiteMove);
+  // bitboard.sortMoves(vMoves, bestMove, depth);
+
+  for (Bitboard::Move move : vMoves) {
+    newDepth = depth;
+    bitboard.movePiece(move);
+
+    if (!bitboard.filterCheck(!whiteMove)) {
+      bitboard.undoMove();
+      continue;
+    }
+
+    bool giveCheck = !bitboard.filterCheck(whiteMove);
+    if (!giveCheck) {
+      newDepth = depth + 1;
+    }
+
+    if (numMoves == 0) {
+      ret = std::max(ret, -searchR(!whiteMove, bitboard, newDepth - 1, -beta, -alpha, false));
+    }
+    else {
+
+      //Late Move Reduction
+      if (numMoves >= 6 && depth >= 3 && !isCheck && move.quiet && !giveCheck) {
+        int reduction = 1;
+
+        if (numMoves > 14) {
+          reduction += 1;
         }
-        else if (hashedBoard.score >= -MATE_VALUE + 100) {
-          mateIn = (hashedBoard.score + MATE_VALUE);
-          bestMove = TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc];
-          if (hashedBoard.move.pieceFrom == 0 && hashedBoard.move.toLoc >= 56) {
-            bestMove += "q";
-          }
-          return ReturnInfo{bestMove, hashedBoard.score, mateIn};
-        }
-        else {
-          bestMove = TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc];
-          if (hashedBoard.move.pieceFrom == 0 && hashedBoard.move.toLoc >= 56) {
-            bestMove += "q";
-          }
-          return ReturnInfo{bestMove, hashedBoard.score, 0};
+
+        // if (numMoves > 20) {
+        //   reduction += 1 + depth / 8;
+        // }
+
+        ret = std::max(ret, -searchR(!whiteMove, bitboard, newDepth - reduction - 1, -alpha-1, -alpha, false));
+
+        if (ret > alpha && reduction != 0) {
+          ret = std::max(ret, -searchR(!whiteMove, bitboard, newDepth - 1, -alpha-1, -alpha, false));
         }
 
       }
-      else if (hashedBoard.flag == 1) { // Low bound
-        alpha = std::max(alpha, hashedBoard.score);
+      else {
+        ret = std::max(ret, -searchR(!whiteMove, bitboard, newDepth - 1, -alpha-1, -alpha, false));
       }
-      else if (hashedBoard.flag == 2) { // Upper bound
-        beta = std::min(beta, hashedBoard.score);
+
+      if (ret > alpha && ret < beta) {
+        ret = std::max(ret, -searchR(!whiteMove, bitboard, newDepth - 1, -beta, -alpha, false));
       }
     }
+    bitboard.undoMove();
+
+    if (ret > alpha) {
+      alpha = ret;
+      bestMove = move;
+      retInfo.move = move;
+      retInfo.score = ret;
+      retInfo.bestMove = TO_ALG[move.fromLoc] + TO_ALG[move.toLoc];
+    }
+
+    ++numMoves;
+  }
+
+  if (numMoves == 1 && isMain) {
+    exit_thread_flag = true;
   }
 
 
-
-  Bitboard::Move bestMoveM = Bitboard::Move{};
-
-
-  // If it is white to move
-  if (useMax) {
-
-
-    int ret = -10000000;
-
-    if (hashed && bitboard.IsMoveWhite(hashedBoard.move.fromLoc, hashedBoard.move.toLoc)) {
-      bitboard.movePiece(hashedBoard.move.fromLoc, hashedBoard.move.toLoc);
-      if (!bitboard.filterCheck(0)) {
-        bitboard.undoMove();
-      }
-      else {
-        numMoves++;
-        // If three fold repetition, score a zero
-        if (bitboard.isThreeFold()) {
-          ret = std::max(ret, 0);
-        }
-        else {
-          ret = std::max(ret, alphabetaR(false, bitboard, depth - 1, alpha, beta, maxDepth));
-        }
-
-        bitboard.undoMove();
-
-        // Update the best move and alpha
-        if (ret > alpha) {
-          alpha = ret;
-          bestMove = TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc];
-          bestMoveM = hashedBoard.move;
-        }
-
-        if (ret >= beta) { //Cut off
-
-          if (hashedBoard.move.quiet) {
-            bitboard.InsertKiller(hashedBoard.move, depth);
-            if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
-              bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth * depth;
-            }
-          }
-
-          bitboard.InsertLookup(hashedBoard.move, ret, alpha, beta, depth, 2, hashF);
-
-          if (ret <= -MATE_VALUE + 100) {
-            mateIn = (ret + MATE_VALUE);
-          }
-          else if (ret >= MATE_VALUE - 100) {
-            mateIn = (ret - MATE_VALUE);
-          }
-
-          if (hashedBoard.move.pieceFrom == 0 && hashedBoard.move.toLoc >= 56) {
-            bestMove += "q";
-          }
-
-          return ReturnInfo{bestMove, ret, mateIn};
-        }
-
-
-
-      }
-    }
-
-    // Generate moves and sort them
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(0);
-    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
-
-    for (Bitboard::Move move : vMoves) {
-
-      // If null move, continue
-      if (move.fromLoc == 65 && move.toLoc == 65) {
-        continue;
-      }
-
-      // Move piece
-      bitboard.movePiece(move.fromLoc, move.toLoc);
-
-      // If in check, continue
-      if (!bitboard.filterCheck(0)) {
-        bitboard.undoMove();
-        continue;
-      }
-      numMoves++;
-      // Continue search
-      ret = std::max(ret, alphabetaR(false, bitboard, depth - 1, alpha, beta, maxDepth));
-
-
-      bitboard.undoMove();
-
-      if (ret > alpha) {
-        alpha = ret;
-        bestMove = TO_ALG[move.fromLoc] + TO_ALG[move.toLoc];
-        bestMoveM = move;
-      }
-
-
-
-      if (ret >= beta) {
-
-        if (move.quiet) {
-          bitboard.InsertKiller(move, depth);
-          if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
-            bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth * depth;
-          }
-        }
-
-        bitboard.InsertLookup(move, ret, alpha, beta, depth, 1, hashF);
-
-        if (ret <= -MATE_VALUE + 100) {
-          mateIn = (ret + MATE_VALUE);
-        }
-        else if (ret >= MATE_VALUE - 100) {
-          mateIn = (ret - MATE_VALUE);
-        }
-
-        if (move.pieceFrom == 0 && move.toLoc >= 56) {
-          bestMove += "q";
-        }
-
-        return ReturnInfo{bestMove, ret, mateIn};
-      }
-
-    }
-
-    if (alpha == origAlpha) {
-      //upper bound
-      bitboard.InsertLookup(bestMoveM, ret, alpha, beta, depth, 2, hashF);
-    }
-    else {
-      //exact
-      if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
-        bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth * depth;
-      }
-      bitboard.InsertLookup(bestMoveM, ret, alpha, beta, depth, 0, hashF);
-    }
-
-    if (ret <= -MATE_VALUE + 100) {
-      mateIn = (ret + MATE_VALUE);
-    }
-    else if (ret >= MATE_VALUE - 100) {
-      mateIn = (ret - MATE_VALUE);
-    }
-
-    if (bestMoveM.pieceFrom == 0 && bestMoveM.toLoc >= 56) {
-      bestMove += "q";
-    }
-
-    if (numMoves == 1) {
-      exit_thread_flag = true;
-    }
-
-    return ReturnInfo{bestMove, ret, mateIn};
+  if (origAlpha != alpha) {
+    bitboard.InsertLookup(bestMove, ret, depth, 0, hashF);
   }
   else {
-
-    int ret = 10000000;
-
-    if (hashed && bitboard.IsMoveBlack(hashedBoard.move.fromLoc, hashedBoard.move.toLoc)) {
-      bitboard.movePiece(hashedBoard.move.fromLoc, hashedBoard.move.toLoc);
-      if (!bitboard.filterCheck(1)) {
-        bitboard.undoMove();
-      }
-      else {
-        numMoves++;
-        // If three fold repetition, score a zero
-        if (bitboard.isThreeFold()) {
-          ret = std::min(ret, 0);
-        }
-        else {
-          ret = std::min(ret, alphabetaR(true, bitboard, depth - 1, alpha, beta, maxDepth));
-        }
-
-        bitboard.undoMove();
-
-        // Update the best move and alpha
-        if (ret < beta) {
-          beta = ret;
-          bestMove = TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc];
-          bestMoveM = hashedBoard.move;
-        }
-
-        if (ret <= alpha) { //Cut off
-          if (hashedBoard.move.quiet) {
-            bitboard.InsertKiller(hashedBoard.move, depth);
-            if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
-              bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth * depth;
-            }
-          }
-
-          bitboard.InsertLookup(hashedBoard.move, ret, alpha, beta, depth, 2, hashF);
-
-          if (ret <= -MATE_VALUE + 100) {
-            mateIn = (ret + MATE_VALUE);
-          }
-          else if (ret >= MATE_VALUE - 100) {
-            mateIn = (ret - MATE_VALUE);
-          }
-
-          if (hashedBoard.move.pieceFrom == 0 && hashedBoard.move.toLoc <= 7) {
-            bestMove += "q";
-          }
-
-          return ReturnInfo{bestMove, ret, mateIn};
-        }
-
-
-
-      }
-    }
-
-    // Generate moves and sort them
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(1);
-    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
-
-    for (Bitboard::Move move : vMoves) {
-
-      // If null move, continue
-      if (move.fromLoc == 65 && move.toLoc == 65) {
-        continue;
-      }
-
-      bitboard.movePiece(move.fromLoc, move.toLoc);
-
-      if (!bitboard.filterCheck(1)) {
-        bitboard.undoMove();
-        continue;
-      }
-      numMoves++;
-      ret = std::min(ret, alphabetaR(true, bitboard, depth - 1, alpha, beta, maxDepth));
-
-      bitboard.undoMove();
-
-      if (ret < beta) {
-        beta = ret;
-        bestMove = TO_ALG[move.fromLoc] + TO_ALG[move.toLoc];
-        bestMoveM = move;
-      }
-
-      if (ret <= alpha) {
-        if (move.quiet) {
-          bitboard.InsertKiller(move, depth);
-          if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
-            bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth * depth;
-          }
-        }
-
-        bitboard.InsertLookup(move, ret, alpha, beta, depth, 2, hashF);
-
-        if (ret <= -MATE_VALUE + 100) {
-          mateIn = (ret + MATE_VALUE);
-        }
-        else if (ret >= MATE_VALUE - 100) {
-          mateIn = (ret - MATE_VALUE);
-        }
-
-        if (move.pieceFrom == 0 && move.toLoc <= 7) {
-          bestMove += "q";
-        }
-
-        return ReturnInfo{bestMove, ret, mateIn};
-      }
-
-    }
-
-    if (beta == origBeta) {
-      //upper bound
-      bitboard.InsertLookup(bestMoveM, ret, alpha, beta, depth, 1, hashF);
-    }
-    else {
-      //exact
-      if (bestMoveM.quiet && bestMoveM.fromLoc < 64 && bestMoveM.toLoc < 64) {
-        bitboard.history[bestMoveM.fromLoc][bestMoveM.toLoc] += depth * depth;
-      }
-      bitboard.InsertLookup(bestMoveM, ret, alpha, beta, depth, 0, hashF);
-      // bitboard.PVMoves.push_back(bestMove);
-
-    }
-
-    if (ret <= -MATE_VALUE + 100) {
-      mateIn = (ret + MATE_VALUE);
-    }
-    else if (ret >= MATE_VALUE - 100) {
-      mateIn = (ret - MATE_VALUE);
-    }
-
-    if (bestMoveM.pieceFrom == 0 && bestMoveM.toLoc <= 7) {
-      bestMove += "q";
-    }
-
-    if (numMoves == 1) {
-      exit_thread_flag = true;
-    }
-
-    return ReturnInfo{bestMove, ret, mateIn};
+    bitboard.InsertLookup(bestMove, ret, depth, 2, hashF);
   }
+
+  if (bestMove.promotion == 4) {
+    retInfo.bestMove += "q";
+  }
+
+
+  return retInfo;
+
 
 }

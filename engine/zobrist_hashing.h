@@ -13,7 +13,7 @@ public:
 
   // Determine hashing key
   uint64_t hashBoard(std::unordered_map<uint8_t, uint64_t>& pieces, uint64_t& occupied, uint64_t& blacks, bool turn);
-  uint64_t hashBoardM(uint64_t board, int8_t pieceFrom, int8_t pieceTo, int8_t moveType, int8_t captureType, bool turn);
+  uint64_t hashBoardM(uint64_t board, int8_t pieceFrom, int8_t pieceTo, int8_t moveType, int8_t captureType, bool turn, bool isEnpassant);
 
 private:
 

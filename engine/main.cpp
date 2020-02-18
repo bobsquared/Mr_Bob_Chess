@@ -6,6 +6,7 @@
 #include <regex>
 #include "search.h"
 #include <thread>
+#include <vector>
 #include <cmath>
 #include "config.h"
 
@@ -66,14 +67,28 @@ void startPosMoves(bool &color, Bitboard & bitboard, std::string moves) {
 
   // Make all the moves.
   while (moves.find(' ') != std::string::npos) {
-    bitboard.movePiece(TO_NUM[moves.substr(0, 2)], TO_NUM[moves.substr(2, 2)]);
+    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!color);
+    for (Bitboard::Move move : vMoves) {
+      if (move.fromLoc == TO_NUM[moves.substr(0, 2)] && move.toLoc == TO_NUM[moves.substr(2, 2)]) {
+        bitboard.movePiece(move);
+        break;
+      }
+    }
+
+
     color = !color;
     moves = moves.erase(0, moves.find(' ') + 1);
   }
 
   // If only one more move in the list
   if (moves.find(' ') == std::string::npos && (moves.size() >= 4)) {
-    bitboard.movePiece(TO_NUM[moves.substr(0, 2)], TO_NUM[moves.substr(2, 2)]);
+    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!color);
+    for (Bitboard::Move move : vMoves) {
+      if (move.fromLoc == TO_NUM[moves.substr(0, 2)] && move.toLoc == TO_NUM[moves.substr(2, 2)]) {
+        bitboard.movePiece(move);
+        break;
+      }
+    }
     color = !color;
   }
 
@@ -101,10 +116,12 @@ void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocate
   uint8_t numBestMove = 0;
 
   ReturnInfo bMove;
+  Bitboard::Move tempM;
 
 
 
-
+  std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!color);
+  bitboard.sortMoves(vMoves, tempM, 1);
   // Searching with Iterative deepining
   // Increment the depth each search and keep the positions in memory.
   for (uint8_t i = 1; i < depth + 1; i++) {
@@ -118,8 +135,19 @@ void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocate
     // Time the search
     auto t1 = std::chrono::high_resolution_clock::now();
     // std::string k = minimaxRoot(color, bitboard, i);
-    bMove = alphabetaRoot(color, bitboard, i, depth);
+    bMove = searchRoot(color, bitboard, i, vMoves);
+    // bMove = alphabetaRoot(color, bitboard, i, depth);
     auto t2 = std::chrono::high_resolution_clock::now();
+
+
+    for (uint8_t j = 0; j < vMoves.size(); j++) {
+      if (vMoves[j] == bMove.move) {
+        vMoves[j].score = 3000000 + i;
+      }
+    }
+
+    bitboard.sortMoves(vMoves, tempM, i);
+    // std::stable_sort(vMoves.begin(), vMoves.end());
 
 
     // Record best move and the score
@@ -149,9 +177,12 @@ void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocate
 
 
     // Debug print
-    std::cout << (double)(pruning) / (double)(pruningTotal) << std::endl;
+    std::cout << (double)(pruning) / (double)(pruningTotal) << " " << pruning << " " << pruningTotal << std::endl;
+    // std::cout << (double)(pruningTT) / (double)(pruningTotalTT) << " " << pruningTT << " " << pruningTotalTT << std::endl;
     pruning = 0;
     pruningTotal = 0;
+    pruningTT = 0;
+    pruningTotalTT = 0;
     //----/
 
     // Calculate effective branching factor.
@@ -172,7 +203,7 @@ void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocate
     // If stop is not called, then print the info
     if (!exit_thread_flag) {
       if (!color) {
-        printInfoUCI(i, diff, -cp, 0, bestMove);
+        printInfoUCI(i, diff, cp, 0, bestMove);
       }
       else {
         printInfoUCI(i, diff, cp, 0, bestMove);
@@ -183,12 +214,13 @@ void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocate
       exit_thread_flag = true;
     }
 
-    if (numBestMove == 8 && timeAllocated != 0xFFFFFFFFU) {
-      exit_thread_flag = true;
-    }
+    // if (numBestMove == 8 && timeAllocated != 0xFFFFFFFFU) {
+    //   exit_thread_flag = true;
+    // }
 
     // Reset this variable and restart search
     traversedNodes = 0;
+    bitboard.updateHalfMove();
 
   }
 
@@ -234,7 +266,6 @@ int main() {
 
 
 
-
   // Forever loop of awesomeness
   while (1) {
 
@@ -264,6 +295,12 @@ int main() {
       std::cout << "uciok" << std::endl;
       continue;
     }
+
+    // // Print engine info, with manditory uciok at the end
+    // if (command == "test") {
+    //   std::cout << searchRoot(color, x, 4).score << std::endl;
+    //   continue;
+    // }
 
     // Debugging color command to switch sides
     if (command.substr(0, 5) == "color") {
@@ -300,7 +337,7 @@ int main() {
       }
 
 
-      th1 = std::thread(search, std::ref(x),  99, color, time);
+      th1 = std::thread(search, std::ref(x),  99, color, time / 32);
       std::this_thread::sleep_for(std::chrono::milliseconds(time / 32));
       if (th1.joinable()) {
         exit_thread_flag = true;
@@ -348,7 +385,7 @@ int main() {
 
     // Evaluate current board position
     if (command == "evaluate") {
-      std::cout << x.evaluate() << std::endl;
+      std::cout << x.evaluate(-5000, 5000) << std::endl;
       continue;
     }
 

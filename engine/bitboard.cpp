@@ -8,6 +8,7 @@
 #include <string>
 #include <algorithm>
 #include "piecesquaretable.h"
+#include "config.h"
 #include <cmath>
 
 
@@ -17,10 +18,6 @@ bool operator==(const Bitboard::Move& lhs, const Bitboard::Move& rhs) {
 
 bool operator!=(const Bitboard::Move& lhs, const Bitboard::Move& rhs) {
   return (lhs.fromLoc != rhs.fromLoc) && (lhs.toLoc != rhs.toLoc);
-}
-
-bool operator==(const Bitboard::KillerMove& lhs, const Bitboard::KillerMove& rhs) {
-  return (lhs.move == rhs.move) && (lhs.depth == rhs.depth);
 }
 
 std::ostream& operator<<(std::ostream& stream, const Bitboard::Move& rhs) {
@@ -60,6 +57,7 @@ Bitboard::Bitboard() {
   InitKingMoves();
 
   InitRayAttacks();
+  InitMvvLva();
 
   magics = Magics(rookMoves, bishopMoves);
 
@@ -77,20 +75,28 @@ Bitboard::Bitboard() {
 
   zobrist = Zobrist();
 
+
   for (uint16_t i = 0; i < 1024; i++) {
     for (uint8_t j = 0; j < 2; j++) {
-      killerMoves[i][j] = KillerMove();
+      for (uint8_t k = 0; k < 2; k++) {
+        killerMoves[k][i][j] = Move();
+      }
     }
   }
 
   moveStack.reserve(1024);
   prevPositions.reserve(1024);
-  lookup.reserve(16777215);
+  numHashes = hashSize * 0xFFFFF / sizeof(ZobristVal);
+  lookup2 = new ZobristVal [numHashes];
+  // std::cout << hashSize * 0xFFFFF / sizeof(ZobristVal) <<std::endl;
+  lookup.reserve(1);
   prevPositions.emplace_back(hashBoard(whiteToMove));
 
   for (uint8_t i = 0; i < 64; i++) {
     for (uint8_t j = 0; j < 64; j++) {
-      history[i][j] = 0;
+      for (uint8_t k = 0; j < 2; j++) {
+        history[k][i][j] = 0;
+      }
     }
   }
 
@@ -109,6 +115,12 @@ Bitboard::Bitboard() {
   countQueensW = count_population(whiteQueens);
   countQueensB = count_population(blackQueens);
 
+  halfMove = 0;
+
+}
+
+Bitboard::~Bitboard() {
+  delete lookup2;
 }
 
 void Bitboard::InitDistanceArray() {
@@ -132,6 +144,8 @@ void Bitboard::InitPieceBoards() {
     for (uint8_t j = 0; j < 8; j++) {
       whitePawnTable[i * 8 + j] = WHITE_PAWN_TABLE[(7 - i) * 8 + j];
       blackPawnTable[i * 8 + j] = BLACK_PAWN_TABLE[(7 - i) * 8 + j];
+      whitePawnTableEG[i * 8 + j] = WHITE_PAWN_TABLE_ENDGAME[(7 - i) * 8 + j];
+      blackPawnTableEG[i * 8 + j] = BLACK_PAWN_TABLE_ENDGAME[(7 - i) * 8 + j];
       whiteKnightTable[i * 8 + j] = WHITE_KNIGHT_TABLE[(7 - i) * 8 + j];
       blackKnightTable[i * 8 + j] = BLACK_KNIGHT_TABLE[(7 - i) * 8 + j];
       whiteBishopTable[i * 8 + j] = WHITE_BISHOP_TABLE[(7 - i) * 8 + j];
@@ -140,6 +154,8 @@ void Bitboard::InitPieceBoards() {
       blackRookTable[i * 8 + j] = BLACK_ROOK_TABLE[(7 - i) * 8 + j];
       whiteQueenTable[i * 8 + j] = WHITE_QUEEN_TABLE[(7 - i) * 8 + j];
       blackQueenTable[i * 8 + j] = BLACK_QUEEN_TABLE[(7 - i) * 8 + j];
+      whiteKingTable[i * 8 + j] = WHITE_KING_TABLE[(7 - i) * 8 + j];
+      blackKingTable[i * 8 + j] = BLACK_KING_TABLE[(7 - i) * 8 + j];
     }
   }
 
@@ -158,6 +174,20 @@ void Bitboard::InitRayAttacks() {
     rayAttacks[6][i] = dumb7FloodingW(0, 1ULL << i);
     rayAttacks[7][i] = dumb7FloodingNW(0, 1ULL << i);
 
+  }
+
+}
+
+
+void Bitboard::InitMvvLva() {
+
+  for (uint16_t i = 0; i < 6; i++) {
+    for (int16_t j = 5; j >= 0; j--) {
+      mvvlva[i][j] = 100 + j * 100 + (6 - i) * 10;
+      if (j >= i) {
+        mvvlva[i][j] *= 10;
+      }
+    }
   }
 
 }
@@ -195,14 +225,18 @@ void Bitboard::resetBoard() {
 
   for (uint8_t i = 0; i < 64; i++) {
     for (uint8_t j = 0; j < 64; j++) {
-      history[i][j] = 0;
+      for (uint8_t k = 0; j < 2; j++) {
+        history[k][i][j] = 0;
+      }
     }
   }
 
 
   for (uint16_t i = 0; i < 1024; i++) {
     for (uint8_t j = 0; j < 2; j++) {
-      killerMoves[i][j] = KillerMove();
+      for (uint8_t k = 0; k < 2; k++) {
+        killerMoves[k][i][j] = Move();
+      }
     }
   }
 
@@ -222,6 +256,8 @@ void Bitboard::resetBoard() {
 
   countQueensW = count_population(whiteQueens);
   countQueensB = count_population(blackQueens);
+
+  halfMove = 0;
 
 }
 
@@ -629,10 +665,6 @@ bool Bitboard::filterCheck(bool color) {
 
       uint64_t indexP = pieces[5] & blacks;
       uint8_t index = bitScanR(indexP);
-      if (!((1ULL << index) == indexP)) {
-        printBoard(indexP);
-        std::cout << index << " " << indexP << std::endl;
-      }
       assert ((1ULL << index) == indexP);
 
       uint64_t bishopAttacksMaskI = magics.bishopAttacksMask(occupied, index);
@@ -697,9 +729,11 @@ std::vector<Bitboard::Move> Bitboard::allValidMoves(bool color) {
   std::vector<Move> ret = {};
   ret.reserve(128);
   bool quiet = true;
-  int pieceFC = -1;
-  int pieceTC = -1;
+  int8_t pieceFC = -1;
+  int8_t pieceTC = -1;
   int score = 0;
+  uint8_t promotion = 0;
+  bool isEnpassant;
 
   if (color == 0){
 
@@ -749,14 +783,37 @@ std::vector<Bitboard::Move> Bitboard::allValidMoves(bool color) {
             pieceTC = 5;
           }
 
+          if (pieceFC == 0 && j > 55) {
+            promotion = 4;
+          }
+
+          isEnpassant = false;
+          score = pieceTC - pieceFC;
+
+        }
+        else if (pieceFC == 0 && j > 55) {
+          quiet = false;
+          pieceTC = -1;
+          score = 6;
+          promotion = 4;
+          isEnpassant = false;
+        }
+        else if (pieceFC == 0 && (j == i + 7 || j == i + 9) && ((1ULL << j) & occupied) == 0) {
+          quiet = false;
+          pieceTC = -1;
+          score = 0;
+          promotion = 0;
+          isEnpassant = true;
         }
         else {
           quiet = true;
           pieceTC = -1;
+          promotion = 0;
           score = 0;
+          isEnpassant = false;
         }
-        Move mv = {i, j, quiet, pieceFC, pieceTC, score};
-        ret.emplace_back(mv);
+
+        ret.emplace_back(i, j, quiet, pieceFC, pieceTC, score, promotion, isEnpassant);
       }
 
     }
@@ -810,14 +867,37 @@ std::vector<Bitboard::Move> Bitboard::allValidMoves(bool color) {
             pieceTC = 5;
           }
 
+          if (pieceFC == 0 && j < 8) {
+            promotion = 4;
+          }
+
+
+          score = pieceTC - pieceFC;
+          isEnpassant = false;
+        }
+        else if (pieceFC == 0 && j < 8) {
+          quiet = false;
+          pieceTC = -1;
+          score = 0;
+          promotion = 4;
+          isEnpassant = false;
+        }
+        else if (pieceFC == 0 && (j == i - 7 || j == i - 9) && ((1ULL << j) & occupied) == 0) {
+          quiet = false;
+          pieceTC = -1;
+          score = 6;
+          promotion = 0;
+          isEnpassant = true;
         }
         else {
           quiet = true;
           pieceTC = -1;
+          promotion = 0;
           score = 0;
+          isEnpassant = false;
         }
-        Move mv = {i, j, quiet, pieceFC, pieceTC, score};
-        ret.emplace_back(mv);
+
+        ret.emplace_back(i, j, quiet, pieceFC, pieceTC, score, promotion, isEnpassant);
       }
 
     }
@@ -834,9 +914,11 @@ std::vector<Bitboard::Move> Bitboard::allValidCaptures(bool color) {
   std::vector<Move> ret = {};
   ret.reserve(128);
   bool quiet = true;
-  int pieceFC = -1;
-  int pieceTC = -1;
+  int8_t pieceFC = -1;
+  int8_t pieceTC = -1;
   int score = 0;
+  uint8_t promotion = 0;
+  bool isEnpassant;
 
   if (color == 0){
 
@@ -865,6 +947,7 @@ std::vector<Bitboard::Move> Bitboard::allValidCaptures(bool color) {
       std::vector<uint8_t> move = validMovesWhite(i);
 
       for (uint8_t j : move) {
+
         if (((1ULL << j) & occupied) != 0) {
           quiet = false;
           if (((1ULL << j) & pieces[0]) != 0) {
@@ -886,11 +969,42 @@ std::vector<Bitboard::Move> Bitboard::allValidCaptures(bool color) {
             pieceTC = 5;
           }
 
-          score = pieceTC - pieceFC;
-          Move mv = {i, j, quiet, pieceFC, pieceTC, score};
+          if (pieceFC == 0 && j > 55) {
+            promotion = 4;
+          }
+          else {
+            promotion = 0;
+          }
+
+          score = (pieceTC - pieceFC) * 10000 + mvvlva[pieceFC][pieceTC];
+          isEnpassant = false;
+
+          Move mv = {i, j, quiet, pieceFC, pieceTC, score, promotion, isEnpassant};
           ret.emplace_back(mv);
 
         }
+        else if (pieceFC == 0 && j > 55) {
+          quiet = false;
+          pieceTC = -1;
+          score = 70000;
+          promotion = 4;
+          isEnpassant = false;
+
+          Move mv = {i, j, quiet, pieceFC, pieceTC, score, promotion, isEnpassant};
+          ret.emplace_back(mv);
+        }
+        else if (pieceFC == 0 && (j == i + 7 || j == i + 9) && ((1ULL << j) & occupied) == 0) {
+          quiet = false;
+          pieceTC = -1;
+          score = 60;
+          promotion = 0;
+          isEnpassant = true;
+
+          Move mv = {i, j, quiet, pieceFC, pieceTC, score, promotion, isEnpassant};
+          ret.emplace_back(mv);
+        }
+
+
 
       }
 
@@ -924,6 +1038,7 @@ std::vector<Bitboard::Move> Bitboard::allValidCaptures(bool color) {
       std::vector<uint8_t> move = validMovesBlack(i);
 
       for (uint8_t j : move) {
+
         if (((1ULL << j) & occupied) != 0) {
           quiet = false;
           if (((1ULL << j) & pieces[0]) != 0) {
@@ -945,11 +1060,41 @@ std::vector<Bitboard::Move> Bitboard::allValidCaptures(bool color) {
             pieceTC = 5;
           }
 
-          score = pieceTC - pieceFC;
-          Move mv = {i, j, quiet, pieceFC, pieceTC, score};
-          ret.emplace_back(mv);
+          if (pieceFC == 0 && j < 8) {
+            promotion = 4;
+          }
+          else {
+            promotion = 0;
+          }
 
+          score = (pieceTC - pieceFC) * 10000 + mvvlva[pieceFC][pieceTC];
+          isEnpassant = false;
+
+          Move mv = {i, j, quiet, pieceFC, pieceTC, score, promotion, isEnpassant};
+          ret.emplace_back(mv);
         }
+        else if (pieceFC == 0 && j < 8) {
+          quiet = false;
+          pieceTC = -1;
+          score = 70000;
+          promotion = 4;
+          isEnpassant = false;
+
+          Move mv = {i, j, quiet, pieceFC, pieceTC, score, promotion, isEnpassant};
+          ret.emplace_back(mv);
+        }
+        else if (pieceFC == 0 && (j == i - 7 || j == i - 9) && ((1ULL << j) & occupied) == 0) {
+          quiet = false;
+          pieceTC = -1;
+          score = 60;
+          promotion = 0;
+          isEnpassant = true;
+
+          Move mv = {i, j, quiet, pieceFC, pieceTC, score, promotion, isEnpassant};
+          ret.emplace_back(mv);
+        }
+
+
 
       }
 
@@ -967,8 +1112,8 @@ std::vector<uint8_t> Bitboard::whitePiecesLoc() {
   ret.reserve(32);
   uint64_t bitboard = whites;
   while (bitboard != 0){
-    uint8_t toApp = MSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-    bitboard ^= 1ULL << toApp;
+    uint8_t toApp = bitScanR(bitboard);
+    bitboard &= bitboard - 1;
     ret.emplace_back(toApp);
   }
   return ret;
@@ -980,8 +1125,8 @@ std::vector<uint8_t> Bitboard::blackPiecesLoc() {
   ret.reserve(32);
   uint64_t bitboard = blacks;
   while (bitboard != 0){
-    uint8_t toApp = MSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-    bitboard ^= 1ULL << toApp;
+    uint8_t toApp = bitScanR(bitboard);
+    bitboard &= bitboard - 1;
     ret.emplace_back(toApp);
   }
   return ret;
@@ -1008,8 +1153,8 @@ std::vector<uint8_t> Bitboard::validMovesWhite(uint8_t index) {
     }
 
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
 
@@ -1018,8 +1163,8 @@ std::vector<uint8_t> Bitboard::validMovesWhite(uint8_t index) {
   else if ((pieces[1] & whitesIndex) != 0) {
     uint64_t base = knightMoves[index] & ~whites;
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
     return ret;
@@ -1027,8 +1172,8 @@ std::vector<uint8_t> Bitboard::validMovesWhite(uint8_t index) {
   else if ((pieces[2] & whitesIndex) != 0) {
     uint64_t base = magics.bishopAttacksMask(occupied, index) & ~whites;
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
     return ret;
@@ -1036,8 +1181,8 @@ std::vector<uint8_t> Bitboard::validMovesWhite(uint8_t index) {
   else if ((pieces[3] & whitesIndex) != 0) {
     uint64_t base = magics.rookAttacksMask(occupied, index) & ~whites;
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
     return ret;
@@ -1046,8 +1191,8 @@ std::vector<uint8_t> Bitboard::validMovesWhite(uint8_t index) {
     uint64_t base = (magics.bishopAttacksMask(occupied, index) | magics.rookAttacksMask(occupied, index)) & ~whites;
 
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
     return ret;
@@ -1056,16 +1201,16 @@ std::vector<uint8_t> Bitboard::validMovesWhite(uint8_t index) {
     uint64_t base = kingMoves[index] & ~whites;
 
     if (canCastleK(true)) {
-        ret.emplace_back(6);
+      ret.emplace_back(6);
     }
 
     if (canCastleQ(true)) {
-        ret.emplace_back(2);
+      ret.emplace_back(2);
     }
 
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
     return ret;
@@ -1074,10 +1219,20 @@ std::vector<uint8_t> Bitboard::validMovesWhite(uint8_t index) {
   return ret;
 }
 
-bool Bitboard::IsMoveWhite(uint8_t index, uint8_t index2) {
+bool Bitboard::IsMoveWhite(Move &move) {
+  uint8_t index = move.fromLoc;
+  uint8_t index2 = move.toLoc;
   uint64_t indexP = 1ULL << index;
   uint64_t indexP2 = 1ULL << index2;
   uint64_t whitesIndex = indexP & whites;
+
+  if (move.pieceTo != -1 && (indexP2 && pieces[move.pieceTo]) == 0) {
+    return false;
+  }
+
+  if (move.pieceTo != -1 && (indexP2 && occupied) == 0) {
+    return false;
+  }
 
   if ((pieces[0] & whitesIndex) != 0) {
     uint64_t base = (whitePawnAttacks[index] & blacks) | (whitePawnMoves[index] & ~occupied);
@@ -1146,8 +1301,8 @@ std::vector<uint8_t>  Bitboard::validMovesBlack(uint8_t index) {
     }
 
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
     return ret;
@@ -1155,8 +1310,8 @@ std::vector<uint8_t>  Bitboard::validMovesBlack(uint8_t index) {
   else if ((pieces[1] & blacksIndex) != 0) {
     uint64_t base = knightMoves[index] & ~blacks;
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
     return ret;
@@ -1164,8 +1319,8 @@ std::vector<uint8_t>  Bitboard::validMovesBlack(uint8_t index) {
   else if ((pieces[2] & blacksIndex) != 0) {
     uint64_t base = magics.bishopAttacksMask(occupied, index) & ~blacks;
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
     return ret;
@@ -1173,8 +1328,8 @@ std::vector<uint8_t>  Bitboard::validMovesBlack(uint8_t index) {
   else if ((pieces[3] & blacksIndex) != 0) {
     uint64_t base = magics.rookAttacksMask(occupied, index) & ~blacks;
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
     return ret;
@@ -1182,8 +1337,8 @@ std::vector<uint8_t>  Bitboard::validMovesBlack(uint8_t index) {
   else if ((pieces[4] & blacksIndex) != 0) {
     uint64_t base = (magics.bishopAttacksMask(occupied, index) | magics.rookAttacksMask(occupied, index)) & ~blacks;
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
     return ret;
@@ -1200,8 +1355,8 @@ std::vector<uint8_t>  Bitboard::validMovesBlack(uint8_t index) {
     }
 
     while (base != 0) {
-      uint8_t toApp = MSB_TABLE[((base ^ (base - 1)) * 0x03f79d71b4cb0a89U) >> 58];
-      base ^= 1ULL << toApp;
+      uint8_t toApp = bitScanR(base);
+      base &= base - 1;
       ret.emplace_back(toApp);
     }
     return ret;
@@ -1210,10 +1365,20 @@ std::vector<uint8_t>  Bitboard::validMovesBlack(uint8_t index) {
   return ret;
 }
 
-bool Bitboard::IsMoveBlack(uint8_t index, uint8_t index2) {
+bool Bitboard::IsMoveBlack(Move &move) {
+  uint8_t index = move.fromLoc;
+  uint8_t index2 = move.toLoc;
   uint64_t indexP = 1ULL << index;
   uint64_t indexP2 = 1ULL << index2;
   uint64_t blacksIndex = indexP & blacks;
+
+  if (move.pieceTo != -1 && (indexP2 && pieces[move.pieceTo]) == 0) {
+    return false;
+  }
+
+  if (move.pieceTo != -1 && (indexP2 && occupied) == 0) {
+    return false;
+  }
 
   if ((pieces[0] & blacksIndex) != 0) {
     uint64_t base = (blackPawnAttacks[index] & whites) | (blackPawnMoves[index] & ~occupied);
@@ -1264,439 +1429,213 @@ bool Bitboard::IsMoveBlack(uint8_t index, uint8_t index2) {
 
 
 
-// void Bitboard::movePiece(Move& move) {
-//
-//   whiteToMove = !whiteToMove;
-//   uint64_t i1 = 1ULL << move.fromLoc;
-//   uint64_t i2 = 1ULL << move.toLoc;
-//   uint64_t i1i2 = i1 ^ i2;
-//   int8_t i = move.pieceFrom;
-//   int8_t k = move.pieceTo;
-//   bool useWhite;
-//
-//   assert(i != -1);
-//
-//   if ((whites & i1) != 0) {
-//     useWhite = true;
-//   }
-//   else {
-//     useWhite = false;
-//   }
-//
-//   if (move.fromLoc == 65 && move.toLoc == 65) {
-//     prevPositions.emplace_back(hashBoard(whiteToMove));
-//     moveStack.emplace_back((MoveStack){65, 65, 10, 10, 0, false, false, false, 0, 0});
-//     return;
-//   }
-//   else if (i == 5 && !kingMovedWhite && move.toLoc == 6) {
-//     whites ^= (1ULL << 7) | (1ULL << 5);
-//     pieces[3] ^= (1ULL << 7) | (1ULL << 5);
-//     occupied ^= (1ULL << 7) | (1ULL << 5);
-//     whiteCastled = true;
-//     castled = 1;
-//
-//     whites ^= i1i2;
-//     pieces[i] ^= i1i2;
-//     occupied ^= i1i2;
-//     moveStack.emplace_back((MoveStack){i1, i2, i, -1, !useWhite, false, false, false, 0, 0});
-//   }
-//   else if (i == 5 && !kingMovedWhite && move.toLoc == 2) {
-//     whites ^= 1ULL | (1ULL << 3);
-//     pieces[3] ^= 1ULL | (1ULL << 3);
-//     occupied ^= 1ULL | (1ULL << 3);
-//     whiteCastled = true;
-//     castled = 2;
-//
-//     whites ^= i1i2;
-//     pieces[i] ^= i1i2;
-//     occupied ^= i1i2;
-//     moveStack.emplace_back((MoveStack){i1, i2, i, -1, !useWhite, false, false, false, 0, 0});
-//   }
-//   else if (move.quiet) {
-//     assert(k == -1);
-//
-//     if (useWhite) {
-//       whites ^= i1i2;
-//     }
-//     else {
-//       blacks ^= i1i2;
-//     }
-//
-//     pieces[i] ^= i1i2;
-//     occupied ^= i1i2;
-//     moveStack.emplace_back((MoveStack){i1, i2, i, -1, !useWhite, false, false, false, 0, 0});
-//
-//   }
-//   else if (!move.quiet) {
-//     assert(k != -1);
-//
-//     if (useWhite) {
-//       whites ^= i1i2;
-//       blacks ^= i2;
-//       materialScore += pieceValues[k];
-//     }
-//     else {
-//       blacks ^= i1i2;
-//       whites ^= i2;
-//       materialScore -= pieceValues[k];
-//     }
-//
-//     pieces[k] ^= i2;
-//     occupied ^= i1;
-//     pieces[i] ^= i1i2;
-//
-//     moveStack.emplace_back((MoveStack){i1, i2, i, k, !useWhite, false, false, false, 0 ,0});
-//   }
-//
-//   if (i == 5 && !kingMovedWhite) {
-//     kingMovedWhite = true;
-//     kingMoved = true;
-//   }
-//
-//   if (i == 3 && !rookMovedWhiteA && index1 == 0) {
-//     rookMovedWhiteA = true;
-//     rookTypeMoved = 1;
-//   }
-//
-//   if (i == 3 && !rookMovedWhiteH && index1 == 7) {
-//     rookMovedWhiteH = true;
-//     rookTypeMoved = 2;
-//   }
-//
-//   if (i == 0 && index2 == index1 + 7) {
-//     blacks ^= 1ULL << (index2 - 8);
-//     pieces[0] ^= 1ULL << (index2 - 8);
-//     occupied ^= 1ULL << (index2 - 8);
-//     materialScore += pieceValues[0];
-//     enpassant = 1;
-//   }
-//
-//   if (i == 0 && index2 == index1 + 9) {
-//     blacks ^= 1ULL << (index2 - 8);
-//     pieces[0] ^= 1ULL << (index2 - 8);
-//     occupied ^= 1ULL << (index2 - 8);
-//     materialScore += pieceValues[0];
-//     enpassant = 2;
-//   }
-//
-//   prevPositions.emplace_back(hashBoard(whiteToMove));
-//
-// }
+void Bitboard::movePiece(Move& move) {
 
-
-
-void Bitboard::movePiece(uint8_t index1, uint8_t index2) {
 
   whiteToMove = !whiteToMove;
-  if (index1 == 65 && index2 == 65) {
-    prevPositions.emplace_back(zobrist.hashBoardM(prevPositions.back(), index1, index2, 0, 0, whiteToMove));
+  // Before doing anything, check if this is a null move.
+  if (move.fromLoc == 65 && move.toLoc == 65) {
+    prevPositions.emplace_back(zobrist.hashBoardM(prevPositions.back(), move.fromLoc, move.toLoc, 0, 0, whiteToMove, false));
     moveStack.emplace_back(65, 65, 10, 10, 0, false, false, false, 0, 0);
     return;
   }
 
-  uint64_t i1 = 1ULL << index1;
-  uint64_t i2 = 1ULL << index2;
+  uint64_t i1 = 1ULL << move.fromLoc;
+  uint64_t i2 = 1ULL << move.toLoc;
   uint64_t i1i2 = i1 ^ i2;
+  int8_t i = move.pieceFrom;
+  int8_t k = move.pieceTo;
+  bool useWhite;
 
-  int8_t k = -1;
-  int8_t i = -1;
-  if ((pieces[0] & i1) != 0) {
-    i = 0;
-  }
-  else if ((pieces[1] & i1) != 0) {
-    i = 1;
-  }
-  else if ((pieces[2] & i1) != 0) {
-    i = 2;
-  }
-  else if ((pieces[3] & i1) != 0) {
-    i = 3;
-  }
-  else if ((pieces[4] & i1) != 0) {
-    i = 4;
-  }
-  else if ((pieces[5] & i1) != 0) {
-    i = 5;
-  }
+  uint8_t rookTypeMoved = 0;
+  uint8_t castled = 0;
+  uint8_t enpassant = 0;
+  bool kingMoved = false;
+  bool promotion = false;
 
-
-  // std::cout << unsigned(index1) << std::endl;
-  // printPretty();
   assert(i != -1);
 
-  if (!(i2 & occupied)) {
-    pieces[i] ^= i1i2;
+  if ((whites & i1) != 0) {
+    useWhite = true;
+  }
+  else {
+    useWhite = false;
+  }
 
-    if (whites & i1) {
-      whites ^= i1i2;
-      uint8_t rookTypeMoved = 0;
-      uint8_t castled = 0;
-      uint8_t enpassant = 0;
-      bool kingMoved = false;
-
-      if (i == 5 && !kingMovedWhite && index2 == 6) {
+  // STEP 1: Check for white castling or if its a king move
+  if (i == 5){
+    if (useWhite) {
+      // King side castle
+      if (!kingMovedWhite && move.toLoc == 6) {
         whites ^= (1ULL << 7) | (1ULL << 5);
         pieces[3] ^= (1ULL << 7) | (1ULL << 5);
         occupied ^= (1ULL << 7) | (1ULL << 5);
         whiteCastled = true;
         castled = 1;
       }
-
-      if (i == 5 && !kingMovedWhite && index2 == 2) {
+      // Queen side Castle
+      else if (!kingMovedWhite && move.toLoc == 2) {
         whites ^= 1ULL | (1ULL << 3);
         pieces[3] ^= 1ULL | (1ULL << 3);
         occupied ^= 1ULL | (1ULL << 3);
         whiteCastled = true;
         castled = 2;
       }
-
-      if (i == 5 && !kingMovedWhite) {
-        kingMovedWhite = true;
-        kingMoved = true;
-      }
-
-      if (i == 3 && !rookMovedWhiteA && index1 == 0) {
-        rookMovedWhiteA = true;
-        rookTypeMoved = 1;
-      }
-
-      if (i == 3 && !rookMovedWhiteH && index1 == 7) {
-        rookMovedWhiteH = true;
-        rookTypeMoved = 2;
-      }
-
-      if (i == 0 && index2 == index1 + 7) {
-        blacks ^= 1ULL << (index2 - 8);
-        pieces[0] ^= 1ULL << (index2 - 8);
-        occupied ^= 1ULL << (index2 - 8);
-        materialScore += pieceValues[0];
-        enpassant = 1;
-      }
-
-      if (i == 0 && index2 == index1 + 9) {
-        blacks ^= 1ULL << (index2 - 8);
-        pieces[0] ^= 1ULL << (index2 - 8);
-        occupied ^= 1ULL << (index2 - 8);
-        materialScore += pieceValues[0];
-        enpassant = 2;
-      }
-
-
-      if (i == 0 && index2 > 55) {
-        pieces[i] ^= i2;
-        pieces[4] ^= i2;
-        moveStack.emplace_back(i1, i2, i, -1, 0, true, kingMoved, rookTypeMoved, castled, enpassant);
-        materialScore += pieceValues[4] - pieceValues[0];
-      }
-      else {
-        moveStack.emplace_back(i1, i2, i, -1, 0, false, kingMoved, rookTypeMoved, castled, enpassant);
-      }
-
     }
-    else if (blacks & i1) {
-      blacks ^= i1i2;
-      uint8_t rookTypeMoved = 0;
-      uint8_t castled = 0;
-      uint8_t enpassant = 0;
-      bool kingMoved = false;
-
-      if (i == 5 && !kingMovedBlack && index2 == 62) {
+    else {
+      // King side castle
+      if (!kingMovedBlack && move.toLoc == 62) {
         blacks ^= (1ULL << 63) | (1ULL << 61);
         pieces[3] ^= (1ULL << 63) | (1ULL << 61);
         occupied ^= (1ULL << 63) | (1ULL << 61);
         blackCastled = true;
         castled = 3;
       }
-
-      if (i == 5 && !kingMovedBlack && index2 == 58) {
+      // Queen side Castle
+      else if (!kingMovedBlack && move.toLoc == 58) {
         blacks ^= (1ULL << 56) | (1ULL << 59);
         pieces[3] ^= (1ULL << 56) | (1ULL << 59);
         occupied ^= (1ULL << 56) | (1ULL << 59);
         blackCastled = true;
         castled = 4;
       }
-
-      if (i == 5 && !kingMovedBlack) {
-        kingMovedBlack = true;
-        kingMoved = true;
-      }
-
-      if (i == 3 && !rookMovedBlackA && index1 == 56) {
-        rookMovedBlackA = true;
-        rookTypeMoved = 3;
-      }
-
-      if (i == 3 && !rookMovedBlackH && index1 == 63) {
-        rookMovedBlackH = true;
-        rookTypeMoved = 4;
-      }
-
-      if (i == 0 && index2 == index1 - 7) {
-        whites ^= 1ULL << (index2 + 8);
-        pieces[0] ^= 1ULL << (index2 + 8);
-        occupied ^= 1ULL << (index2 + 8);
-        materialScore -= pieceValues[0];
-        enpassant = 3;
-      }
-
-      if (i == 0 && index2 == index1 - 9) {
-        whites ^= 1ULL << (index2 + 8);
-        pieces[0] ^= 1ULL << (index2 + 8);
-        occupied ^= 1ULL << (index2 + 8);
-        materialScore -= pieceValues[0];
-        enpassant = 4;
-      }
-
-      if (i == 0 && index2 < 8) {
-        pieces[i] ^= i2;
-        pieces[4] ^= i2;
-        moveStack.emplace_back(i1, i2, i, -1, 1, true, kingMoved, rookTypeMoved, castled, enpassant);
-        materialScore -= pieceValues[4] - pieceValues[0];
-      }
-      else {
-        moveStack.emplace_back(i1, i2, i, -1, 1, false, kingMoved, rookTypeMoved, castled, enpassant);
-      }
-
-
     }
 
+    // KING MOVE
+    if (!kingMovedWhite && useWhite) {
+      kingMovedWhite = true;
+      kingMoved = true;
+    }
+    else if (!kingMovedBlack && !useWhite) {
+      kingMovedBlack = true;
+      kingMoved = true;
+    }
+
+  }
+
+
+
+
+  // Any pawn moves. Captures may happen here
+  else if (i == 0) {
+
+    // STEP 2: Check for any promotions
+    if (move.toLoc > 55) {
+      pieces[i] ^= i2;
+      pieces[4] ^= i2;
+      promotion = true;
+      materialScore += pieceValues[4] - pieceValues[0];
+    }
+    else if (move.toLoc < 8) {
+      pieces[i] ^= i2;
+      pieces[4] ^= i2;
+      promotion = true;
+      materialScore -= pieceValues[4] - pieceValues[0];
+    }
+
+
+
+    // STEP 3: Check for any enpassants
+    if (useWhite && move.isEnpassant){
+
+      blacks ^= 1ULL << (move.toLoc - 8);
+      pieces[0] ^= 1ULL << (move.toLoc - 8);
+      occupied ^= 1ULL << (move.toLoc - 8);
+      materialScore += pieceValues[0];
+
+      if (move.toLoc == move.fromLoc + 7) {
+        enpassant = 1;
+      }
+      else if (move.toLoc == move.fromLoc + 9) {
+        enpassant = 2;
+      }
+
+    }
+    else if (move.isEnpassant) {
+
+      whites ^= 1ULL << (move.toLoc + 8);
+      pieces[0] ^= 1ULL << (move.toLoc + 8);
+      occupied ^= 1ULL << (move.toLoc + 8);
+      materialScore -= pieceValues[0];
+
+      if (move.toLoc == move.fromLoc - 7) {
+        enpassant = 3;
+      }
+      else if (move.toLoc == move.fromLoc - 9) {
+        enpassant = 4;
+      }
+    }
+  }
+
+
+
+
+
+  // STEP 4: Check if any rooks moved
+  else if (i == 3) {
+    if (!rookMovedWhiteA && move.fromLoc == 0) {
+      rookMovedWhiteA = true;
+      rookTypeMoved = 1;
+    }
+    else if (!rookMovedWhiteH && move.fromLoc == 7) {
+      rookMovedWhiteH = true;
+      rookTypeMoved = 2;
+    }
+    else if (!rookMovedBlackA && move.fromLoc == 56) {
+      rookMovedBlackA = true;
+      rookTypeMoved = 3;
+    }
+    else if (!rookMovedBlackH && move.fromLoc == 63) {
+      rookMovedBlackH = true;
+      rookTypeMoved = 4;
+    }
+  }
+
+
+
+
+  // STEP 5: Finally make the move
+  if (k == -1) {
+
+    if (useWhite) {
+      whites ^= i1i2;
+    }
+    else {
+      blacks ^= i1i2;
+    }
+
+    pieces[i] ^= i1i2;
     occupied ^= i1i2;
+
   }
   else {
 
-    if (whites & i1) {
+    if (useWhite) {
       whites ^= i1i2;
-      uint8_t rookTypeMoved = 0;
-      bool kingMoved = false;
-
-      assert((blacks & i2) != 0);
-      if (blacks & i2) {
-        if ((pieces[0] & i2) != 0) {
-          k = 0;
-        }
-        else if ((pieces[1] & i2) != 0) {
-          k = 1;
-        }
-        else if ((pieces[2] & i2) != 0) {
-          k = 2;
-        }
-        else if ((pieces[3] & i2) != 0) {
-          k = 3;
-        }
-        else if ((pieces[4] & i2) != 0) {
-          k = 4;
-        }
-        else if ((pieces[5] & i2) != 0) {
-          k = 5;
-        }
-
-        assert(k != -1);
-
-        pieces[k] ^= i2;
-        blacks ^= i2;
-
-        if (i == 5 && !kingMovedWhite) {
-          kingMovedWhite = true;
-          kingMoved = true;
-        }
-
-        if (i == 3 && !rookMovedWhiteA && index1 == 0) {
-          rookMovedWhiteA = true;
-          rookTypeMoved = 1;
-        }
-
-        if (i == 3 && !rookMovedWhiteH && index1 == 7) {
-          rookMovedWhiteH = true;
-          rookTypeMoved = 2;
-        }
-
-        if (i == 0 && index2 > 55) {
-          pieces[i] ^= i2;
-          pieces[4] ^= i2;
-          moveStack.emplace_back(i1, i2, i, k, 0, true, kingMoved, rookTypeMoved,0 ,0);
-          materialScore += pieceValues[4] - pieceValues[0];
-        }
-        else {
-          moveStack.emplace_back(i1, i2, i, k, 0, false, kingMoved, rookTypeMoved,0 ,0);
-        }
-
-        materialScore += pieceValues[k];
-
-      }
-
+      blacks ^= i2;
+      materialScore += pieceValues[k];
     }
-    else if (blacks & i1) {
+    else {
       blacks ^= i1i2;
-      uint8_t rookTypeMoved = 0;
-      bool kingMoved = false;
-
-      assert((whites & i2) != 0);
-      if (whites & i2) {
-
-        if ((pieces[0] & i2) != 0) {
-          k = 0;
-        }
-        else if ((pieces[1] & i2) != 0) {
-          k = 1;
-        }
-        else if ((pieces[2] & i2) != 0) {
-          k = 2;
-        }
-        else if ((pieces[3] & i2) != 0) {
-          k = 3;
-        }
-        else if ((pieces[4] & i2) != 0) {
-          k = 4;;
-        }
-        else if ((pieces[5] & i2) != 0) {
-          k = 5;
-        }
-
-        assert(k != -1);
-
-        pieces[k] ^= i2;
-        whites ^= i2;
-
-        if (i == 5 && !kingMovedBlack) {
-          kingMovedBlack = true;
-          kingMoved = true;
-        }
-
-        if (i == 3 && !rookMovedBlackA && index1 == 56) {
-          rookMovedBlackA = true;
-          rookTypeMoved = 3;
-        }
-
-        if (i == 3 && !rookMovedBlackH && index1 == 63) {
-          rookMovedBlackH = true;
-          rookTypeMoved = 4;
-        }
-
-
-        if (i == 0 && index2 < 8) {
-          pieces[i] ^= i2;
-          pieces[4] ^= i2;;
-          moveStack.emplace_back(i1, i2, i, k, 1, true, kingMoved, rookTypeMoved, 0, 0);
-          materialScore -= pieceValues[4] - pieceValues[0];
-        }
-        else {
-          moveStack.emplace_back(i1, i2, i, k, 1, false, kingMoved, rookTypeMoved, 0, 0);
-        }
-
-        materialScore -= pieceValues[k];
-
-      }
-
+      whites ^= i2;
+      materialScore -= pieceValues[k];
     }
 
-    occupied ^= i1;
+    pieces[k] ^= i2;
     pieces[i] ^= i1i2;
+    occupied ^= i1;
 
   }
-  // prevPositions.emplace_back(zobrist.hashBoard(pieces, occupied, blacks, whiteToMove));
-  prevPositions.emplace_back(zobrist.hashBoardM(prevPositions.back(), index1, index2, i, k, whiteToMove));
+
+
+  moveStack.emplace_back(i1, i2, i, k, !useWhite, promotion, kingMoved, rookTypeMoved, castled, enpassant);
+  prevPositions.emplace_back(zobrist.hashBoardM(prevPositions.back(), move.fromLoc, move.toLoc, i, k, useWhite, move.isEnpassant));
 
 }
+
+
+
+
 
 
 
@@ -1705,8 +1644,6 @@ void Bitboard::undoMove() {
 
   assert(!prevPositions.empty());
   assert(!moveStack.empty());
-
-
   whiteToMove = !whiteToMove;
   MoveStack m = moveStack.back();
   uint64_t fromLoc = m.fromLoc;
@@ -1717,6 +1654,8 @@ void Bitboard::undoMove() {
     prevPositions.pop_back();
     return;
   }
+
+
   int8_t movePiece = m.movePiece;
   int8_t capturePiece = m.capturePiece;
   bool promotion = m.promote;
@@ -1728,20 +1667,21 @@ void Bitboard::undoMove() {
 
   uint64_t i1i2 = fromLoc ^ toLoc;
 
+  // STEP 1: Check if Enpassants
   if (enpassant == 1 || enpassant == 2) {
     blacks ^= toLoc >> 8;
     pieces[0] ^= toLoc >> 8;
     occupied ^= toLoc >> 8;
     materialScore -= pieceValues[0];
   }
-
-  if (enpassant == 3 || enpassant == 4) {
+  else if (enpassant == 3 || enpassant == 4) {
     whites ^= toLoc << 8;
     pieces[0] ^= toLoc << 8;
     occupied ^= toLoc << 8;
     materialScore += pieceValues[0];
   }
 
+  // STEP 2: Check if castling
   if (castled == 1) {
     whites ^= (1ULL << 7) | (1ULL << 5);
     pieces[3] ^= (1ULL << 7) | (1ULL << 5);
@@ -1767,6 +1707,7 @@ void Bitboard::undoMove() {
     blackCastled = false;
   }
 
+  // STEP 3: Check if King moved
   if (kingMoved && !m.color) {
     kingMovedWhite = false;
   }
@@ -1774,6 +1715,7 @@ void Bitboard::undoMove() {
     kingMovedBlack = false;
   }
 
+  // STEP 4: Check if rook moved
   if (rookMoved == 1) {
     rookMovedWhiteA = false;
   }
@@ -1787,46 +1729,44 @@ void Bitboard::undoMove() {
     rookMovedBlackH = false;
   }
 
+  // STEP 5: Check for promotions
+  if (!m.color && promotion) {
+    pieces[4] ^= toLoc;
+    pieces[0] ^= toLoc;
+    materialScore -= pieceValues[4] - pieceValues[0];
+  }
+  else if (m.color && promotion) {
+    pieces[4] ^= toLoc;
+    pieces[0] ^= toLoc;
+    materialScore += pieceValues[4] - pieceValues[0];
+  }
 
+
+  // STEP 6: Undo the move
   if (toLoc != fromLoc) {
     pieces[movePiece] ^= i1i2;
-    if (!m.color) {
-      whites ^= i1i2;
-      if (capturePiece != -1) {
-        pieces[capturePiece] ^= toLoc;
-        blacks ^= toLoc;
-        occupied ^= fromLoc;
-        materialScore -= pieceValues[capturePiece];
-
+    if (capturePiece == -1) {
+      if (!m.color) {
+        whites ^= i1i2;
       }
       else {
-        occupied ^= i1i2;
+        blacks ^= i1i2;
       }
-
-      if (promotion) {
-        pieces[4] ^= toLoc;
-        pieces[0] ^= toLoc;
-        materialScore -= pieceValues[4] - pieceValues[0];
-      }
+      occupied ^= i1i2;
     }
     else {
-      blacks ^= i1i2;
-      if (capturePiece != -1) {
-        pieces[capturePiece] ^= toLoc;
-        whites ^= toLoc;
-        occupied ^= fromLoc;
-        materialScore += pieceValues[capturePiece];
+      if (!m.color) {
+        whites ^= i1i2;
+        blacks ^= toLoc;
+        materialScore -= pieceValues[capturePiece];
       }
       else {
-        occupied ^= i1i2;
+        blacks ^= i1i2;
+        whites ^= toLoc;
+        materialScore += pieceValues[capturePiece];
       }
-
-      if (promotion) {
-        pieces[4] ^= toLoc;
-        pieces[0] ^= toLoc;
-        materialScore += pieceValues[4] - pieceValues[0];
-      }
-
+      pieces[capturePiece] ^= toLoc;
+      occupied ^= fromLoc;
     }
   }
 
@@ -1836,7 +1776,7 @@ void Bitboard::undoMove() {
 }
 
 
-int Bitboard::evaluate() {
+int Bitboard::evaluate(int alpha, int beta) {
 
   // if (count_population(blacks & pieces[3]) != countRooksB) {
     // std::cout << unsigned(countRooksB) << " " << unsigned(count_population(blacks & pieces[3])) << std::endl;
@@ -1853,10 +1793,10 @@ int Bitboard::evaluate() {
   // assert(count_population(blacks & pieces[3]) == countRooksB);
   // assert(count_population(whites & pieces[4]) == countQueensW);
   // assert(count_population(blacks & pieces[4]) == countQueensB);
+
   int ret = materialScore;
 
-  uint8_t whiteKingIndex = bitScanR(whites & pieces[5]);
-  uint8_t blackKingIndex = bitScanR(blacks & pieces[5]);
+
 
   uint64_t whitePawns = whites & pieces[0];
   uint64_t blackPawns = blacks & pieces[0];
@@ -1867,14 +1807,40 @@ int Bitboard::evaluate() {
   uint64_t whiteBishops = whites & pieces[2];
   uint64_t blackBishops = blacks & pieces[2];
 
-  uint64_t whiteRooks = whites & pieces[3];
-  uint64_t blackRooks = blacks & pieces[3];
 
-  uint64_t whiteQueens = whites & pieces[4];
-  uint64_t blackQueens = blacks & pieces[4];
 
-  ret += evaluateMobility(whitePawns, blackPawns, whiteKnights, blackKnights, whiteBishops, blackBishops, whiteRooks, blackRooks, whiteQueens, blackQueens);
-  ret += evaluateKingSafety(whiteKingIndex, blackKingIndex, whiteKnights, blackKnights, whiteBishops, blackBishops, whiteRooks, blackRooks, whiteQueens, blackQueens);
+  if (whiteToMove) {
+    ret += 10;
+  }
+  else {
+    ret -= 10;
+  }
+
+  if (count_population(whiteBishops) == 2) {
+    ret += 20;
+  }
+
+  if (count_population(blackBishops) == 2) {
+    ret -= 20;
+  }
+
+  if (count_population(whiteKnights) == 2) {
+    ret -= 10;
+
+  }
+
+  if (count_population(blackKnights) == 2) {
+    ret += 10;
+  }
+
+  if (whitePawns == 0) {
+    ret -= 30;
+  }
+
+  if (blackPawns == 0) {
+    ret += 30;
+  }
+
   if (whiteCastled) {
     ret += 80;
   }
@@ -1882,10 +1848,53 @@ int Bitboard::evaluate() {
     ret -= 80;
   }
 
-  return ret;
+
+  // return ret;
+  // if (ret < alpha - 300 || ret > beta + 300) {
+  //   return whiteToMove? ret : -ret;
+  // }
+
+
+  bool endgame = false;
+  uint8_t whiteKingIndex = bitScanR(whites & pieces[5]);
+  uint8_t blackKingIndex = bitScanR(blacks & pieces[5]);
+
+  uint64_t whiteRooks = whites & pieces[3];
+  uint64_t blackRooks = blacks & pieces[3];
+
+  uint64_t whiteQueens = whites & pieces[4];
+  uint64_t blackQueens = blacks & pieces[4];
+
+  uint64_t egPiecesWhite = whiteKnights | whiteBishops | whiteRooks | whiteQueens;
+  uint64_t egPiecesBlack = blackKnights | blackBishops | blackRooks | blackQueens;
+  uint8_t numWhitePawns = count_population(whitePawns);
+  uint8_t numBlackPawns = count_population(blackPawns);
+
+  if ((egPiecesWhite & (egPiecesWhite - 1)) == 0 && (egPiecesBlack & (egPiecesBlack - 1)) == 0) {
+    endgame = true;
+  }
+
+
+  ret += evaluateMobility(whitePawns, blackPawns, whiteKnights, blackKnights, whiteBishops, blackBishops, whiteRooks, blackRooks, whiteQueens, blackQueens, endgame);
+  ret += evaluateKingSafety(whiteKingIndex, blackKingIndex, whitePawns, blackPawns, whiteKnights, blackKnights, whiteBishops, blackBishops, whiteRooks, blackRooks, whiteQueens, blackQueens) / 1.2;
+
+
+  ret += knightWeight[numWhitePawns] * count_population(whiteKnights);
+  ret -= knightWeight[numBlackPawns] * count_population(blackKnights);
+
+  ret += rookWeight[numWhitePawns] * count_population(whiteRooks);
+  ret -= rookWeight[numBlackPawns] * count_population(blackRooks);
+
+
+
+
+
+
+
+  return whiteToMove? ret : -ret;
 }
 
-int Bitboard::evaluateKingSafety(uint8_t whiteKingIndex, uint8_t blackKingIndex, uint64_t whiteKnights, uint64_t blackKnights,
+int Bitboard::evaluateKingSafety(uint8_t whiteKingIndex, uint8_t whitePawns, uint8_t blackPawns, uint8_t blackKingIndex, uint64_t whiteKnights, uint64_t blackKnights,
   uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens) {
 
   int ret = 0;
@@ -1933,22 +1942,50 @@ int Bitboard::evaluateKingSafety(uint8_t whiteKingIndex, uint8_t blackKingIndex,
 }
 
 int Bitboard::evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_t whiteKnights, uint64_t blackKnights,
-  uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens) {
+  uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens, bool endgame) {
 
   int ret = 0;
   int board = 0;
 
-  while (whitePawns) {
-    board += whitePawnTable[bitScanR(whitePawns)];
-    whitePawns &= whitePawns - 1;
-  }
 
 
-  // countPiece = count_population(pawnsB);
-  while (blackPawns) {
-    board -= blackPawnTable[bitScanR(blackPawns)];
-    blackPawns &= blackPawns - 1;
+  if (endgame) {
+
+    uint64_t whiteKing = whites & pieces[5];
+    uint64_t blackKing = blacks & pieces[5];
+
+    while (whitePawns) {
+      board += whitePawnTableEG[bitScanR(whitePawns)];
+      whitePawns &= whitePawns - 1;
+    }
+
+
+    // countPiece = count_population(pawnsB);
+    while (blackPawns) {
+      board -= blackPawnTableEG[bitScanR(blackPawns)];
+      blackPawns &= blackPawns - 1;
+    }
+
+    board += whiteKingTable[bitScanR(whiteKing)];
+    board -= blackKingTable[bitScanR(blackKing)];
+
   }
+  else {
+
+    while (whitePawns) {
+      board += whitePawnTable[bitScanR(whitePawns)];
+      whitePawns &= whitePawns - 1;
+    }
+
+
+    // countPiece = count_population(pawnsB);
+    while (blackPawns) {
+      board -= blackPawnTable[bitScanR(blackPawns)];
+      blackPawns &= blackPawns - 1;
+    }
+
+  }
+
 
   ret += count_population(knightAttacks(whiteKnights) & (pawnAttacksBlack(blacks) ^ ALL_ONES));
   ret -= count_population(knightAttacks(blackKnights) & (pawnAttacksWhite(whites) ^ ALL_ONES));
@@ -2003,7 +2040,7 @@ int Bitboard::evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_
   while (whiteQueens) {
     uint8_t bscan = bitScanR(whiteQueens);
     board += whiteQueenTable[bscan];
-    ret += count_population(magics.rookAttacksMask(occupied, bscan) | magics.bishopAttacksMask(occupied, bscan)) / 3;
+    ret += count_population((magics.rookAttacksMask(occupied, bscan) | magics.bishopAttacksMask(occupied, bscan))) / 3;
     whiteQueens &= whiteQueens - 1;
   }
 
@@ -2011,7 +2048,7 @@ int Bitboard::evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_
   while (blackQueens) {
     uint8_t bscan = bitScanR(blackQueens);
     board -= blackQueenTable[bscan];
-    ret -= count_population(magics.rookAttacksMask(occupied, bscan) | magics.bishopAttacksMask(occupied, bscan)) / 3;
+    ret -= count_population((magics.rookAttacksMask(occupied, bscan) | magics.bishopAttacksMask(occupied, bscan))) / 3;
     blackQueens &= blackQueens - 1;
   }
 
@@ -2021,101 +2058,130 @@ int Bitboard::evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_
 
 
 
-uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move move, int depth) {
+uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move &move, int depth) {
 
   if (moveList.size() <= 1) {
     return 0;
   }
 
-
-  uint8_t insertIndex = 0;
-  std::vector<Move>::iterator p;
-
-  p = std::find(moveList.begin(), moveList.end(), move);
-  if (p != moveList.end()) {
-    *p = std::move(moveList.back());
-    moveList.pop_back();
+  if (move != Move()) {
+    std::vector<Move>::iterator p;
+    p = std::find(moveList.begin(), moveList.end(), move);
+    if (p != moveList.end()) {
+      *p = std::move(moveList.back());
+      moveList.pop_back();
+    }
   }
 
 
-
   //MVV/LVA
-  int8_t val = 0;
-  for (uint8_t i = insertIndex; i < moveList.size() && insertIndex < moveList.size(); i++) {
+  int16_t val = -75;
+  int16_t valMin = 0;
+  for (uint8_t i = 0; i < moveList.size(); i++) {
 
-    if (!moveList[i].quiet){
-      if (moveList[i].pieceTo - moveList[i].pieceFrom > val) {
-        val = moveList[i].pieceTo - moveList[i].pieceFrom;
-      }
+    if (pieceValues[moveList[i].pieceTo] - pieceValues[moveList[i].pieceFrom] > val) {
+      val = pieceValues[moveList[i].pieceTo] - pieceValues[moveList[i].pieceFrom];
     }
 
-    if (moveList[i].quiet) {
-      if (moveList[i] == killerMoves[depth][0].move) {
-        moveList[i].score = 1000000;
-      }
-      else if (moveList[i] == killerMoves[depth][1].move) {
-        moveList[i].score = 900000;
-      }
-      else {
-        moveList[i].score = history[moveList[i].fromLoc][moveList[i].toLoc];
+    if (pieceValues[moveList[i].pieceTo] - pieceValues[moveList[i].pieceFrom] < valMin) {
+      valMin = pieceValues[moveList[i].pieceTo] - pieceValues[moveList[i].pieceFrom];
+    }
+
+    if (moveList[i].score < 3000000) {
+      // if (moveList[i].promotion == 4) {
+      //   moveList[i].score = 1600000;
+      // }
+      // else if (moveList[i].pieceTo != -1 && mvvlva[moveList[i].pieceFrom][moveList[i].pieceTo] >= 1000){
+      //   moveList[i].score = 1500000 + mvvlva[moveList[i].pieceFrom][moveList[i].pieceTo];
+      // }
+      //
+      // else if (moveList[i].pieceTo != -1){
+      //   moveList[i].score = 800000 + mvvlva[moveList[i].pieceFrom][moveList[i].pieceTo];
+      // }
+
+      if (moveList[i].quiet){
+        if (moveList[i] == killerMoves[whiteToMove][depth][0]) {
+          moveList[i].score = 1000000;
+        }
+        else if (moveList[i] == killerMoves[whiteToMove][depth][1]) {
+          moveList[i].score = 900000;
+        }
+        else {
+          moveList[i].score += history[whiteToMove][moveList[i].pieceFrom][moveList[i].toLoc];
+        }
       }
     }
 
   }
   //
-  for (uint8_t i = insertIndex; i < moveList.size() && insertIndex < moveList.size(); i++) {
+  for (uint8_t i = 0; i < moveList.size(); i++) {
 
-    if (!moveList[i].quiet){
-      if (moveList[i].pieceTo - moveList[i].pieceFrom == val) {
-        moveList[i].score = 1500000;
+    if (!moveList[i].quiet && moveList[i].score < 3000000) {
+
+      if (moveList[i].promotion == 4) {
+        moveList[i].score = 1600000;
+        continue;
       }
+      if (pieceValues[moveList[i].pieceTo] - pieceValues[moveList[i].pieceFrom] == val) {
+        moveList[i].score = 1500000 + mvvlva[moveList[i].pieceFrom][moveList[i].pieceTo];
+      }
+      else if (moveList[i].pieceTo - moveList[i].pieceFrom == 0) {
+        moveList[i].score = 1400000 + mvvlva[moveList[i].pieceFrom][moveList[i].pieceTo];
+      }
+
+      else if (moveList[i].pieceTo - moveList[i].pieceFrom == valMin) {
+        moveList[i].score = -800000 + mvvlva[moveList[i].pieceFrom][moveList[i].pieceTo];
+      }
+      else if (mvvlva[moveList[i].pieceFrom][moveList[i].pieceTo] >= 1000) {
+        moveList[i].score = 700000 + mvvlva[moveList[i].pieceFrom][moveList[i].pieceTo];
+      }
+      else if (moveList[i].pieceTo - moveList[i].pieceFrom < 0 && moveList[i].pieceTo - moveList[i].pieceFrom > -500) {
+        moveList[i].score = 800000 + mvvlva[moveList[i].pieceFrom][moveList[i].pieceTo];
+      }
+
     }
+
   }
 
-  // if (move != Move()) {
-  //   p = std::find(moveList.begin(), moveList.end(), move);
-  //   if (p != moveList.end()) {
-  //     p->score = 2000000;
-  //   }
-  // }
-
-
-  // Null Move
-  Move nm = {65, 65, 10, 0, false, 1700000};
-  moveList.push_back(nm);
-  insertIndex++;
 
 
   std::sort(moveList.begin(), moveList.end());
 
-  return insertIndex;
+  return 0;
 
 
 }
 
 
 void Bitboard::InsertKiller(Move move, int depth) {
-  KillerMove val = KillerMove();
 
-  killerMoves[depth][1] = killerMoves[depth][0];
-  val.move = move;
-  val.depth = depth;
-  killerMoves[depth][0] = val;
-
+  killerMoves[whiteToMove][depth][1] = killerMoves[whiteToMove][depth][0];
+  killerMoves[whiteToMove][depth][0] = move;
 
 }
 
 
-void Bitboard::InsertLookup(Move move, int score, int alpha, int beta, int depth, uint8_t flag, uint64_t key) {
+void Bitboard::InsertLookup(Move move, int score, int depth, uint8_t flag, uint64_t key) {
+
   ZobristVal val = ZobristVal();
+  uint64_t posKey = key % numHashes;
+
+  // If there is a colision
+  if (lookup2[posKey].posKey != key && lookup2[posKey].posKey != 0) {
+    if (halfMove != lookup2[posKey].halfMove) {
+      if (lookup2[posKey].depth > depth) {
+        return;
+      }
+    }
+  }
   val.move = move;
   val.score = score;
-  val.alpha = alpha;
-  val.beta = beta;
   val.depth = depth;
   val.flag = flag;
+  val.posKey = key;
+  val.halfMove = halfMove;
 
-  lookup[key] = val;
+  lookup2[posKey] = val;
 
 }
 
@@ -2316,10 +2382,9 @@ std::string Bitboard::posToFEN() {
 
 
 bool Bitboard::isThreeFold() {
-  if (std::count(prevPositions.begin(), prevPositions.end(), prevPositions.back()) >= 3) {
+  if (std::count(prevPositions.begin(), prevPositions.end(), prevPositions.back()) >= 2) {
     return true;
   }
-
 
   return false;
 }
@@ -2327,6 +2392,101 @@ bool Bitboard::isThreeFold() {
 uint64_t Bitboard::getPosKey() {
   return prevPositions.back();
 }
+
+void Bitboard::updateHalfMove() {
+  halfMove++;
+}
+
+
+
+
+
+// int8_t Bitboard::leastValuableAttacker(uint8_t loc, bool isWhite) {
+//
+//   uint64_t ret = 0;
+//   if (isWhite) {
+//
+//     ret = whitePawnAttacks[loc] & blacks & pieces[0];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     ret = knightAttacks[loc] & blacks & pieces[1];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     ret = magics.bishopAttacksMask(occupied, loc) & blacks & pieces[2];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     ret = magics.rookAttacksMask(occupied, loc) & blacks & pieces[3];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     ret = (magics.rookAttacksMask(occupied, loc) | magics.bishopAttacksMask(occupied, loc)) & blacks & pieces[4];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     ret = kingMoves[loc] & blacks & pieces[5];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     return -1;
+//   }
+//
+//   else {
+//     ret = blackPawnAttacks[loc] & whites & pieces[0];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     ret = knightAttacks[loc] & whites & pieces[1];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     ret = magics.bishopAttacksMask(occupied, loc) & whites & pieces[2];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     ret = magics.rookAttacksMask(occupied, loc) & whites & pieces[3];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     ret = (magics.rookAttacksMask(occupied, loc) | magics.bishopAttacksMask(occupied, loc)) & whites & pieces[4];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     ret = kingMoves[loc] & whites & pieces[5];
+//     if (ret) {
+//       return bitScanR(ret);
+//     }
+//
+//     return -1;
+//   }
+//
+// }
+//
+//
+// int8_t Bitboard::see(uint8_t loc, bool isWhite) {
+//
+//   int value = 0;
+//   int8_t piece = leastValuableAttacker(loc, isWhite);
+//
+//   if (piece != -1) {
+//     movePiece(Move{piece, loc, true, })
+//   }
+//
+// }
+
 
 
 
