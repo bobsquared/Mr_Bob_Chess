@@ -11,16 +11,39 @@ Then run
 
 **Engine:**
 
+Universal Chess Interface (UCI)
 You can call the makefile in the engine folder to create the binary.
 You can then use the binary in any UCI GUI to use it.
 
 **Techniques Used in Engine:**
 
+*Move Ordering:*
+
+1. Principal variation move
+2. Most valuable victim, least valuable attacker (Mvv Lva) move ordering.
+3. Killer moves heurstic.
+4. History Heuristic.
+
+*Pruning and Reductions:*
+
 - Null Move Pruning.
 - Late moves reduction.
-- Transposition table (default 2GB memory allocated).
-- Most valuable victim, least valuable attacker (Mvv Lva) move ordering.
-- Principal variation search
 
-- Bitboards
-- Magic bitboards for sliding pieces
+*Pure speed improvements:*
+
+- Transposition table (default 2GB memory allocated).
+- Iterative deepening
+- Principal variation search.
+- Bitboards.
+- Magic bitboards for sliding pieces.
+
+*Accuracy:*
+
+- Quiescence search (Mitigates the horizon effect).
+
+**TODO:**
+
+- More pruning techniques such as futility pruning.
+- Effectively implement internal iterative deepening
+- Lazy evaluation.
+- Many more.
