@@ -13,3 +13,14 @@ Then run
 
 You can call the makefile in the engine folder to create the binary.
 You can then use the binary in any UCI GUI to use it.
+
+**Techniques Used in Engine:**
+
+- Null Move Pruning.
+- Late moves reduction.
+- Transposition table (default 2GB memory allocated).
+- Most valuable victim, least valuable attacker (Mvv Lva) move ordering.
+- Principal variation search
+
+- Bitboards
+- Magic bitboards for sliding pieces
