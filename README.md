@@ -1,5 +1,7 @@
 # Chess-Program
-A Chess program made using Python 3 and pygame using FIDE rules
+A Chess GUI made using Python 3 and pygame using FIDE rules.
+
+A Chess engine made using C++.
 
 **GUI:**
 
