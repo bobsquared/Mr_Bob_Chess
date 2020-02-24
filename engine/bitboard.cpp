@@ -2058,10 +2058,10 @@ int Bitboard::evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_
 
 
 
-uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move &move, int depth) {
+void Bitboard::scoreMoves(std::vector<Move> &moveList, Move &move, int depth) {
 
   if (moveList.size() <= 1) {
-    return 0;
+    return;
   }
 
   if (move != Move()) {
@@ -2144,12 +2144,27 @@ uint8_t Bitboard::sortMoves(std::vector<Move> &moveList, Move &move, int depth) 
   }
 
 
-
-  std::sort(moveList.begin(), moveList.end());
-
-  return 0;
+}
 
 
+Bitboard::Move Bitboard::pickMove(std::vector<Move> &moveList) {
+
+
+  Move ret = moveList[0];
+  uint8_t index = 0;
+  for (uint8_t i = 1; i < moveList.size(); i++) {
+    if (moveList[i].score > ret.score) {
+      ret = moveList[i];
+      index = i;
+    }
+  }
+
+  // moveList.erase(moveList.begin() + index);
+  std::vector<Move>::iterator p = moveList.begin() + index;
+  *p = std::move(moveList.back());
+  moveList.pop_back();
+
+  return ret;
 }
 
 

@@ -93,27 +93,14 @@ int quiesceSearchR(bool whiteMove, Bitboard &bitboard, int alpha, int beta, int 
 
   Bitboard::Move bestMove;
 
-  // bool isCheck = !bitboard.filterCheck(!whiteMove);
   std::vector<Bitboard::Move> vMoves;
-
-
-  // if (isCheck) {
-  //   vMoves = bitboard.allValidMoves(!whiteMove);
-  //   bitboard.sortMoves(vMoves, bestMove, depth);
-  // }
-  // else {
-    // vMoves = bitboard.allValidCaptures(!whiteMove);
-    // bitboard.sortMoves(vMoves, bestMove, depth);
-    // std::sort(vMoves.begin(), vMoves.end());
-  // }
-
   vMoves = bitboard.allValidCaptures(!whiteMove);
-  bitboard.sortMoves(vMoves, bestMove, depth);
+  bitboard.scoreMoves(vMoves, bestMove, depth);
 
 
-  for (Bitboard::Move move : vMoves) {
+  while (!vMoves.empty()) {
 
-
+    Bitboard::Move move = bitboard.pickMove(vMoves);
     bitboard.movePiece(move);
 
     if (!bitboard.filterCheck(!whiteMove)) {
@@ -332,17 +319,18 @@ int searchR(bool whiteMove, Bitboard &bitboard, int depth, int alpha, int beta, 
     //     break;
     //   }
     // }
-    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
+    bitboard.scoreMoves(vMoves, hashedBoard.move, depth);
   }
   else {
-    bitboard.sortMoves(vMoves, hashedBoard.move, depth);
+    bitboard.scoreMoves(vMoves, hashedBoard.move, depth);
   }
 
 
 
 
   // Loop through all the moves.
-  for (Bitboard::Move move : vMoves) {
+  while (!vMoves.empty()) {
+    Bitboard::Move move = bitboard.pickMove(vMoves);
     int reduction = 1;
     newDepth = depth;
     bitboard.movePiece(move);
@@ -488,8 +476,6 @@ ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, int depth, std::vector
 
 
   Bitboard::Move bestMove;
-  // std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!whiteMove);
-  // bitboard.sortMoves(vMoves, bestMove, depth);
 
   for (Bitboard::Move move : vMoves) {
     newDepth = depth;

@@ -121,7 +121,8 @@ void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocate
 
 
   std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!color);
-  bitboard.sortMoves(vMoves, tempM, 1);
+  bitboard.scoreMoves(vMoves, tempM, 1);
+  std::stable_sort(vMoves.begin(), vMoves.end());
   // Searching with Iterative deepining
   // Increment the depth each search and keep the positions in memory.
   for (uint8_t i = 1; i < depth + 1; i++) {
@@ -146,8 +147,8 @@ void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocate
       }
     }
 
-    bitboard.sortMoves(vMoves, tempM, i);
-    // std::stable_sort(vMoves.begin(), vMoves.end());
+    bitboard.scoreMoves(vMoves, tempM, i);
+    std::stable_sort(vMoves.begin(), vMoves.end());
 
 
     // Record best move and the score

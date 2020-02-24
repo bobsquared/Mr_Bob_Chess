@@ -69,7 +69,7 @@ public:
 
   bool isAttacked(uint8_t index, bool color);
   bool filterCheck(bool color);
-  uint8_t sortMoves(std::vector<Move> &moveList, Move &move, int depth);
+  void scoreMoves(std::vector<Move> &moveList, Move &move, int depth);
   void movePiece(Move& move);
   void undoMove();
   bool canNullMove();
@@ -100,7 +100,7 @@ public:
   uint32_t history[2][64][64];
 
   uint64_t numHashes;
-
+  Move pickMove(std::vector<Move> &moveList);
 
 
 
