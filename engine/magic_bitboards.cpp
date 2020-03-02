@@ -5,16 +5,16 @@
 
 
 
-Magics::Magics() {
-  //Dummy init
-}
+Magics::Magics() {}
 
 Magics::Magics(std::unordered_map<uint8_t, uint64_t> rookMoves, std::unordered_map<uint8_t, uint64_t> bishopMoves) : rookMoves(rookMoves), bishopMoves(bishopMoves) {
 
+  // Initialize magic numbers
   optimalMagicRook();
   optimalMagicBishop();
 
   for (uint8_t i = 0; i < 64; i++) {
+
     uint64_t mrMasked = 0;
     if (i == 0) {
       mrMasked = 72057594037927935U & 9187201950435737471U;
@@ -72,11 +72,13 @@ Magics::Magics(std::unordered_map<uint8_t, uint64_t> rookMoves, std::unordered_m
     attacksB[i] = mp;
   }
 
+  // Assert to make sure everything works before going any further
   for (uint8_t i = 0; i < 64; i++) {
     assert(InitBlocksRook(rookMoves[i], i, magicR[i]));
     assert(InitBlocksBishop(bishopMoves[i], i, magicB[i]));
   }
 
+  // Not needed anymore
   rookMoves.clear();
   bishopMoves.clear();
 
@@ -84,6 +86,7 @@ Magics::Magics(std::unordered_map<uint8_t, uint64_t> rookMoves, std::unordered_m
 
 
 
+// Magic bishop numbers for each square. numbers generated with Generate_Magic_Rooks function
 void Magics::optimalMagicRook() {
   magicR[0] = 36029348655939588ULL;
   magicR[1] = 1170971087756869632ULL;
@@ -152,6 +155,9 @@ void Magics::optimalMagicRook() {
 
 }
 
+
+
+// Magic bishop numbers for each square. numbers generated with Generate_Magic_Bishops function
 void Magics::optimalMagicBishop() {
   magicB[0] = 18058413343254592ULL;
   magicB[1] = 580969858422935552ULL;
@@ -221,7 +227,7 @@ void Magics::optimalMagicBishop() {
 
 
 
-
+// Get the bitboard for bishop blockers
 uint64_t Magics::bishopAttacksMask(uint64_t occupations, uint8_t index){
   occupations &= attacksB[index].mask;
   occupations = ((attacksB[index].magic * occupations) >> attacksB[index].shift);
@@ -229,6 +235,8 @@ uint64_t Magics::bishopAttacksMask(uint64_t occupations, uint8_t index){
 }
 
 
+
+// Get the bitboard for rook blockers
 uint64_t Magics::rookAttacksMask(uint64_t occupations, uint8_t index) {
   occupations &= attacksR[index].mask;
   occupations = ((attacksR[index].magic * occupations) >> attacksR[index].shift);
@@ -237,9 +245,8 @@ uint64_t Magics::rookAttacksMask(uint64_t occupations, uint8_t index) {
 
 
 
-
-// #I honestly tried to implement myself but failed.
-// #Adapted from https://stackoverflow.com/questions/30680559/how-to-find-magic-bitboards
+// Bit combinations of set bits.
+// Adapted from https://stackoverflow.com/questions/30680559/how-to-find-magic-bitboards
 uint64_t Magics::bitCombinations(uint64_t index, uint64_t bitboard) {
   uint8_t bindex = 0;
   uint64_t board = bitboard;
@@ -260,9 +267,7 @@ uint64_t Magics::bitCombinations(uint64_t index, uint64_t bitboard) {
 
 
 
-
-
-
+// Initializes the blocking bitboards for rooks
 bool Magics::InitBlocksRook(uint64_t bitboard, uint64_t index, uint64_t magic) {
 
   uint64_t bitboardMasked = bitboard & attacksR[index].mask;
@@ -290,8 +295,7 @@ bool Magics::InitBlocksRook(uint64_t bitboard, uint64_t index, uint64_t magic) {
 
 
 
-
-
+// Initializes the blocking bitboards for bishops
 bool Magics::InitBlocksBishop(uint64_t bitboard, uint8_t index, uint64_t magic) {
 
   uint64_t bitboardMasked = bitboard & 35604928818740736U;
@@ -316,20 +320,18 @@ bool Magics::InitBlocksBishop(uint64_t bitboard, uint8_t index, uint64_t magic) 
 
 }
 
-
-
-
-
-
-
+// Used to generate numbers in the function optimalMagicRook
 void Magics::Generate_Magic_Rooks() {
   uint64_t x = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
 
   for (uint8_t i = 0; i < 64; i++) {
+
     while(!InitBlocksRook(rookMoves[i], i, x)) {
       uint64_t x1 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
       uint64_t x2 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
       uint64_t x3 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+
+      // AND 3 numbers together to get a number with less bits
       x = x1 & x2 & x3;
     }
     std::cout << "  magicR[" << unsigned(i) << "] = " << x << "ULL;" << std::endl;
@@ -339,7 +341,7 @@ void Magics::Generate_Magic_Rooks() {
 
 
 
-
+// Used to generate numbers in the function optimalMagicBishop
 void Magics::Generate_Magic_Bishops() {
   uint64_t x = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
 
@@ -348,6 +350,8 @@ void Magics::Generate_Magic_Bishops() {
       uint64_t x1 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
       uint64_t x2 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
       uint64_t x3 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+
+      // AND 3 numbers together to get a number with less bits
       x = x1 & x2 & x3;
     }
     std::cout << "  magicB[" << unsigned(i) << "] = " << x << "ULL;" << std::endl;
@@ -356,6 +360,7 @@ void Magics::Generate_Magic_Bishops() {
 }
 
 
+// Counts the number of bits that is set to 1.
 uint8_t Magics::count_population(uint64_t bitboard) {
 
   uint8_t count = 0;
