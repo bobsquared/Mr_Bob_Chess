@@ -8,7 +8,6 @@ class Zobrist {
 
 public:
 
-  // Initialize
   Zobrist();
 
   // Determine hashing key
