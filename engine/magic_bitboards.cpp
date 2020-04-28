@@ -5,9 +5,14 @@
 
 
 
-Magics::Magics() {}
+Magics::~Magics() {
+  delete [] rookComb;
+  delete [] bishopComb;
+}
 
-Magics::Magics(std::unordered_map<uint8_t, uint64_t> rookMoves, std::unordered_map<uint8_t, uint64_t> bishopMoves) : rookMoves(rookMoves), bishopMoves(bishopMoves) {
+
+
+Magics::Magics(uint64_t *rookMoves, uint64_t *bishopMoves) : rookMoves(rookMoves), bishopMoves(bishopMoves) {
 
   // Initialize magic numbers
   optimalMagicRook();
@@ -72,15 +77,23 @@ Magics::Magics(std::unordered_map<uint8_t, uint64_t> rookMoves, std::unordered_m
     attacksB[i] = mp;
   }
 
+  rookComb = new uint64_t[262144];
+  bishopComb = new uint64_t[32768];
+
+  for (int i = 0; i < 262144; i++) {
+    rookComb[i] = 0;
+  }
+
+  for (int i = 0; i < 32768; i++) {
+    bishopComb[i] = 0;
+  }
+
   // Assert to make sure everything works before going any further
   for (uint8_t i = 0; i < 64; i++) {
     assert(InitBlocksRook(rookMoves[i], i, magicR[i]));
     assert(InitBlocksBishop(bishopMoves[i], i, magicB[i]));
   }
 
-  // Not needed anymore
-  rookMoves.clear();
-  bishopMoves.clear();
 
 }
 
@@ -228,19 +241,19 @@ void Magics::optimalMagicBishop() {
 
 
 // Get the bitboard for bishop blockers
-uint64_t Magics::bishopAttacksMask(uint64_t occupations, uint8_t index){
+uint64_t Magics::bishopAttacksMask(uint64_t occupations, int index){
   occupations &= attacksB[index].mask;
   occupations = ((attacksB[index].magic * occupations) >> attacksB[index].shift);
-  return bishopComb[index][occupations];
+  return bishopComb[index * 512 + occupations];
 }
 
 
 
 // Get the bitboard for rook blockers
-uint64_t Magics::rookAttacksMask(uint64_t occupations, uint8_t index) {
+uint64_t Magics::rookAttacksMask(uint64_t occupations, int index) {
   occupations &= attacksR[index].mask;
   occupations = ((attacksR[index].magic * occupations) >> attacksR[index].shift);
-  return rookComb[index][occupations];
+  return rookComb[index * 4096 + occupations];
 }
 
 
@@ -271,7 +284,6 @@ uint64_t Magics::bitCombinations(uint64_t index, uint64_t bitboard) {
 bool Magics::InitBlocksRook(uint64_t bitboard, uint64_t index, uint64_t magic) {
 
   uint64_t bitboardMasked = bitboard & attacksR[index].mask;
-
   uint64_t indexP = 1ULL << index;
   uint8_t countMasked = count_population(bitboardMasked);
 
@@ -281,12 +293,11 @@ bool Magics::InitBlocksRook(uint64_t bitboard, uint64_t index, uint64_t magic) {
     uint64_t res = (dumb7FloodingN(indexP, r) | dumb7FloodingE(indexP, r) | dumb7FloodingS(indexP, r) | dumb7FloodingW(indexP, r)) & (indexP ^ 18446744073709551615U);
     uint64_t magicI = ((r * magic) >> attacksR[index].shift);
 
-    if (rookComb[index].find(magicI) != rookComb[index].end()) {
-      rookComb.erase(index);
+    if (rookComb[index * 4096 + magicI] != 0) {
       return false;
     }
 
-    rookComb[index][magicI] = res;
+    rookComb[index * 4096 + magicI] = res;
   }
 
   return true;
@@ -308,12 +319,11 @@ bool Magics::InitBlocksBishop(uint64_t bitboard, uint8_t index, uint64_t magic) 
     uint64_t res = (dumb7FloodingNE(indexP, r) | dumb7FloodingSE(indexP, r) | dumb7FloodingSW(indexP, r) | dumb7FloodingNW(indexP, r)) & (indexP ^ 18446744073709551615U);
     uint64_t magicI = ((r * magic) >> attacksB[index].shift);
 
-    if (bishopComb[index].find(magicI) != bishopComb[index].end()) {
-      bishopComb.erase(index);
+    if (bishopComb[index * 512 + magicI]  != 0) {
       return false;
     }
 
-    bishopComb[index][magicI] = res;
+    bishopComb[index * 512 + magicI] = res;
   }
 
   return true;

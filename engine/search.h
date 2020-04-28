@@ -10,10 +10,11 @@
 #include <atomic>
 #include "bitboard.h"
 #include "zobrist_hashing.h"
+#include "transpositionTable.h"
 #include <cassert>
 
 extern uint64_t traversedNodes;
-const int MATE_VALUE = 100000;
+const int MATE_VALUE = 32500;
 
 // Debugging variables
 extern uint64_t pruning;
@@ -26,11 +27,7 @@ extern uint64_t pruningTotalTT;
 extern std::atomic<bool> exit_thread_flag;
 
 
-// Number to algebra
-extern const std::string TO_ALG[64];
 
-// Algebra to number
-extern std::unordered_map<std::string, uint8_t> TO_NUM;
 
 struct ReturnInfo {
   std::string bestMove;
@@ -45,6 +42,5 @@ struct ReturnInfo {
 };
 
 
-int searchR(bool useMax, Bitboard &bitboard, int depth, int alpha, int beta);
-ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, int depth, std::vector<Bitboard::Move> &vMoves, int alpha=-100000000, int beta=100000000, bool isMain=true);
+ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int depth, int &seldepth, std::vector<Bitboard::Move> &vMoves, int alpha=-100000000, int beta=100000000, bool isMain=true);
 #endif

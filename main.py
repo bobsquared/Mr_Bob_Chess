@@ -109,6 +109,7 @@ def colorBoard(boardHeight, boardWidth, screen, colorBoard, validMoves=None):
 
 	# Set Dark squares
 	screen.fill(darkSquareColor)
+	pg.draw.rect(screen, (200, 200, 200), (boardWidth, 0, 400, boardHeight))
 
 
 	# Set light squares
@@ -120,7 +121,6 @@ def colorBoard(boardHeight, boardWidth, screen, colorBoard, validMoves=None):
 
 			if height % 2 == 1 and width % 2 == 1:
 				pg.draw.rect(screen, lightSquareColor, (squareWidth * width, squareHeight * height, squareWidth, squareHeight))
-
 
 	if validMoves is not None and validMoves.shape[0] > 0:
 		validMoves = validMoves.astype('U2')
@@ -1652,17 +1652,18 @@ def engineMove(color):
 
 	co.put("color " + str(color))
 	mp = ""
+	centipawn = ""
 	if color == 1:
-		mp = co.search(cfg.white_Max_Depth)
+		mp, centipawn = co.search(cfg.white_Max_Depth)
 	else:
-		mp = co.search(cfg.black_Max_Depth)
+		mp, centipawn = co.search(cfg.black_Max_Depth)
 
 	# threadFlag = False;
 	# t1.do_run = False;
 	# t1.join()
 
 
-	return mp
+	return mp, centipawn
 #
 mp1 = ""
 mp2 = ""
@@ -1680,7 +1681,7 @@ threadFlag = True;
 
 
 
-def main():
+async def main():
 
 
 	r.seed(datetime.datetime.now())
@@ -1690,9 +1691,14 @@ def main():
 	color_side = cfg.color_side
 
 
-	chessBoard = createBoard(height, width) # Pygame object of the board
+	chessBoard = createBoard(height, width + 400) # Pygame object of the board
 	positions = initPositions(height, width) # returns the coordinates of the board. for example: specifys where the A1 square is
 	boardPieces = Board(color_side, positions) # Class that displays all the board pieces
+
+	pg.font.init()
+	mfont = pg.font.SysFont('Comic Sans MS', 30)
+	mfont2 = pg.font.SysFont('Comic Sans MS', 20)
+
 
 	clock = pg.time.Clock()
 	crashed = False
@@ -1702,6 +1708,10 @@ def main():
 	mouse_prev = None
 	showValid = None
 	epochs = 30
+	centipawn = ""
+	prevCentipawn = ""
+
+
 	while not crashed:
 		for event in pg.event.get():
 
@@ -1737,67 +1747,67 @@ def main():
 				if isDragging:
 					boardPieces.dragPiece(getPosition(height, width, color_side, mouse_prev), event.pos)
 
-			#print(boardPieces.outcomeGame())
-			# print(getPosition(height, width, color_side, pg.mouse.get_pos()), position2Location(height, width, color_side, getPosition(height, width, color_side, pg.mouse.get_pos())), pg.mouse.get_pos())
-
 
 		chessBoard = colorBoard(height, width, chessBoard, color_side, showValid)
+		cp = mfont.render("Score: " + centipawn, False, (0, 0, 0))
+		chessBoard.blit(cp, (width + 50, 30))
+
+		if prevCentipawn != "" and centipawn != "":
+			if float(centipawn) - float(prevCentipawn) > 0.75:
+				isBlunder = mfont2.render("Your last move was likely a blunder", False, (0, 0, 0))
+				chessBoard.blit(isBlunder, (width + 50, 70))
+
+			elif float(centipawn) - float(prevCentipawn) < -0.2:
+				isBlunder = mfont2.render("Your last move was a good move", False, (0, 0, 0))
+				chessBoard.blit(isBlunder, (width + 50, 70))
+
+			elif float(centipawn) > 1000:
+				isBlunder = mfont2.render("Your getting checkmated", False, (0, 0, 0))
+				chessBoard.blit(isBlunder, (width + 50, 70))
+
+			elif float(centipawn) > 1000:
+				isBlunder = mfont2.render("I'm getting checkmated", False, (0, 0, 0))
+				chessBoard.blit(isBlunder, (width + 50, 70))
+
+
 		boardPieces.show(chessBoard)
 		pg.display.flip()
 		mm = 0
 		if not cfg.is_playing_white and boardPieces.turn == "white":
 			boardPieces.prevPiece = None
 
-			mp = engineMove(1)
+			prevCentipawn = centipawn
+			mp, centipawn = engineMove(1)
 
+			if centipawn != "":
+				tempCentipawn = float(centipawn)
+				centipawn = str(tempCentipawn / 100)
 			mp1 = mp[0:2]
 			mp2 = mp[2:4]
 
 			boardPieces.movePiece(mp1.upper(), mp2.upper())
-			# co.put("color 1")
-			# if not p:
-			# 	p = multiprocessing.Process(target=engineMove, args=(1,)).start()
-			# elif p:
-			# 	if mp1 != "" and mp2 != "":
-			# 		boardPieces.movePiece(mp1.upper(), mp2.upper())
-			# 		mp1 = ""
-			# 		mp2 = ""
-			# if boardPieces.outcomeGame() == 0:
-			# 	engineMove(True)
-			# 	# mp = co.search(cfg.white_Max_Depth)
-			# 	# if mp != "HAHA":
-			# 	mp1 = mp[0:2]
-			# 	mp2 = mp[2:4]
-			# 	print(mp)
-			# 	boardPieces.movePiece(mp1.upper(), mp2.upper())
-			# else:
-			# 	mm = 2
-			# mm = boardPieces.minimax('black')
+
 			chessBoard = colorBoard(height, width, chessBoard, color_side, showValid)
 			boardPieces.show(chessBoard)
-		#mm = 0
+
 		elif not cfg.is_playing_black and boardPieces.turn == "black":
 
 			boardPieces.prevPiece = None
 
-			# mp = engineMove(0)
-			#
-			# mp1 = mp[0:2]
-			# mp2 = mp[2:4]
-			mm = boardPieces.minimax('white')
-			# boardPieces.movePiece(mp1.upper(), mp2.upper())
-			# if not p:
-			# 	p = multiprocessing.Process(target=engineMove, args=(0,)).start()
-			# elif p:
-			# 	if mp1 != "" and mp2 != "":
-			# 		boardPieces.movePiece(mp1.upper(), mp2.upper())
-			# 		mp1 = ""
-			# 		mp2 = ""
+			prevCentipawn = centipawn
+			mp, centipawn = engineMove(0)
 
+			if centipawn != "":
+				tempCentipawn = -float(centipawn)
+				centipawn = str(tempCentipawn / 100)
+			mp1 = mp[0:2]
+			mp2 = mp[2:4]
 
-			# mm = boardPieces.minimax('white')
+			boardPieces.movePiece(mp1.upper(), mp2.upper())
+
 			chessBoard = colorBoard(height, width, chessBoard, color_side, showValid)
 			boardPieces.show(chessBoard)
+
 
 		if mm == 2:
 			print("White wins!")
@@ -1826,5 +1836,5 @@ def main():
 
 
 if __name__=='__main__':
-	# asyncio.run(main())
-    main()
+	asyncio.run(main())
+    # main()

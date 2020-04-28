@@ -1,6 +1,9 @@
 import subprocess
 import time
 import config
+import re
+
+cp = re.compile('.*cp\s+(-?\d+)')
 
 def put(command):
 
@@ -25,8 +28,9 @@ def search(depth):
 	# to indicate current last line of stdout
 
     bestMove = ""
+    centipawn = ""
 
-    s = "go wtime 15000 btime 15000"
+    s = "go wtime 2500 btime 15000"
     print(s)
     engine.stdin.write(s + "\n")  # Include '\n'
     engine.stdin.flush()
@@ -40,6 +44,10 @@ def search(depth):
             print(response)
             break
             # print(bestMove)
+        elif response.startswith("info "):
+            print(response)
+            m = re.match(cp, response)
+            centipawn = m.group(1)
         elif response != '':
             i = 0
             print ("Process response:", response)
@@ -47,7 +55,7 @@ def search(depth):
             break
 
 
-    return bestMove
+    return bestMove, centipawn
 
 
 

@@ -1,5 +1,6 @@
 #include <iostream>
 #include "bitboard.h"
+#include "transpositionTable.h"
 #include <string>
 #include <chrono>
 #include <unordered_map>
@@ -34,12 +35,12 @@ void printInfo(int depth, std::string move, float branchingFactor, long long int
 
 // Info printing for Universal Chess Interface.
 // This function is used to communicate searching info to the chess GUI
-void printInfoUCI(int depth, long long int time, int cp, int mateInPlies, std::string pv) {
+void printInfoUCI(int depth, int seldepth, long long int time, int cp, int mateInPlies, std::string pv) {
 
   // Print the score in centipawns
   // positive cp indicates that the engine is at an advantage, does not matter if engine is playing white or black.
   // Negative cp indicates that the engine is at a disadvantage.
-  std::cout << "info depth " << depth << " score cp " << cp;
+  std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << cp;
 
   // If a mate threat is found, print mate in number of moves.
   // Positive indicates that engine will checkmate
@@ -49,7 +50,7 @@ void printInfoUCI(int depth, long long int time, int cp, int mateInPlies, std::s
   }
 
   // Search efficiency and principal variation
-  std::cout << " nodes " << traversedNodes << " nps " << (uint64_t)(traversedNodes / (double)(time / 1000000000.0)) << " time " <<  (uint64_t)(time / 1000000.0) << " pv " << pv << std::endl;
+  std::cout << " nodes " << traversedNodes << " nps " << (uint64_t)(traversedNodes / (double)(time / 1000000000.0)) << " time " <<  (uint64_t)(time / 1000000.0) << " pv" << pv << std::endl;
 
 }
 
@@ -102,7 +103,7 @@ void startPosMoves(bool &color, Bitboard & bitboard, std::string moves) {
 // Search for the best move in the position.
 // print the best move and the info for the search.
 // Position to search is the position of the bitboard reference passed in.
-void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocated) {
+void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, unsigned int timeAllocated) {
 
   float branchingFactor = 0;
   int prevNodes = 0;
@@ -110,8 +111,10 @@ void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocate
   // Keep track of previous variables to use if stop command is called.
   std::string prevBestMove = "";
   std::string bestMove = "";
+  std::string pv = "";
 
   int cp;
+  int seldepth;
   int mateInPlies;
   uint8_t numBestMove = 0;
 
@@ -121,39 +124,43 @@ void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocate
 
 
   std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!color);
-  bitboard.scoreMoves(vMoves, tempM, 1);
+  bitboard.scoreMoves(vMoves, tempM, 1, !color);
   std::stable_sort(vMoves.begin(), vMoves.end());
   // Searching with Iterative deepining
   // Increment the depth each search and keep the positions in memory.
-  for (uint8_t i = 1; i < depth + 1; i++) {
+  for (int i = 1; i < depth + 1; i++) {
 
     // If stop is called, cancel search and use previous iteration serach
     if (exit_thread_flag) {
       break;
     }
-
+    seldepth = i;
 
     // Time the search
     auto t1 = std::chrono::high_resolution_clock::now();
     // std::string k = minimaxRoot(color, bitboard, i);
-    bMove = searchRoot(color, bitboard, i, vMoves);
+    bMove = searchRoot(color, bitboard, tt, i, seldepth, vMoves);
     // bMove = alphabetaRoot(color, bitboard, i, depth);
     auto t2 = std::chrono::high_resolution_clock::now();
 
 
-    for (uint8_t j = 0; j < vMoves.size(); j++) {
-      if (vMoves[j] == bMove.move) {
-        vMoves[j].score = 3000000 + i;
+    for (std::vector<Bitboard::Move>::iterator it = vMoves.begin(); it != vMoves.end(); ++it) {
+      if (*it == bMove.move) {
+        it->score = 4000000 + i;
       }
     }
 
-    bitboard.scoreMoves(vMoves, tempM, i);
+    bitboard.scoreMoves(vMoves, tempM, i, !color);
     std::stable_sort(vMoves.begin(), vMoves.end());
 
 
     // Record best move and the score
     bestMove = bMove.bestMove;
     cp = bMove.score;
+
+    seldepth = std::abs(seldepth) - 1 + i;
+    pv = tt.getPV(bitboard);
+
 
     // If checkmate is found, store in variable to print later.
     if (bMove.mateIn) {
@@ -204,10 +211,10 @@ void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocate
     // If stop is not called, then print the info
     if (!exit_thread_flag) {
       if (!color) {
-        printInfoUCI(i, diff, cp, 0, bestMove);
+        printInfoUCI(i, seldepth, diff, cp, 0, pv);
       }
       else {
-        printInfoUCI(i, diff, cp, 0, bestMove);
+        printInfoUCI(i, seldepth, diff, cp, 0, pv);
       }
     }
 
@@ -221,15 +228,14 @@ void search(Bitboard &bitboard, int depth, bool color, unsigned int timeAllocate
 
     // Reset this variable and restart search
     traversedNodes = 0;
-    bitboard.updateHalfMove();
+
 
   }
 
 
-
+  tt.updateHalfMove();
   // Print the best move and clear the transposition table
   std::cout << "bestmove " << prevBestMove << std::endl;
-  bitboard.lookup.clear();
 
 }
 
@@ -251,6 +257,7 @@ int main() {
 
   // Initialize bitboard
   Bitboard x = Bitboard();
+  TranspositionTable tt = TranspositionTable();
   bool color = true;
 
   // Regular expressions, r for finding a Number
@@ -322,7 +329,7 @@ int main() {
 
     // Search (virtually) forever.
     if (command == "go infinite") {
-      th1 = std::thread(search, std::ref(x),  512, color, 0xFFFFFFFFU);
+      th1 = std::thread(search, std::ref(x), std::ref(tt), 512, color, 0xFFFFFFFFU);
       continue;
     }
 
@@ -338,7 +345,7 @@ int main() {
       }
 
 
-      th1 = std::thread(search, std::ref(x),  99, color, time / 32);
+      th1 = std::thread(search, std::ref(x), std::ref(tt), 99, color, time / 32);
       std::this_thread::sleep_for(std::chrono::milliseconds(time / 32));
       if (th1.joinable()) {
         exit_thread_flag = true;
@@ -353,7 +360,7 @@ int main() {
     if (command.substr(0, 2) == "go") {
       std::cout << command << std::endl;
       std::regex_search(command, m, r);
-      th1 = std::thread(search, std::ref(x),  10, color, 0xFFFFFFFFU);
+      th1 = std::thread(search, std::ref(x), std::ref(tt), 10, color, 0xFFFFFFFFU);
       th1.join();
       continue;
     }
