@@ -6,7 +6,7 @@
 
 
 std::string engineName = "'Mr Bob'";
-std::string version = "v0.4.1";
+std::string version = "v0.5.0";
 
 
 

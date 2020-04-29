@@ -1844,7 +1844,7 @@ void Bitboard::undoMove() {
 
 
 
-int Bitboard::evaluate(int alpha, int beta) {
+int Bitboard::evaluate() {
 
   // if (count_population(blacks & pieces[3]) != countRooksB) {
     // std::cout << unsigned(countRooksB) << " " << unsigned(count_population(blacks & pieces[3])) << std::endl;
@@ -1947,7 +1947,7 @@ int Bitboard::evaluate(int alpha, int beta) {
 
 
   ret += evaluateMobility(whitePawns, blackPawns, whiteKnights, blackKnights, whiteBishops, blackBishops, whiteRooks, blackRooks, whiteQueens, blackQueens, endgame);
-  ret += evaluateKingSafety(whiteKingIndex, blackKingIndex, whitePawns, blackPawns, whiteKnights, blackKnights, whiteBishops, blackBishops, whiteRooks, blackRooks, whiteQueens, blackQueens);
+  ret += evaluateKingSafety(whiteKingIndex, blackKingIndex, whiteKnights, blackKnights, whiteBishops, blackBishops, whiteRooks, blackRooks, whiteQueens, blackQueens);
   ret += evaluatePawns(whitePawns, blackPawns);
 
 
@@ -1963,7 +1963,7 @@ int Bitboard::evaluate(int alpha, int beta) {
 
 
 
-int Bitboard::evaluateKingSafety(uint8_t whiteKingIndex, uint8_t whitePawns, uint8_t blackPawns, uint8_t blackKingIndex, uint64_t whiteKnights, uint64_t blackKnights,
+int Bitboard::evaluateKingSafety(uint8_t whiteKingIndex, uint8_t blackKingIndex, uint64_t whiteKnights, uint64_t blackKnights,
   uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens) {
 
   int ret = 0;

@@ -34,14 +34,14 @@ int quiesceSearchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, i
   TranspositionTable::ZobristVal hashedBoard;
   uint64_t hashF = bitboard.getPosKey();
   bool ttRet = false;
-  bool hashed = tt.probeTT(hashF, hashedBoard, depth, ttRet, alpha, beta);
+  tt.probeTT(hashF, hashedBoard, depth, ttRet, alpha, beta);
 
   if (ttRet) {
     return hashedBoard.score;
   }
 
 
-  int standPat = bitboard.evaluate(alpha, beta);
+  int standPat = bitboard.evaluate();
   if (standPat >= beta) {
     return standPat;
   }
@@ -50,7 +50,7 @@ int quiesceSearchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, i
     alpha = standPat;
   }
 
-  int ret = -1000000;
+  int ret = -INFINITY_VAL;
   Bitboard::Move bestMove;
 
   // SEARCHING STEP 2: Transposition Principal variation search:
@@ -114,7 +114,7 @@ int quiesceSearchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, i
 
   }
 
-  if (ret != -1000000) {
+  if (ret != -INFINITY_VAL) {
 
     if (ret <= origAlpha) {
       tt.saveTT(bestMove, ret, depth, 2, hashF);
@@ -127,7 +127,7 @@ int quiesceSearchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, i
 
 
 
-  return ret == -1000000? standPat : ret;
+  return ret == -INFINITY_VAL? standPat : ret;
 
 }
 
@@ -178,12 +178,12 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
   traversedNodes++;
 
 
-  int ret = -1000000;
+  int ret = -INFINITY_VAL;
   int moveNumber = 0;
   int newDepth = depth;
   bool hasMove = false;
   Bitboard::Move bestMove;
-  int eval = bitboard.evaluate(alpha, beta);
+  int eval = bitboard.evaluate();
   bool isCheck = !bitboard.filterCheck(!whiteMove); // Determine if player is in check.
 
 
@@ -292,14 +292,6 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
     int prevRet = ret;
     Bitboard::Move move = bitboard.pickMove(vMoves);
 
-
-    // if (!IsPv && !move.quiet && !isCheck && depth == 1) {
-    //   if (bitboard.evaluate(alpha, beta) + 250 < beta) {
-    //     continue;
-    //   }
-    // }
-
-
     newDepth = depth;
     bitboard.movePiece(move);
 
@@ -331,29 +323,17 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
       // SERACHING STEP 4: Late Move Reduction:
       // We can also reduce the depth of late moves to reduce the size of the tree.
       // Again, this is assuming that the good moves are on the front of the list.
-      if (moveNumber > 2 && depth >= 3 && move.quiet && !isCheck && !giveCheck) {
+      if (moveNumber > 0 && depth >= 3 && move.quiet && !isCheck && !giveCheck) {
         int reduction = 1;
 
         if (moveNumber > 6) {
           reduction += 1;
         }
 
-        // if (moveNumber > 14) {
-        //   reduction += 1;
-        // }
-        //
-        // if (moveNumber > 19) {
-        //   reduction += 1;
-        // }
-
         // Reduce reduction if in PV
         if (IsPv || (hashed && hashedBoard.flag == 0)) {
           reduction -= 2;
         }
-
-        // if (hashed && hashedBoard.flag == 1) {
-        //   reduction += 2;
-        // }
 
         reduction = std::max(0, reduction);
         ret = std::max(ret, -searchR(!whiteMove, bitboard, tt, newDepth - reduction - 1, -alpha-1, -alpha, seldepth, nullMoves));
@@ -448,11 +428,10 @@ ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt
 
   ReturnInfo retInfo = ReturnInfo{};
   uint64_t hashF = bitboard.getPosKey();
-  int ret = alpha;
+  int ret = -INFINITY_VAL;
   uint8_t numMoves = 0;
   bool isCheck = !bitboard.filterCheck(!whiteMove);
   int newDepth = depth;
-  bool hasMove = false;
 
 
   Bitboard::Move bestMove;

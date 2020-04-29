@@ -113,9 +113,11 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
   std::string bestMove = "";
   std::string pv = "";
 
-  int cp;
+  int cp = 0;
+  int alpha;
+  int beta;
+  int delta = 35;
   int seldepth;
-  int mateInPlies;
   uint8_t numBestMove = 0;
 
   ReturnInfo bMove;
@@ -136,39 +138,63 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
     }
     seldepth = i;
 
-    // Time the search
-    auto t1 = std::chrono::high_resolution_clock::now();
-    // std::string k = minimaxRoot(color, bitboard, i);
-    bMove = searchRoot(color, bitboard, tt, i, seldepth, vMoves);
-    // bMove = alphabetaRoot(color, bitboard, i, depth);
-    auto t2 = std::chrono::high_resolution_clock::now();
-
-
-    for (std::vector<Bitboard::Move>::iterator it = vMoves.begin(); it != vMoves.end(); ++it) {
-      if (*it == bMove.move) {
-        it->score = 4000000 + i;
-      }
+    if (i >= 5) {
+      delta = 35;
+      alpha = cp - delta;
+      beta = cp + delta;
+    }
+    else {
+      alpha = -INFINITY_VAL;
+      beta = INFINITY_VAL;
     }
 
-    bitboard.scoreMoves(vMoves, tempM, i, !color);
-    std::stable_sort(vMoves.begin(), vMoves.end());
+
+    auto t1 = std::chrono::high_resolution_clock::now();
+    while (true) {
+
+      bMove = searchRoot(color, bitboard, tt, i, seldepth, vMoves, alpha, beta);
+      for (std::vector<Bitboard::Move>::iterator it = vMoves.begin(); it != vMoves.end(); ++it) {
+        if (*it == bMove.move) {
+          it->score = 4000000 + i;
+        }
+      }
+
+      bitboard.scoreMoves(vMoves, tempM, i, !color);
+      std::stable_sort(vMoves.begin(), vMoves.end());
 
 
-    // Record best move and the score
-    bestMove = bMove.bestMove;
-    cp = bMove.score;
+      // Record best move and the score
+      bestMove = bMove.bestMove;
+      cp = bMove.score;
+
+      if (cp >= beta) {
+        beta = cp + delta;
+      }
+      else if (cp <= alpha || (bMove.move.fromLoc == 0 && bMove.move.toLoc == 0)) {
+        beta = (alpha + beta) / 2;
+        alpha = cp - delta;
+      }
+      else {
+        break;
+      }
+
+      delta = delta * 1.25 + 4;
+
+    }
+    auto t2 = std::chrono::high_resolution_clock::now();
+
 
     seldepth = std::abs(seldepth) - 1 + i;
     pv = tt.getPV(bitboard);
 
 
     // If checkmate is found, store in variable to print later.
-    if (bMove.mateIn) {
-      mateInPlies = i - bMove.mateIn;
-    }
-    else {
-      mateInPlies = 0;
-    }
+    // if (bMove.mateIn) {
+    //   mateInPlies = i - bMove.mateIn;
+    // }
+    // else {
+    //   mateInPlies = 0;
+    // }
 
     if (prevBestMove == bestMove) {
       numBestMove++;
@@ -393,7 +419,7 @@ int main() {
 
     // Evaluate current board position
     if (command == "evaluate") {
-      std::cout << x.evaluate(-5000, 5000) << std::endl;
+      std::cout << x.evaluate() << std::endl;
       continue;
     }
 

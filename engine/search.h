@@ -15,6 +15,7 @@
 
 extern uint64_t traversedNodes;
 const int MATE_VALUE = 32500;
+const int INFINITY_VAL = 1000000;
 
 // Debugging variables
 extern uint64_t pruning;
@@ -42,5 +43,5 @@ struct ReturnInfo {
 };
 
 
-ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int depth, int &seldepth, std::vector<Bitboard::Move> &vMoves, int alpha=-100000000, int beta=100000000, bool isMain=true);
+ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int depth, int &seldepth, std::vector<Bitboard::Move> &vMoves, int alpha=-INFINITY_VAL, int beta=INFINITY_VAL, bool isMain=true);
 #endif
