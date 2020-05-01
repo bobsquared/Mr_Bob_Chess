@@ -7,6 +7,7 @@
 #include "bitboard.h"
 #include <cassert>
 #include "config.h"
+#include "defs.h"
 #include <algorithm>
 
 

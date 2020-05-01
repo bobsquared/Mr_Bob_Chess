@@ -40,8 +40,7 @@ public:
   ~Bitboard();
 
   // Insert into killer moves and transposition table
-  void InsertKiller(Move move, int depth);
-  void InsertLookup(Move move, int score, int depth, uint8_t flag, uint64_t key, bool isPv=false);
+  void InsertKiller(Move &move, int &depth);
   uint64_t getPosKey();
 
   // Printing utilities
@@ -75,7 +74,6 @@ public:
   void resetBoard();
 
   // Extras
-  std::vector<Move> PVMoves = {};
   std::string posToFEN();
   void updateHalfMove();
   int seeCapture(Move &capture, bool isWhite);
@@ -254,11 +252,14 @@ private:
   void InitPassedPawnsMask();
   void InitIsolatedPawnsMask();
   void InitColumnsMask();
+  void InitKingZoneMask();
 
   uint64_t whitePassedPawnMask[64];
   uint64_t blackPassedPawnMask[64];
   uint64_t isolatedPawnMask[64];
   uint64_t columnMask[8];
+  uint64_t kingZoneMaskWhite[64];
+  uint64_t kingZoneMaskBlack[64];
 
   Magics *magics; // Magic bitboard
 

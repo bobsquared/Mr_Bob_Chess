@@ -63,6 +63,7 @@ Bitboard::Bitboard() {
   InitPassedPawnsMask();
   InitIsolatedPawnsMask();
   InitColumnsMask();
+  InitKingZoneMask();
 
   magics = new Magics(rookMoves, bishopMoves);
 
@@ -257,6 +258,26 @@ void Bitboard::InitIsolatedPawnsMask() {
     isolatedPawnMask[i] |= isolatedPawnMask[i] >> 8;
     isolatedPawnMask[i] |= isolatedPawnMask[i] >> 16;
     isolatedPawnMask[i] |= isolatedPawnMask[i] >> 32;
+
+  }
+
+}
+
+
+
+void Bitboard::InitKingZoneMask() {
+
+  for (int i = 0; i < 64; i++) {
+
+    kingZoneMaskWhite[i] = kingMoves[i] | (1ULL << i);
+    kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
+    kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
+    kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
+
+    kingZoneMaskBlack[i] = kingMoves[i] | (1ULL << i);
+    kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
+    kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
+    kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
 
   }
 
@@ -1967,45 +1988,111 @@ int Bitboard::evaluateKingSafety(uint8_t whiteKingIndex, uint8_t blackKingIndex,
   uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens) {
 
   int ret = 0;
+  int bscan;
+
+  int valueOfAttacksWhite = 0;
+  int attackingPiecesCountWhite = 0;
+  int valueOfAttacksBlack = 0;
+  int attackingPiecesCountBlack = 0;
+
   while (whiteKnights) {
-    ret -= (chebyshevArray[blackKingIndex][bitScanR(whiteKnights)] * pieceValues[1] / 512);
+    bscan = bitScanR(whiteKnights);
+    ret -= (chebyshevArray[blackKingIndex][bscan] * pieceValues[1] / 512);
+
+    if (kingZoneMaskBlack[blackKingIndex] & knightAttacks(bscan) & ~whites) {
+      attackingPiecesCountWhite++;
+      valueOfAttacksWhite += 22;
+    }
+
     whiteKnights &= whiteKnights - 1;
   }
 
   while (blackKnights) {
-    ret += (chebyshevArray[whiteKingIndex][bitScanR(blackKnights)] * pieceValues[1] / 512);
+    bscan = bitScanR(blackKnights);
+    ret += (chebyshevArray[whiteKingIndex][bscan] * pieceValues[1] / 512);
+
+    if (kingZoneMaskWhite[whiteKingIndex] & knightAttacks(bscan) & ~blacks) {
+      attackingPiecesCountBlack++;
+      valueOfAttacksBlack -= 22;
+    }
+
     blackKnights &= blackKnights - 1;
   }
 
   while (whiteBishops) {
-    ret -= (chebyshevArray[blackKingIndex][bitScanR(whiteBishops)] * pieceValues[2] / 512);
+    bscan = bitScanR(whiteBishops);
+    ret -= (chebyshevArray[blackKingIndex][bscan] * pieceValues[2] / 512);
+
+    if (kingZoneMaskBlack[blackKingIndex] & magics->bishopAttacksMask(occupied, bscan) & ~whites) {
+      attackingPiecesCountWhite++;
+      valueOfAttacksWhite += 20;
+    }
+
     whiteBishops &= whiteBishops - 1;
   }
 
   while (blackBishops) {
-    ret += (chebyshevArray[whiteKingIndex][bitScanR(blackBishops)] * pieceValues[2] / 512);
+    bscan = bitScanR(blackBishops);
+    ret += (chebyshevArray[whiteKingIndex][bscan] * pieceValues[2] / 512);
+
+    if (kingZoneMaskWhite[whiteKingIndex] & magics->bishopAttacksMask(occupied, bscan) & ~blacks) {
+      attackingPiecesCountBlack++;
+      valueOfAttacksBlack -= 20;
+    }
+
     blackBishops &= blackBishops - 1;
   }
 
   while (whiteRooks) {
-    ret -= (manhattanArray[blackKingIndex][bitScanR(whiteRooks)] * pieceValues[3] / 512);
+    bscan = bitScanR(whiteRooks);
+    ret -= (manhattanArray[blackKingIndex][bscan] * pieceValues[3] / 512);
+
+    if (kingZoneMaskBlack[blackKingIndex] & magics->rookAttacksMask(occupied, bscan) & ~whites) {
+      attackingPiecesCountWhite++;
+      valueOfAttacksWhite += 29;
+    }
+
     whiteRooks &= whiteRooks - 1;
   }
 
   while (blackRooks) {
-    ret += (manhattanArray[whiteKingIndex][bitScanR(blackRooks)] * pieceValues[3] / 512);
+    bscan = bitScanR(blackRooks);
+    ret += (manhattanArray[whiteKingIndex][bscan] * pieceValues[3] / 512);
+
+    if (kingZoneMaskWhite[whiteKingIndex] & magics->rookAttacksMask(occupied, bscan) & ~blacks) {
+      attackingPiecesCountBlack++;
+      valueOfAttacksBlack -= 29;
+    }
+
     blackRooks &= blackRooks - 1;
   }
 
   while (whiteQueens) {
-    ret -= (chebyshevArray[blackKingIndex][bitScanR(whiteQueens)] * pieceValues[4] / 512);
+    bscan = bitScanR(whiteQueens);
+    ret -= (chebyshevArray[blackKingIndex][bscan] * pieceValues[4] / 512);
+
+    if (kingZoneMaskBlack[blackKingIndex] & (magics->rookAttacksMask(occupied, bscan) | magics->bishopAttacksMask(occupied, bscan)) & ~whites) {
+      attackingPiecesCountWhite++;
+      valueOfAttacksWhite += 45;
+    }
+
     whiteQueens &= whiteQueens - 1;
   }
 
   while (blackQueens) {
-    ret += (chebyshevArray[whiteKingIndex][bitScanR(blackQueens)] * pieceValues[4] / 512);
+    bscan = bitScanR(whiteQueens);
+    ret += (chebyshevArray[whiteKingIndex][bscan] * pieceValues[4] / 512);
+
+    if (kingZoneMaskWhite[whiteKingIndex] & (magics->rookAttacksMask(occupied, bscan) | magics->bishopAttacksMask(occupied, bscan)) & ~blacks) {
+      attackingPiecesCountBlack++;
+      valueOfAttacksBlack -= 45;
+    }
+
     blackQueens &= blackQueens - 1;
   }
+
+  ret += (valueOfAttacksWhite * attackWeight[attackingPiecesCountWhite]) / 100;
+  ret += (valueOfAttacksBlack * attackWeight[attackingPiecesCountBlack]) / 100;
 
   return ret;
 }
@@ -2054,23 +2141,19 @@ int Bitboard::evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_
 
   }
 
+  ret += count_population(knightAttacks(whiteKnights) & (pawnAttacksBlack(blacks) ^ ALL_ONES)) * 2;
+  ret -= count_population(knightAttacks(blackKnights) & (pawnAttacksWhite(whites) ^ ALL_ONES)) * 2;
 
-  ret += count_population(knightAttacks(whiteKnights) & (pawnAttacksBlack(blacks) ^ ALL_ONES));
-  ret -= count_population(knightAttacks(blackKnights) & (pawnAttacksWhite(whites) ^ ALL_ONES));
-
-  // countPiece = count_population(knightsW);
   while (whiteKnights) {
     board += whiteKnightTable[bitScanR(whiteKnights)];
     whiteKnights &= whiteKnights - 1;
   }
 
-  // countPiece = count_population(knightsB);
   while (blackKnights) {
     board -= blackKnightTable[bitScanR(blackKnights)];
     blackKnights &= blackKnights - 1;
   }
 
-  // countPiece = count_population(bishopsW);
   while (whiteBishops) {
     bscan = bitScanR(whiteBishops);
     ret += count_population(magics->bishopAttacksMask(occupied, bscan));
@@ -2078,7 +2161,6 @@ int Bitboard::evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_
     whiteBishops &= whiteBishops - 1;
   }
 
-  // countPiece = count_population(bishopsB);
   while (blackBishops) {
     bscan = bitScanR(blackBishops);
     ret -= count_population(magics->bishopAttacksMask(occupied, bscan));
@@ -2086,8 +2168,6 @@ int Bitboard::evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_
     blackBishops &= blackBishops - 1;
   }
 
-
-  // countPiece = count_population(rooksW);
   while (whiteRooks) {
     bscan = bitScanR(whiteRooks);
     ret += count_population(magics->rookAttacksMask(occupied, bscan));
@@ -2095,7 +2175,6 @@ int Bitboard::evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_
     whiteRooks &= whiteRooks - 1;
   }
 
-  // countPiece = count_population(rooksB);
   while (blackRooks) {
     bscan = bitScanR(blackRooks);
     ret -= count_population(magics->rookAttacksMask(occupied, bscan));
@@ -2103,20 +2182,17 @@ int Bitboard::evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_
     blackRooks &= blackRooks - 1;
   }
 
-
-  // countPiece = count_population(queensW);
   while (whiteQueens) {
     bscan = bitScanR(whiteQueens);
     board += whiteQueenTable[bscan];
-    ret += count_population((magics->rookAttacksMask(occupied, bscan) | magics->bishopAttacksMask(occupied, bscan))) / 3;
+    ret += count_population((magics->rookAttacksMask(occupied, bscan) | magics->bishopAttacksMask(occupied, bscan))) / 2;
     whiteQueens &= whiteQueens - 1;
   }
 
-  // countPiece = count_population(queensB);
   while (blackQueens) {
     bscan = bitScanR(blackQueens);
     board -= blackQueenTable[bscan];
-    ret -= count_population((magics->rookAttacksMask(occupied, bscan) | magics->bishopAttacksMask(occupied, bscan))) / 3;
+    ret -= count_population((magics->rookAttacksMask(occupied, bscan) | magics->bishopAttacksMask(occupied, bscan))) / 2;
     blackQueens &= blackQueens - 1;
   }
 
@@ -2232,59 +2308,22 @@ void Bitboard::scoreMoves(std::vector<Move> &moveList, Move &move, int depth, bo
 
   }
 
-  // for (std::vector<Move>::iterator it = moveList.begin(); it != moveList.end(); ++it) {
-  //
-  //   if (!it->quiet && it->score < 3000000) {
-  //
-  //     if (mvvlva[it->pieceFrom][it->pieceTo] >= 1000) {
-  //       it->score = 1500000 + mvvlva[it->pieceFrom][it->pieceTo];
-  //     }
-  //     else {
-  //       it->score = 800000 + mvvlva[it->pieceFrom][it->pieceTo];
-  //     }
-  //
-  //     // if (pieceValues[it->pieceTo] - pieceValues[it->pieceFrom] == val) {
-  //     //   it->score = 1500000 + mvvlva[it->pieceFrom][it->pieceTo];
-  //     // }
-  //     // else if (mvvlva[it->pieceFrom][it->pieceTo] >= 1000) {
-  //     //   it->score = 1400000 + mvvlva[it->pieceFrom][it->pieceTo];
-  //     // }
-  //     // else {
-  //     //   it->score = 1300000 + mvvlva[it->pieceFrom][it->pieceTo];
-  //     // }
-  //     //
-  //     // if (it->promotion == 4) {
-  //     //   it->score += 20000;
-  //     // }
-  //
-  //   }
-  //
-  // }
-
 }
 
 
 
 // Choose the max score of the move and delete it from the list
 Bitboard::Move Bitboard::pickMove(std::vector<Move> &moveList) {
-
-  Move ret = moveList[0];
-  std::vector<Move>::iterator p = moveList.begin();
-
-  for (std::vector<Move>::iterator it = moveList.begin(); it != moveList.end(); ++it) {
-    if (it->score > ret.score) {
-      ret = *it;
-      p = it;
-    }
-  }
-
-  moveList.erase(p);
+  std::vector<Move>::iterator p = min_element(moveList.begin(), moveList.end());
+  Move ret = *p;
+  *p = moveList.back();
+  moveList.pop_back();
   return ret;
 }
 
 
 
-void Bitboard::InsertKiller(Move move, int depth) {
+void Bitboard::InsertKiller(Move &move, int &depth) {
   killerMoves[whiteToMove][depth][1] = killerMoves[whiteToMove][depth][0];
   killerMoves[whiteToMove][depth][0] = move;
 }

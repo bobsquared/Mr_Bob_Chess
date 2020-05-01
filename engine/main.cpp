@@ -10,6 +10,7 @@
 #include <vector>
 #include <cmath>
 #include "config.h"
+#include "defs.h"
 
 
 

@@ -11,11 +11,11 @@
 #include "bitboard.h"
 #include "zobrist_hashing.h"
 #include "transpositionTable.h"
+#include "defs.h"
 #include <cassert>
 
 extern uint64_t traversedNodes;
-const int MATE_VALUE = 32500;
-const int INFINITY_VAL = 1000000;
+
 
 // Debugging variables
 extern uint64_t pruning;
