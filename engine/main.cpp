@@ -117,7 +117,7 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
   int cp = 0;
   int alpha;
   int beta;
-  int delta = 35;
+  int delta = ASPIRATION_WINDOW_DELTA;
   int seldepth;
   uint8_t numBestMove = 0;
 
@@ -140,7 +140,7 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
     seldepth = i;
 
     if (i >= 5) {
-      delta = 35;
+      delta = ASPIRATION_WINDOW_DELTA;
       alpha = cp - delta;
       beta = cp + delta;
     }
@@ -263,6 +263,7 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
   tt.updateHalfMove();
   // Print the best move and clear the transposition table
   std::cout << "bestmove " << prevBestMove << std::endl;
+
 
 }
 
@@ -421,6 +422,11 @@ int main() {
     // Evaluate current board position
     if (command == "evaluate") {
       std::cout << x.evaluate() << std::endl;
+      continue;
+    }
+
+    if (command.substr(0, 14) == "evaluate debug") {
+      x.evaluateDebug();
       continue;
     }
 

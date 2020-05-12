@@ -25,6 +25,10 @@ int quiesceSearchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, i
     seldepth = depth;
   }
 
+  if (bitboard.isDraw()) {
+    return 0;
+  }
+
   if (exit_thread_flag) {
     return 0;
   }
@@ -144,6 +148,10 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
 
   // Atomic Boolean flag will return 0 if the search has ran out of time.
   if (exit_thread_flag) {
+    return 0;
+  }
+
+  if (bitboard.isDraw()) {
     return 0;
   }
 
@@ -323,10 +331,14 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
       // SERACHING STEP 4: Late Move Reduction:
       // We can also reduce the depth of late moves to reduce the size of the tree.
       // Again, this is assuming that the good moves are on the front of the list.
-      if (moveNumber > 0 && depth >= 3 && move.quiet && !isCheck && !giveCheck) {
+      if (moveNumber > 2 && depth >= 3 && move.quiet && !isCheck && !giveCheck) {
         int reduction = 1;
 
         if (moveNumber > 6) {
+          reduction += 1;
+        }
+
+        if (moveNumber > 14) {
           reduction += 1;
         }
 
@@ -460,7 +472,7 @@ ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt
     else {
 
       //Late Move Reduction
-      if (numMoves >= 14 && depth >= 3 && !isCheck && move.quiet && !giveCheck) {
+      if (numMoves > 14 && depth >= 4 && !isCheck && move.quiet && !giveCheck) {
         int reduction = 1;
 
         if (numMoves > 25) {

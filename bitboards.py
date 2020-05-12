@@ -1937,49 +1937,6 @@ def bitScan(bitboard):
 
 
 
-start = time.time()* 1000000
+
 x = Board()
 m = Magic()
-
-for i in range(64):
-    rookBlockBoard[i] = blocksRook(x.rookMoves[i], i)
-    bishopBlockBoard[i] = blocksBishop(x.bishopMoves[i], i)
-
-# x.printPretty()
-# print()
-x.movePiece(62, 16)
-x.printPretty()
-print()
-x.movePiece(61, 21)
-x.printPretty()
-print()
-print(x.allValidMoves(1))
-x.undoMove()
-x.printPretty()
-print()
-# x.movePiece(2, 47)
-# x.printPretty()
-# print()
-start = time.time()* 1000000
-# for i in range(1000000):
-    # x.whitePiecesLoc()
-    # x.undoMove()
-end = time.time() * 1000000
-# x.printPretty()
-# print()
-# x.undoMove()
-# x.printPretty()
-# print()
-occupations = 0
-printBoard(x.rookMoves[5])
-print()
-printBoard(x.rookAttacksMask(occupations, 5))
-# printBoard(x.rookMoves[3])
-
-
-# printBoard(x.moveStack[-1].occupied)
-print()
-
-# print(x.validMovesWhite(1))
-
-print((end - start))

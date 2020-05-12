@@ -9,19 +9,20 @@ def put(command):
 
     engine.stdin.write(command + "\n")
     engine.stdin.flush()
+    count = 0
+
+    if command.startswith("color") or command.startswith("position startpos moves"):
+        return
 
     while True:
-
-        s = "isready"
-        engine.stdin.write(s + "\n")
-        engine.stdin.flush()
         response = engine.stdout.readline().strip()
-        if response.startswith("readyok"):
-            # print ("Process response:", response)
-            return
+        if response.startswith("-"):
+            print (response)
+            count += 1
+            if count == 6:
+                return
         else:
-
-            break
+            print(response)
 
 def search(depth):
 	# using the 'isready' command (engine has to answer 'readyok')

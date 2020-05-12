@@ -15,6 +15,8 @@ import subprocess
 import multiprocessing
 import threading, queue
 import asyncio
+from collections import deque
+from multiprocessing.pool import ThreadPool
 
 
 
@@ -1637,7 +1639,7 @@ class Board:
 	# 			pg.quit()
 	# 			quit()
 	# 	pg.display.flip()
-
+threadQ = deque()
 
 def engineMove(color):
 	# global pgdf
@@ -1661,6 +1663,7 @@ def engineMove(color):
 	# threadFlag = False;
 	# t1.do_run = False;
 	# t1.join()
+	threadQ.append(True)
 
 
 	return mp, centipawn
@@ -1681,7 +1684,7 @@ threadFlag = True;
 
 
 
-async def main():
+def main():
 
 
 	r.seed(datetime.datetime.now())
@@ -1719,6 +1722,9 @@ async def main():
 
 			if event.type == pg.QUIT:
 				crashed = True
+			if event.type == pg.KEYDOWN:
+				if event.key == pg.K_e:
+					co.put("evaluate debug")
 			if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
 				isDragging = True
 				mouse_prev = pg.mouse.get_pos()
@@ -1773,6 +1779,7 @@ async def main():
 		boardPieces.show(chessBoard)
 		pg.display.flip()
 		mm = 0
+
 		if not cfg.is_playing_white and boardPieces.turn == "white":
 			boardPieces.prevPiece = None
 
@@ -1795,7 +1802,11 @@ async def main():
 			boardPieces.prevPiece = None
 
 			prevCentipawn = centipawn
-			mp, centipawn = engineMove(0)
+			pool = ThreadPool(processes=2)
+			async_result = pool.apply_async(engineMove, (0,))
+			# mp, centipawn = engineMove(0)
+
+			mp, centipawn = async_result.get()
 
 			if centipawn != "":
 				tempCentipawn = -float(centipawn)
@@ -1836,5 +1847,5 @@ async def main():
 
 
 if __name__=='__main__':
-	asyncio.run(main())
-    # main()
+	# asyncio.run(main())
+    main()

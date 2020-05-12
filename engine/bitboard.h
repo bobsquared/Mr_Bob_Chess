@@ -61,6 +61,7 @@ public:
   // Checking moves
   bool canNullMove();
   bool isThreeFold();
+  bool isDraw();
   bool isPassedPawn(int index, bool color);
 
   // Moving pieces
@@ -69,6 +70,7 @@ public:
 
   // Evaluate position
   int evaluate();
+  void evaluateDebug();
 
   // Reseting position to original
   void resetBoard();
@@ -88,11 +90,11 @@ private:
   const uint64_t DOWN_MASK = 18446744073709551360U;
   const uint64_t UP_MASK = 72057594037927935U;
 
-  const int pieceValues[6] = {100, 300, 325, 500, 900, 20000};
+  const int pieceValues[6] = {100, 321, 333, 500, 900, 20000};
   const std::string NUM_TO_STR[9] = {"0", "1", "2", "3", "4", "5", "6", "7", "8"};
 
   const int attackWeight[8] = {
-    0, 0, 50, 75, 88, 94, 97, 99
+    12, 25, 50, 75, 88, 94, 97, 99
   };
 
   const int knightWeight[9] = {
@@ -124,8 +126,8 @@ private:
   uint64_t blackPawnAttacks[64];
   void InitWhitePawnMoves();
   void InitBlackPawnMoves();
-  uint64_t pawnAttacksWhite(uint64_t bitboard);
-  uint64_t pawnAttacksBlack(uint64_t bitboard);
+  uint64_t pawnAttacksMan(uint64_t bitboard, bool isWhite);
+  uint64_t pawnAttacks(bool isWhite);
   uint64_t whitePawns;
   uint64_t blackPawns;
 
@@ -245,6 +247,8 @@ private:
   int blackQueenTable[64];
   int whiteKingTable[64];
   int blackKingTable[64];
+  int whiteKingTableEG[64];
+  int blackKingTableEG[64];
 
   // Initializing masks
   void InitPieceBoards();
@@ -252,14 +256,18 @@ private:
   void InitPassedPawnsMask();
   void InitIsolatedPawnsMask();
   void InitColumnsMask();
+  void InitRowsMask();
   void InitKingZoneMask();
 
   uint64_t whitePassedPawnMask[64];
   uint64_t blackPassedPawnMask[64];
   uint64_t isolatedPawnMask[64];
   uint64_t columnMask[8];
+  uint64_t rowMask[8];
   uint64_t kingZoneMaskWhite[64];
   uint64_t kingZoneMaskBlack[64];
+  uint64_t enemyTerritoryWhite;
+  uint64_t enemyTerritoryBlack;
 
   Magics *magics; // Magic bitboard
 
@@ -281,11 +289,12 @@ private:
   bool isAttacked(int index, bool color); // Is square attacked
 
   // Evaluation functions
-  int evaluateMobility(uint64_t whitePawns, uint64_t blackPawns, uint64_t whiteKnights, uint64_t blackKnights,
-    uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens, bool endgame);
-  int evaluateKingSafety(uint8_t whiteKingIndex, uint8_t blackKingIndex, uint64_t whiteKnights, uint64_t blackKnights,
-    uint64_t whiteBishops, uint64_t blackBishops, uint64_t whiteRooks, uint64_t blackRooks, uint64_t whiteQueens, uint64_t blackQueens);
-  int evaluatePawns(uint64_t whitePawns, uint64_t blackPawns);
+  int evaluateImbalance();
+  int evaluateMobility(int kingIndex, uint64_t pawns, uint64_t knights, uint64_t bishops, uint64_t rooks, uint64_t queens, bool endgame, bool isWhite);
+  int evaluateKingSafety(int kingIndex, uint64_t color, uint64_t knights, uint64_t bishops, uint64_t rooks, uint64_t queens, bool isWhite);
+  int evaluatePawns(uint64_t allyPawns, uint64_t enemyPawns, bool endgame, bool isWhite);
+  int evaluateOutposts(uint64_t knights, uint64_t bishops, uint64_t pawns, bool endgame, bool isWhite);
+  int evaluateThreats(uint64_t pawns, bool endgame, bool isWhite);
 
 
 
