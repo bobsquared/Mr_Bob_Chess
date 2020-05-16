@@ -34,7 +34,7 @@ public:
   };
 
 
-  uint32_t history[2][64][64]; // For history heuristic
+  int32_t history[2][64][64]; // For history heuristic
 
 
   Bitboard();
@@ -79,7 +79,6 @@ public:
   // Extras
   std::string posToFEN();
   void updateHalfMove();
-  int seeCapture(Move &capture, bool isWhite);
   int seeCaptureNew(Move &capture);
 
 
@@ -282,10 +281,8 @@ private:
 
 
   // Generating moves helpers
-  std::vector<int> whitePiecesLoc();
-  std::vector<int> blackPiecesLoc();
-  std::vector<int> validMovesWhite(int index);
-  std::vector<int> validMovesBlack(int index);
+  uint64_t validMovesWhite(uint64_t index);
+  uint64_t validMovesBlack(uint64_t index);
 
 
   bool isAttacked(int index, bool color); // Is square attacked
@@ -320,11 +317,7 @@ private:
   int count_population(uint64_t bitboard); // Count number of 1 bits
 
   //See
-  Move smallestAttacker(int index, bool isWhite);
-  int see(int index, bool isWhite);
   uint64_t getLeastValuablePiece(uint64_t attadef, bool isWhite, int &piece);
-  void movePieceCapture(Move &move);
-  void undoMoveCapture();
 
 
 };

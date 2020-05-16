@@ -169,6 +169,7 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
 
   // If depth goes to zero, go into quiescence search.
   if (depth <= 0) {
+    // return bitboard.evaluate();
     return quiesceSearchR(whiteMove, bitboard, tt, alpha, beta, seldepth);
   }
 
@@ -345,6 +346,45 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
           reduction += 1;
         }
 
+        if (move.quiet) {
+
+          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] < 0) {
+            reduction += 1;
+          }
+
+          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] < -500) {
+            reduction += 1;
+          }
+
+          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] < -1000) {
+            reduction += 1;
+          }
+
+          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] < -1500) {
+            reduction += 1;
+          }
+
+
+          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] > 0) {
+            reduction -= 1;
+          }
+
+          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] > 500) {
+            reduction -= 1;
+          }
+
+          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] > 1000) {
+            reduction -= 1;
+          }
+
+          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] > 1500) {
+            reduction -= 1;
+          }
+
+
+        }
+
+
         // Reduce reduction if in PV
         if (IsPv || (hashed && hashedBoard.flag == 0)) {
           reduction -= 2;
@@ -393,9 +433,12 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
       alpha = ret;
 
     }
+    else if (move.quiet) {
+      bitboard.history[whiteMove][move.pieceFrom][move.toLoc] -= depth;
+    }
 
-    if (move.quiet) {
-      bitboard.history[whiteMove][move.pieceFrom][move.toLoc] -= depth / 2;
+    if (std::abs((int)bitboard.history[whiteMove][move.pieceFrom][move.toLoc]) > 2250) {
+      bitboard.history[whiteMove][move.pieceFrom][move.toLoc] /= 2;
     }
 
     if (prevRet != ret) {
@@ -427,9 +470,9 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
     tt.saveTT(bestMove, ret, depth, 2, hashF);
   }
   else {
-    if (bestMove.quiet) {
-      bitboard.history[whiteMove][bestMove.pieceFrom][bestMove.toLoc] += depth * depth;
-    }
+    // if (bestMove.quiet) {
+    //   bitboard.history[whiteMove][bestMove.pieceFrom][bestMove.toLoc] += depth * depth;
+    // }
     tt.saveTT(bestMove, ret, depth, 0, hashF);
   }
 

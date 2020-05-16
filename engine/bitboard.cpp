@@ -369,22 +369,22 @@ void Bitboard::resetBoard() {
   moveStack = {};
   prevPositions = {};
 
-  for (int i = 0; i < 64; i++) {
-    for (int j = 0; j < 64; j++) {
-      for (int k = 0; j < 2; j++) {
-        history[k][i][j] = 0;
-      }
-    }
-  }
-
-
-  for (int i = 0; i < 1024; i++) {
-    for (int j = 0; j < 2; j++) {
-      for (int k = 0; k < 2; k++) {
-        killerMoves[k][i][j] = Move();
-      }
-    }
-  }
+  // for (int i = 0; i < 64; i++) {
+  //   for (int j = 0; j < 64; j++) {
+  //     for (int k = 0; j < 2; j++) {
+  //       history[k][i][j] = 0;
+  //     }
+  //   }
+  // }
+  //
+  //
+  // for (int i = 0; i < 1024; i++) {
+  //   for (int j = 0; j < 2; j++) {
+  //     for (int k = 0; k < 2; k++) {
+  //       killerMoves[k][i][j] = Move();
+  //     }
+  //   }
+  // }
 
   prevPositions.emplace_back(hashBoard(whiteToMove));
 
@@ -950,65 +950,42 @@ std::vector<Bitboard::Move> Bitboard::allValidMoves(bool color) {
 
   if (color == 0){
 
-    std::vector<int> loc = whitePiecesLoc();
-    for (int i : loc) {
+    uint64_t loc = whites;
+    while (loc) {
 
-      if ((1ULL << i) & pieces[0]) {
-        pieceFC = 0;
-      }
-      else if ((1ULL << i) & pieces[1]) {
-        pieceFC = 1;
-      }
-      else if ((1ULL << i) & pieces[2]) {
-        pieceFC = 2;
-      }
-      else if ((1ULL << i) & pieces[3]) {
-        pieceFC = 3;
-      }
-      else if ((1ULL << i) & pieces[4]) {
-        pieceFC = 4;
-      }
-      else if ((1ULL << i) & pieces[5]) {
-        pieceFC = 5;
+      uint64_t pieceLoc = loc & -loc;
+      int fromLoc = bitScanR(pieceLoc);
+      for (int i = 0; i < 6; i++) {
+        if (pieceLoc & pieces[i]) {
+          pieceFC = i;
+          break;
+        };
       }
 
-      std::vector<int> move = validMovesWhite(i);
+      uint64_t moves = validMovesWhite(pieceLoc);
 
-      for (int j : move) {
+      while (moves) {
 
-        if ((1ULL << j) & occupied) {
-
-          if ((1ULL << j) & pieces[0]) {
-            pieceTC = 0;
+        uint64_t movesLoc = moves & -moves;
+        int toLoc = bitScanR(movesLoc);
+        if (movesLoc & occupied) {
+          for (int i = 0; i < 6; i++) {
+            if (movesLoc & pieces[i]) {
+              pieceTC = i;
+              break;
+            };
           }
-          else if ((1ULL << j) & pieces[1]) {
-            pieceTC = 1;
-          }
-          else if ((1ULL << j) & pieces[2]) {
-            pieceTC = 2;
-          }
-          else if ((1ULL << j) & pieces[3]) {
-            pieceTC = 3;
-          }
-          else if ((1ULL << j) & pieces[4]) {
-            pieceTC = 4;
-          }
-          else if ((1ULL << j) & pieces[5]) {
-            pieceTC = 5;
-          }
-
           quiet = false;
-          promotion = (pieceFC == 0 && j > 55) ? 4 : 0;
+          promotion = (pieceFC == 0 && toLoc > 55) ? 4 : 0;
           isEnpassant = false;
-
         }
-        else if (pieceFC == 0 && j > 55) {
+        else if (pieceFC == 0 && toLoc > 55) {
           quiet = false;
           pieceTC = -1;
           promotion = 4;
           isEnpassant = false;
         }
-        else if (pieceFC == 0 && (j == i + 7 || j == i + 9) && ((1ULL << j) & occupied) == 0) {
+        else if (pieceFC == 0 && (toLoc == fromLoc + 7 || toLoc == fromLoc + 9) && (movesLoc & occupied) == 0) {
           quiet = false;
           pieceTC = -1;
           promotion = 0;
@@ -1021,76 +998,52 @@ std::vector<Bitboard::Move> Bitboard::allValidMoves(bool color) {
           isEnpassant = false;
         }
 
-        ret.emplace_back(i, j, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
+        ret.emplace_back(fromLoc, toLoc, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
+        moves &= moves - 1;
       }
 
+      loc &= loc - 1;
     }
 
   }
   else {
 
-    std::vector<int> loc = blackPiecesLoc();
-    for (int i : loc) {
+    uint64_t loc = blacks;
+    while (loc) {
 
-      uint64_t i64 = 1ULL << i;
-
-      if (i64 & pieces[0]) {
-        pieceFC = 0;
-      }
-      else if (i64 & pieces[1]) {
-        pieceFC = 1;
-      }
-      else if (i64 & pieces[2]) {
-        pieceFC = 2;
-      }
-      else if (i64 & pieces[3]) {
-        pieceFC = 3;
-      }
-      else if (i64 & pieces[4]) {
-        pieceFC = 4;
-      }
-      else if (i64 & pieces[5]) {
-        pieceFC = 5;
+      uint64_t pieceLoc = loc & -loc;
+      int fromLoc = bitScanR(pieceLoc);
+      for (int i = 0; i < 6; i++) {
+        if (pieceLoc & pieces[i]) {
+          pieceFC = i;
+          break;
+        };
       }
 
-      std::vector<int> move = validMovesBlack(i);
+      uint64_t moves = validMovesBlack(pieceLoc);
 
-      for (int j : move) {
+      while (moves) {
 
-        uint64_t j64 = 1ULL << j;
-
-        if (j64 & occupied) {
-
-          if (j64 & pieces[0]) {
-            pieceTC = 0;
+        uint64_t movesLoc = moves & -moves;
+        int toLoc = bitScanR(movesLoc);
+        if (movesLoc & occupied) {
+          for (int i = 0; i < 6; i++) {
+            if (movesLoc & pieces[i]) {
+              pieceTC = i;
+              break;
+            };
           }
-          else if (j64 & pieces[1]) {
-            pieceTC = 1;
-          }
-          else if (j64 & pieces[2]) {
-            pieceTC = 2;
-          }
-          else if (j64 & pieces[3]) {
-            pieceTC = 3;
-          }
-          else if (j64 & pieces[4]) {
-            pieceTC = 4;
-          }
-          else if (j64 & pieces[5]) {
-            pieceTC = 5;
-          }
-
           quiet = false;
-          promotion = (pieceFC == 0 && j < 8) ? 4 : 0;
+          promotion = (pieceFC == 0 && toLoc < 8) ? 4 : 0;
           isEnpassant = false;
         }
-        else if (pieceFC == 0 && j < 8) {
+        else if (pieceFC == 0 && toLoc < 8) {
           quiet = false;
           pieceTC = -1;
           promotion = 4;
           isEnpassant = false;
         }
-        else if (pieceFC == 0 && (j == i - 7 || j == i - 9) && ((1ULL << j) & occupied) == 0) {
+        else if (pieceFC == 0 && (toLoc == fromLoc - 7 || toLoc == fromLoc - 9) && (movesLoc & occupied) == 0) {
           quiet = false;
           pieceTC = -1;
           promotion = 0;
@@ -1103,12 +1056,15 @@ std::vector<Bitboard::Move> Bitboard::allValidMoves(bool color) {
           isEnpassant = false;
         }
 
-        ret.emplace_back(i, j, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
+        ret.emplace_back(fromLoc, toLoc, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
+        moves &= moves - 1;
       }
 
+      loc &= loc - 1;
     }
 
   }
+
 
   return ret;
 
@@ -1129,154 +1085,110 @@ std::vector<Bitboard::Move> Bitboard::allValidCaptures(bool color) {
 
   if (color == 0){
 
-    std::vector<int> loc = whitePiecesLoc();
-    for (int i : loc) {
+    uint64_t loc = whites;
+    while (loc) {
 
-      uint64_t i64 = 1ULL << i;
-
-      if (i64 & pieces[0]) {
-        pieceFC = 0;
-      }
-      else if (i64 & pieces[1]) {
-        pieceFC = 1;
-      }
-      else if (i64 & pieces[2]) {
-        pieceFC = 2;
-      }
-      else if (i64 & pieces[3]) {
-        pieceFC = 3;
-      }
-      else if (i64 & pieces[4]) {
-        pieceFC = 4;
-      }
-      else if (i64 & pieces[5]) {
-        pieceFC = 5;
+      uint64_t pieceLoc = loc & -loc;
+      int fromLoc = bitScanR(pieceLoc);
+      for (int i = 0; i < 6; i++) {
+        if (pieceLoc & pieces[i]) {
+          pieceFC = i;
+          break;
+        };
       }
 
-      std::vector<int> move = validMovesWhite(i);
+      uint64_t moves = validMovesWhite(pieceLoc);
 
-      for (int j : move) {
+      while (moves) {
 
-        uint64_t j64 = 1ULL << j;
+        uint64_t movesLoc = moves & -moves;
+        int toLoc = bitScanR(movesLoc);
 
-        if (j64 & occupied) {
-
-          if (j64 & pieces[0]) {
-            pieceTC = 0;
+        if (movesLoc & occupied) {
+          for (int i = 0; i < 6; i++) {
+            if (movesLoc & pieces[i]) {
+              pieceTC = i;
+              quiet = false;
+              promotion = (pieceFC == 0 && toLoc > 55) ? 4 : 0;
+              isEnpassant = false;
+              ret.emplace_back(fromLoc, toLoc, false, pieceFC, pieceTC, 0, promotion, false);
+              break;
+            };
           }
-          else if (j64 & pieces[1]) {
-            pieceTC = 1;
-          }
-          else if (j64 & pieces[2]) {
-            pieceTC = 2;
-          }
-          else if (j64 & pieces[3]) {
-            pieceTC = 3;
-          }
-          else if (j64 & pieces[4]) {
-            pieceTC = 4;
-          }
-          else if (j64 & pieces[5]) {
-            pieceTC = 5;
-          }
-
-          quiet = false;
-          promotion = (pieceFC == 0 && j > 55) ? 4 : 0;
-          isEnpassant = false;
-          ret.emplace_back(i, j, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
-
         }
-        else if (pieceFC == 0 && j > 55) {
+        else if (pieceFC == 0 && toLoc > 55) {
           quiet = false;
           pieceTC = -1;
           promotion = 4;
           isEnpassant = false;
-          ret.emplace_back(i, j, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
+          ret.emplace_back(fromLoc, toLoc, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
         }
-        else if (pieceFC == 0 && (j == i + 7 || j == i + 9) && ((1ULL << j) & occupied) == 0) {
+        else if (pieceFC == 0 && (toLoc == fromLoc + 7 || toLoc == fromLoc + 9) && (movesLoc & occupied) == 0) {
           quiet = false;
           pieceTC = -1;
           promotion = 0;
           isEnpassant = true;
-          ret.emplace_back(i, j, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
+          ret.emplace_back(fromLoc, toLoc, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
         }
 
+        moves &= moves - 1;
       }
 
+      loc &= loc - 1;
     }
 
   }
   else {
 
-    std::vector<int> loc = blackPiecesLoc();
-    for (int i : loc) {
+    uint64_t loc = blacks;
+    while (loc) {
 
-      if ((1ULL << i) & pieces[0]) {
-        pieceFC = 0;
-      }
-      else if ((1ULL << i) & pieces[1]) {
-        pieceFC = 1;
-      }
-      else if ((1ULL << i) & pieces[2]) {
-        pieceFC = 2;
-      }
-      else if ((1ULL << i) & pieces[3]) {
-        pieceFC = 3;
-      }
-      else if ((1ULL << i) & pieces[4]) {
-        pieceFC = 4;
-      }
-      else if ((1ULL << i) & pieces[5]) {
-        pieceFC = 5;
+      uint64_t pieceLoc = loc & -loc;
+      int fromLoc = bitScanR(pieceLoc);
+      for (int i = 0; i < 6; i++) {
+        if (pieceLoc & pieces[i]) {
+          pieceFC = i;
+          break;
+        };
       }
 
-      std::vector<int> move = validMovesBlack(i);
+      uint64_t moves = validMovesBlack(pieceLoc);
 
-      for (int j : move) {
+      while (moves) {
 
-        if ((1ULL << j) & occupied) {
+        uint64_t movesLoc = moves & -moves;
+        int toLoc = bitScanR(movesLoc);
 
-          if ((1ULL << j) & pieces[0]) {
-            pieceTC = 0;
+        if (movesLoc & occupied) {
+          for (int i = 0; i < 6; i++) {
+            if (movesLoc & pieces[i]) {
+              pieceTC = i;
+              quiet = false;
+              promotion = (pieceFC == 0 && toLoc < 8) ? 4 : 0;
+              isEnpassant = false;
+              ret.emplace_back(fromLoc, toLoc, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
+              break;
+            };
           }
-          else if ((1ULL << j) & pieces[1]) {
-            pieceTC = 1;
-          }
-          else if ((1ULL << j) & pieces[2]) {
-            pieceTC = 2;
-          }
-          else if ((1ULL << j) & pieces[3]) {
-            pieceTC = 3;
-          }
-          else if ((1ULL << j) & pieces[4]) {
-            pieceTC = 4;
-          }
-          else if ((1ULL << j) & pieces[5]) {
-            pieceTC = 5;
-          }
-
-          quiet = false;
-          promotion = (pieceFC == 0 && j < 8) ? 4 : 0;
-          isEnpassant = false;
-          ret.emplace_back(i, j, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
         }
-        else if (pieceFC == 0 && j < 8) {
+        else if (pieceFC == 0 && toLoc < 8) {
           quiet = false;
           pieceTC = -1;
           promotion = 4;
           isEnpassant = false;
-          ret.emplace_back(i, j, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
+          ret.emplace_back(fromLoc, toLoc, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
         }
-        else if (pieceFC == 0 && (j == i - 7 || j == i - 9) && ((1ULL << j) & occupied) == 0) {
+        else if (pieceFC == 0 && (toLoc == fromLoc - 7 || toLoc == fromLoc - 9) && (movesLoc & occupied) == 0) {
           quiet = false;
           pieceTC = -1;
           promotion = 0;
           isEnpassant = true;
-          ret.emplace_back(i, j, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
+          ret.emplace_back(fromLoc, toLoc, quiet, pieceFC, pieceTC, 0, promotion, isEnpassant);
         }
 
+        moves &= moves - 1;
       }
-
+      loc &= loc - 1;
     }
 
   }
@@ -1287,121 +1199,45 @@ std::vector<Bitboard::Move> Bitboard::allValidCaptures(bool color) {
 
 
 
-std::vector<int> Bitboard::whitePiecesLoc() {
-  std::vector<int> ret = {};
-  ret.reserve(16);
-  uint64_t bitboard = whites;
-  while (bitboard != 0){
-    int toApp = bitScanR(bitboard);
-    bitboard &= bitboard - 1;
-    ret.emplace_back(toApp);
-  }
-  return ret;
-}
+uint64_t Bitboard::validMovesWhite(uint64_t whitesIndex) {
 
-
-
-std::vector<int> Bitboard::blackPiecesLoc() {
-  std::vector<int> ret = {};
-  ret.reserve(16);
-  uint64_t bitboard = blacks;
-  while (bitboard != 0){
-    int toApp = bitScanR(bitboard);
-    bitboard &= bitboard - 1;
-    ret.emplace_back(toApp);
-  }
-  return ret;
-}
-
-
-
-std::vector<int> Bitboard::validMovesWhite(int index) {
-
-  uint64_t whitesIndex = 1ULL << index;
-  std::vector<int> ret = {};
-  ret.reserve(32);
-
+  int index = bitScanR(whitesIndex);
 
   if (pieces[0] & whitesIndex) {
-
     uint64_t base = (whitePawnAttacks[index] & blacks) | (whitePawnMoves[index] & ~occupied);
     if (occupied & (1ULL << (index + 8))){
       base &= (1ULL << (index + 16)) ^ 18446744073709551615ULL;
     }
-
     int enpass = enpassantConditions(true, index);
     if (enpass) {
-      ret.emplace_back(enpass);
+      base |= 1ULL << enpass;
     }
-
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-
-    return ret;
+    return base;
   }
   else if (pieces[1] & whitesIndex) {
-
-    uint64_t base = knightMoves[index] & ~whites;
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-    return ret;
+    return knightMoves[index] & ~whites;
   }
   else if (pieces[2] & whitesIndex) {
-
-    uint64_t base = magics->bishopAttacksMask(occupied, index) & ~whites;
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-    return ret;
+    return magics->bishopAttacksMask(occupied, index) & ~whites;
   }
   else if (pieces[3] & whitesIndex) {
-
-    uint64_t base = magics->rookAttacksMask(occupied, index) & ~whites;
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-    return ret;
+    return magics->rookAttacksMask(occupied, index) & ~whites;
   }
   else if (pieces[4] & whitesIndex) {
-
-    uint64_t base = (magics->bishopAttacksMask(occupied, index) | magics->rookAttacksMask(occupied, index)) & ~whites;
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-    return ret;
+    return (magics->bishopAttacksMask(occupied, index) | magics->rookAttacksMask(occupied, index)) & ~whites;
   }
   else if (pieces[5] & whitesIndex) {
-
     uint64_t base = kingMoves[index] & ~whites;
     if (canCastleK(true)) {
-      ret.emplace_back(6);
+      base |= 1ULL << 6;
     }
-
     if (canCastleQ(true)) {
-      ret.emplace_back(2);
+      base |= 1ULL << 2;
     }
-
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-    return ret;
+    return base;
   }
 
-  return ret;
+  return 0;
 }
 
 
@@ -1462,91 +1298,45 @@ bool Bitboard::IsMoveWhite(Move &move) {
 
 
 
-std::vector<int> Bitboard::validMovesBlack(int index) {
+uint64_t Bitboard::validMovesBlack(uint64_t blacksIndex) {
 
-  uint64_t blacksIndex = 1ULL << index;
-  std::vector<int> ret = {};
-  ret.reserve(32);
+  int index = bitScanR(blacksIndex);
 
   if (pieces[0] & blacksIndex) {
-
     uint64_t base = (blackPawnAttacks[index] & whites) | (blackPawnMoves[index] & ~occupied);
     if ((index >= 16 && (occupied & (1ULL << (index - 8))) != 0)){
       base &= (1ULL << (index - 16)) ^ 18446744073709551615U;
     }
-
     int enpass = enpassantConditions(false, index);
     if (enpass) {
-      ret.emplace_back(enpass);
+      base |= 1ULL << enpass;
     }
-
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-    return ret;
+    return base;
   }
   else if (pieces[1] & blacksIndex) {
-
-    uint64_t base = knightMoves[index] & ~blacks;
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-    return ret;
+    return knightMoves[index] & ~blacks;
   }
   else if (pieces[2] & blacksIndex) {
-
-    uint64_t base = magics->bishopAttacksMask(occupied, index) & ~blacks;
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-    return ret;
+    return magics->bishopAttacksMask(occupied, index) & ~blacks;
   }
   else if (pieces[3] & blacksIndex) {
-
-    uint64_t base = magics->rookAttacksMask(occupied, index) & ~blacks;
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-    return ret;
+    return magics->rookAttacksMask(occupied, index) & ~blacks;
   }
   else if (pieces[4] & blacksIndex) {
-
-    uint64_t base = (magics->bishopAttacksMask(occupied, index) | magics->rookAttacksMask(occupied, index)) & ~blacks;
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-    return ret;
+    return (magics->bishopAttacksMask(occupied, index) | magics->rookAttacksMask(occupied, index)) & ~blacks;
   }
   else if (pieces[5] & blacksIndex) {
     uint64_t base = kingMoves[index] & ~blacks;
-
     if (canCastleK(false)) {
-        ret.emplace_back(62);
+        base |= 1ULL << 62;
     }
-
     if (canCastleQ(false)) {
-        ret.emplace_back(58);
+        base |= 1ULL << 58;
     }
-
-    while (base) {
-      int toApp = bitScanR(base);
-      base &= base - 1;
-      ret.emplace_back(toApp);
-    }
-    return ret;
+    return base;
   }
 
-  return ret;
+  return 0;
 }
 
 
@@ -2409,7 +2199,7 @@ int Bitboard::evaluatePawns(uint64_t allyPawns, uint64_t enemyPawns, bool endgam
   for (int i = 0; i < 8; i++) {
     int popCount = count_population(allyPawns & columnMask[i]);
     if (popCount >= 2) {
-      ret -= (popCount - 1) * 7;
+      ret -= (popCount - 1) * 12;
     }
   }
 
@@ -2906,8 +2696,6 @@ uint64_t Bitboard::getPosKey() {
 // Given an index and color of piece, determine if it is a passed pawn
 bool Bitboard::isPassedPawn(int index, bool color) {
 
-
-
   if (color == 0) {
 
     uint64_t mask = (1ULL << index) & pieces[0] & whites;
@@ -2932,157 +2720,6 @@ bool Bitboard::isPassedPawn(int index, bool color) {
   }
 }
 
-
-
-Bitboard::Move Bitboard::smallestAttacker(int index, bool isWhite) {
-
-  int8_t pieceFC = -1;
-
-  if (!isWhite) {
-    uint64_t piece = (1ULL << index) & whites;
-
-    if (piece & pieces[0]) {
-      pieceFC = 0;
-    }
-    else if (piece & pieces[1]) {
-      pieceFC = 1;
-    }
-    else if (piece & pieces[2]) {
-      pieceFC = 2;
-    }
-    else if (piece & pieces[3]) {
-      pieceFC = 3;
-    }
-    else if (piece & pieces[4]) {
-      pieceFC = 4;
-    }
-    else if (piece & pieces[5]) {
-      pieceFC = 5;
-    }
-
-    assert(pieceFC != -1);
-
-    uint64_t index2 = whitePawnAttacks[index] & blacks & pieces[0];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 0, 0, 0, false);
-    }
-
-    index2 = knightMoves[index] & blacks & pieces[1];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 1, 0, 0, false);
-    }
-
-    index2 = magics->bishopAttacksMask(occupied, index) & blacks & pieces[2];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 2, 0, 0, false);
-    }
-
-    index2 = magics->rookAttacksMask(occupied, index) & blacks & pieces[3];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 3, 0, 0, false);
-    }
-
-    index2 = (magics->bishopAttacksMask(occupied, index) | magics->rookAttacksMask(occupied, index)) & blacks & pieces[4];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 4, 0, 0, false);
-    }
-
-    index2 = kingMoves[index] & blacks & pieces[5];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 5, 0, 0, false);
-    }
-
-  }
-  else {
-
-    uint64_t piece = (1ULL << index) & blacks;
-
-    if (piece & pieces[0]) {
-      pieceFC = 0;
-    }
-    else if (piece & pieces[1]) {
-      pieceFC = 1;
-    }
-    else if (piece & pieces[2]) {
-      pieceFC = 2;
-    }
-    else if (piece & pieces[3]) {
-      pieceFC = 3;
-    }
-    else if (piece & pieces[4]) {
-      pieceFC = 4;
-    }
-    else if (piece & pieces[5]) {
-      pieceFC = 5;
-    }
-
-    assert(pieceFC !=-1);
-
-    uint64_t index2 = blackPawnAttacks[index] & whites & pieces[0];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 0, 0, 0, false);
-    }
-
-    index2 = knightMoves[index] & whites & pieces[1];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 1, 0, 0, false);
-    }
-
-    index2 = magics->bishopAttacksMask(occupied, index) & whites & pieces[2];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 2, 0, 0, false);
-    }
-
-    index2 = magics->rookAttacksMask(occupied, index) & whites & pieces[3];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 3, 0, 0, false);
-    }
-
-    index2 = (magics->bishopAttacksMask(occupied, index) | magics->rookAttacksMask(occupied, index)) & whites & pieces[4];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 4, 0, 0, false);
-    }
-
-    index2 = kingMoves[index] & whites & pieces[5];
-    if (index2) {
-      return Move(bitScanR(index2), index, false, pieceFC, 5, 0, 0, false);
-    }
-
-  }
-
-  return Move();
-
-}
-
-
-int Bitboard::see(int index, bool isWhite) {
-
-  int value = 0;
-  Move piece = smallestAttacker(index, isWhite);
-
-  if (piece != Move()) {
-    movePieceCapture(piece);
-    value = std::max(0, pieceValues[piece.pieceTo] - see(index, !isWhite));
-    undoMoveCapture();
-  }
-
-  return value;
-
-}
-
-
-
-int Bitboard::seeCapture(Move &capture, bool isWhite) {
-
-  int value = 0;
-
-  movePieceCapture(capture);
-  value = pieceValues[capture.pieceTo] - see(capture.toLoc, !isWhite);
-  undoMoveCapture();
-
-  return value;
-
-}
 
 
 uint64_t Bitboard::getLeastValuablePiece(uint64_t attadef, bool isWhite, int &piece) {
@@ -3143,69 +2780,6 @@ int Bitboard::seeCaptureNew(Move &capture) {
 
   return gain[0];
 
-}
-
-
-
-void Bitboard::movePieceCapture(Move& move) {
-
-  uint64_t i1 = 1ULL << move.fromLoc;
-  uint64_t i2 = 1ULL << move.toLoc;
-  uint64_t i1i2 = i1 ^ i2;
-  int i = move.pieceFrom;
-  int k = move.pieceTo;
-  bool useWhite;
-
-  assert(i != -1);
-  assert(k != -1);
-
-  useWhite = whites & i1 ? true : false;
-
-  if (useWhite) {
-    whites ^= i1i2;
-    blacks ^= i2;
-  }
-  else {
-    blacks ^= i1i2;
-    whites ^= i2;
-  }
-
-  pieces[k] ^= i2;
-  pieces[i] ^= i1i2;
-  occupied ^= i1;
-
-
-  moveStack.emplace_back(i1, i2, i, k, !useWhite, 0, false, 0, false, false);
-
-}
-
-
-
-void Bitboard::undoMoveCapture() {
-
-  MoveStack m = moveStack.back();
-  uint64_t fromLoc = m.fromLoc;
-  uint64_t toLoc = m.toLoc;
-  uint64_t i1i2 = fromLoc ^ toLoc;
-
-  // STEP 6: Undo the move
-  if (toLoc != fromLoc) {
-    pieces[m.movePiece] ^= i1i2;
-
-    if (!m.color) {
-      whites ^= i1i2;
-      blacks ^= toLoc;
-    }
-    else {
-      blacks ^= i1i2;
-      whites ^= toLoc;
-    }
-    pieces[m.capturePiece] ^= toLoc;
-    occupied ^= fromLoc;
-
-  }
-
-  moveStack.pop_back();
 }
 
 
