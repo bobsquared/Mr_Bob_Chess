@@ -9,7 +9,7 @@
 
 #define QSEARCH_CHECKS_MAX 16
 
-#define ASPIRATION_WINDOW_DELTA 32
+#define ASPIRATION_WINDOW_DELTA 19
 
 // Number to algebra
 const std::string TO_ALG[64] = {

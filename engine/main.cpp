@@ -160,7 +160,7 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
         }
       }
 
-      bitboard.scoreMoves(vMoves, tempM, i, !color);
+      // bitboard.scoreMoves(vMoves, tempM, i, !color);
       std::stable_sort(vMoves.begin(), vMoves.end());
 
 

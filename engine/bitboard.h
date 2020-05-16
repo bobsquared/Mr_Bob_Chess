@@ -4,6 +4,7 @@
 #include <vector>
 #include "zobrist_hashing.h"
 #include "magic_bitboards.h"
+#include "defs.h"
 
 
 
@@ -79,6 +80,7 @@ public:
   std::string posToFEN();
   void updateHalfMove();
   int seeCapture(Move &capture, bool isWhite);
+  int seeCaptureNew(Move &capture);
 
 
 private:
@@ -90,19 +92,19 @@ private:
   const uint64_t DOWN_MASK = 18446744073709551360U;
   const uint64_t UP_MASK = 72057594037927935U;
 
-  const int pieceValues[6] = {100, 321, 333, 500, 900, 20000};
+  const int pieceValues[6] = {100, 330, 345, 550, 975, 20000};
   const std::string NUM_TO_STR[9] = {"0", "1", "2", "3", "4", "5", "6", "7", "8"};
 
   const int attackWeight[8] = {
-    12, 25, 50, 75, 88, 94, 97, 99
+    0, 0, 50, 75, 88, 94, 97, 99
   };
 
   const int knightWeight[9] = {
-    -20, -16, -12, -8, -4, 0, 4, 8, 12
+    -25, -16, -12, -8, -4, 0, 8, 16, 24
   };
 
   const int rookWeight[9] = {
-    15, 12, 9, 6, 3, 0, -3, -6, -9
+    24, 12, 9, 6, 3, 0, -6, -9, -12
   };
 
   const int MSB_TABLE[64] = {
@@ -233,22 +235,22 @@ private:
   int countQueensB;
 
   // Piece square tables
-  int whitePawnTable[64];
-  int blackPawnTable[64];
-  int whitePawnTableEG[64];
-  int blackPawnTableEG[64];
-  int whiteKnightTable[64];
-  int blackKnightTable[64];
-  int whiteBishopTable[64];
-  int blackBishopTable[64];
-  int whiteRookTable[64];
-  int blackRookTable[64];
-  int whiteQueenTable[64];
-  int blackQueenTable[64];
-  int whiteKingTable[64];
-  int blackKingTable[64];
-  int whiteKingTableEG[64];
-  int blackKingTableEG[64];
+  int8_t whitePawnTable[64];
+  int8_t blackPawnTable[64];
+  int8_t whitePawnTableEG[64];
+  int8_t blackPawnTableEG[64];
+  int8_t whiteKnightTable[64];
+  int8_t blackKnightTable[64];
+  int8_t whiteBishopTable[64];
+  int8_t blackBishopTable[64];
+  int8_t whiteRookTable[64];
+  int8_t blackRookTable[64];
+  int8_t whiteQueenTable[64];
+  int8_t blackQueenTable[64];
+  int8_t whiteKingTable[64];
+  int8_t blackKingTable[64];
+  int8_t whiteKingTableEG[64];
+  int8_t blackKingTableEG[64];
 
   // Initializing masks
   void InitPieceBoards();
@@ -287,6 +289,13 @@ private:
 
 
   bool isAttacked(int index, bool color); // Is square attacked
+  uint64_t isAttackedSee(int index);
+  uint64_t xrayAttackRook(uint64_t blockers, int index);
+  uint64_t xrayAttackBishop(uint64_t blockers, int index);
+  uint64_t xrayAttackQueen(uint64_t blockers, int index);
+  uint64_t xrayAttackRookSee(uint64_t blockers, int index);
+  uint64_t xrayAttackBishopSee(uint64_t blockers, int index);
+  uint64_t xrayAttackQueenSee(uint64_t blockers, int index);
 
   // Evaluation functions
   int evaluateImbalance();
@@ -295,6 +304,8 @@ private:
   int evaluatePawns(uint64_t allyPawns, uint64_t enemyPawns, bool endgame, bool isWhite);
   int evaluateOutposts(uint64_t knights, uint64_t bishops, uint64_t pawns, bool endgame, bool isWhite);
   int evaluateThreats(uint64_t pawns, bool endgame, bool isWhite);
+  int evaluateTrappedPieces(int kingIndex, uint64_t rooks, bool isWhite);
+  int evaluateKingPawnEndgame(int kingIndex, uint64_t allyPawns, uint64_t enemyPawns, bool endgame, bool isWhite);
 
 
 
@@ -311,6 +322,7 @@ private:
   //See
   Move smallestAttacker(int index, bool isWhite);
   int see(int index, bool isWhite);
+  uint64_t getLeastValuablePiece(uint64_t attadef, bool isWhite, int &piece);
   void movePieceCapture(Move &move);
   void undoMoveCapture();
 

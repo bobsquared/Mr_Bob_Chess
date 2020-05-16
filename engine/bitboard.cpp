@@ -276,14 +276,14 @@ void Bitboard::InitKingZoneMask() {
   for (int i = 0; i < 64; i++) {
 
     kingZoneMaskWhite[i] = kingMoves[i] | (1ULL << i);
-    kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
-    kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
-    kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
+    // kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
+    // kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
+    // kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
 
     kingZoneMaskBlack[i] = kingMoves[i] | (1ULL << i);
-    kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
-    kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
-    kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
+    // kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
+    // kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
+    // kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
 
   }
 
@@ -698,6 +698,52 @@ uint64_t Bitboard::pawnAttacks(bool isWhite) {
 
 
 
+uint64_t Bitboard::xrayAttackRook(uint64_t blockers, int index) {
+  uint64_t bb = magics->rookAttacksMask(occupied, index);
+  bb &= blockers;
+  return magics->rookAttacksMask(occupied ^ bb, index);
+}
+
+
+
+uint64_t Bitboard::xrayAttackBishop(uint64_t blockers, int index) {
+  uint64_t bb = magics->bishopAttacksMask(occupied, index);
+  bb &= blockers;
+  return magics->bishopAttacksMask(occupied ^ bb, index);
+}
+
+
+
+uint64_t Bitboard::xrayAttackQueen(uint64_t blockers, int index) {
+  uint64_t bb = magics->bishopAttacksMask(occupied, index) | magics->rookAttacksMask(occupied, index);
+  bb &= blockers;
+  return magics->bishopAttacksMask(occupied & bb, index) | magics->rookAttacksMask(occupied & bb, index);
+}
+
+
+
+uint64_t Bitboard::xrayAttackRookSee(uint64_t blockers, int index) {
+  uint64_t bb = magics->rookAttacksMask(occupied, index);
+  return bb ^ magics->rookAttacksMask(occupied ^ (bb & blockers), index);
+}
+
+
+
+uint64_t Bitboard::xrayAttackBishopSee(uint64_t blockers, int index) {
+  uint64_t bb = magics->bishopAttacksMask(occupied, index);
+  return bb ^ magics->bishopAttacksMask(occupied ^ (bb & blockers), index);
+}
+
+
+
+uint64_t Bitboard::xrayAttackQueenSee(uint64_t blockers, int index) {
+  uint64_t bb = magics->bishopAttacksMask(occupied, index) | magics->rookAttacksMask(occupied, index);
+  bb &= blockers;
+  return magics->bishopAttacksMask(occupied & bb, index) | magics->rookAttacksMask(occupied & bb, index);
+}
+
+
+
 // Adapted from https://www.chessprogramming.org/Knight_Pattern#MultipleKnightAttacks
 uint64_t Bitboard::knightAttacks(uint64_t knights) {
   uint64_t l1 = (knights >> 1) & 0x7f7f7f7f7f7f7f7f;
@@ -812,48 +858,37 @@ bool Bitboard::filterCheck(bool color) {
   uint64_t ret = 0;
 
   if (color == 0) {
-    if (pieces[5] & whites) {
 
-      uint64_t indexP = pieces[5] & whites;
-      int index = bitScanR(indexP);
-      assert ((1ULL << index) == indexP);
+    uint64_t indexP = pieces[5] & whites;
+    int index = bitScanR(indexP);
+    assert ((1ULL << index) == indexP);
 
-      uint64_t bishopAttacksMaskI = magics->bishopAttacksMask(occupied, index);
-      uint64_t rookAttacksMaskI = magics->rookAttacksMask(occupied, index);
-      ret = blacks & pieces[0] & whitePawnAttacks[index];
-      ret |= blacks & pieces[1] & knightMoves[index];
-      ret |= blacks & pieces[2] & bishopAttacksMaskI;
-      ret |= blacks & pieces[3] & rookAttacksMaskI;
-      ret |= blacks & pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
-      ret |= blacks & pieces[5] & kingMoves[index];
-    }
-    else {
-      return false;
-    }
+    uint64_t bishopAttacksMaskI = magics->bishopAttacksMask(occupied, index);
+    uint64_t rookAttacksMaskI = magics->rookAttacksMask(occupied, index);
+    ret = pieces[0] & whitePawnAttacks[index];
+    ret |= pieces[1] & knightMoves[index];
+    ret |= pieces[2] & bishopAttacksMaskI;
+    ret |= pieces[3] & rookAttacksMaskI;
+    ret |= pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
+    ret |= pieces[5] & kingMoves[index];
+    ret &= blacks;
 
   }
   else {
 
-    if (pieces[5] & blacks) {
+    uint64_t indexP = pieces[5] & blacks;
+    int index = bitScanR(indexP);
+    assert ((1ULL << index) == indexP);
 
-      uint64_t indexP = pieces[5] & blacks;
-      int index = bitScanR(indexP);
-      assert ((1ULL << index) == indexP);
-
-      uint64_t bishopAttacksMaskI = magics->bishopAttacksMask(occupied, index);
-      uint64_t rookAttacksMaskI = magics->rookAttacksMask(occupied, index);
-      ret = whites & pieces[0] & blackPawnAttacks[index];
-      ret |= whites & pieces[1] & knightMoves[index];
-      ret |= whites & pieces[2] & bishopAttacksMaskI;
-      ret |= whites & pieces[3] & rookAttacksMaskI;
-      ret |= whites & pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
-      ret |= whites & pieces[5] & kingMoves[index];
-
-
-    }
-    else {
-      return false;
-    }
+    uint64_t bishopAttacksMaskI = magics->bishopAttacksMask(occupied, index);
+    uint64_t rookAttacksMaskI = magics->rookAttacksMask(occupied, index);
+    ret = pieces[0] & blackPawnAttacks[index];
+    ret |= pieces[1] & knightMoves[index];
+    ret |= pieces[2] & bishopAttacksMaskI;
+    ret |= pieces[3] & rookAttacksMaskI;
+    ret |= pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
+    ret |= pieces[5] & kingMoves[index];
+    ret &= whites;
 
   }
 
@@ -866,33 +901,36 @@ bool Bitboard::filterCheck(bool color) {
 bool Bitboard::isAttacked(int index, bool color) {
 
   uint64_t ret = 0;
+  uint64_t bishopAttacksMaskI = magics->bishopAttacksMask(occupied, index);
+  uint64_t rookAttacksMaskI = magics->rookAttacksMask(occupied, index);
+  ret = pieces[0] & color? whitePawnAttacks[index] : blackPawnAttacks[index];
+  ret |= pieces[1] & knightMoves[index];
+  ret |= pieces[2] & bishopAttacksMaskI;
+  ret |= pieces[3] & rookAttacksMaskI;
+  ret |= pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
+  ret |= pieces[5] & kingMoves[index];
+  ret &= color? whites : blacks;
 
-  if (!color) {
+  return !ret;
 
-    uint64_t bishopAttacksMaskI = magics->bishopAttacksMask(occupied, index);
-    uint64_t rookAttacksMaskI = magics->rookAttacksMask(occupied, index);
-    ret = blacks & pieces[0] & whitePawnAttacks[index];
-    ret |= blacks & pieces[1] & knightMoves[index];
-    ret |= blacks & pieces[2] & bishopAttacksMaskI;
-    ret |= blacks & pieces[3] & rookAttacksMaskI;
-    ret |= blacks & pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
-    ret |= blacks & pieces[5] & kingMoves[index];
+}
 
-  }
-  else {
 
-    uint64_t bishopAttacksMaskI = magics->bishopAttacksMask(occupied, index);
-    uint64_t rookAttacksMaskI = magics->rookAttacksMask(occupied, index);
-    ret = whites & pieces[0] & blackPawnAttacks[index];
-    ret |= whites & pieces[1] & knightMoves[index];
-    ret |= whites & pieces[2] & bishopAttacksMaskI;
-    ret |= whites & pieces[3] & rookAttacksMaskI;
-    ret |= whites & pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
-    ret |= whites & pieces[5] & kingMoves[index];
 
-  }
+uint64_t Bitboard::isAttackedSee(int index) {
 
-  return ret == 0;
+  uint64_t ret = 0;
+  uint64_t bishopAttacksMaskI = magics->bishopAttacksMask(occupied, index);
+  uint64_t rookAttacksMaskI = magics->rookAttacksMask(occupied, index);
+  ret |= pieces[0] & whitePawnAttacks[index];
+  ret |= pieces[0] & blackPawnAttacks[index];
+  ret |= pieces[1] & knightMoves[index];
+  ret |= pieces[2] & bishopAttacksMaskI;
+  ret |= pieces[3] & rookAttacksMaskI;
+  ret |= pieces[4] & (bishopAttacksMaskI | rookAttacksMaskI);
+  ret |= pieces[5] & kingMoves[index];
+
+  return ret;
 
 }
 
@@ -2040,6 +2078,8 @@ int Bitboard::evaluate() {
   ret += evaluatePawns(whitePawns, blackPawns, endgame, true) - evaluatePawns(blackPawns, whitePawns, endgame, false);
   ret += evaluateOutposts(whiteKnights, whiteBishops, blackPawns, endgame, true) - evaluateOutposts(blackKnights, blackBishops, whitePawns, endgame, false);
   ret += evaluateThreats(whitePawns, endgame, true) - evaluateThreats(blackPawns, endgame, false);
+  ret += evaluateTrappedPieces(whiteKingIndex, whiteRooks, true) - evaluateTrappedPieces(blackKingIndex, blackRooks, false);
+  ret += evaluateKingPawnEndgame(whiteKingIndex, whitePawns, blackPawns, endgame, true) - evaluateKingPawnEndgame(blackKingIndex, blackPawns, whitePawns, endgame, false);
 
   ret += knightWeight[countPawnsW] * countKnightsW;
   ret -= knightWeight[countPawnsB] * countKnightsB;
@@ -2073,6 +2113,15 @@ void Bitboard::evaluateDebug() {
 
   int ret = materialScore;
 
+  std::vector<Move> moves = allValidMoves(false);
+  for (Move move : moves) {
+    std::cout << TO_ALG[move.fromLoc] << TO_ALG[move.toLoc] << std::endl;
+    if (move.toLoc == 36 && move.pieceTo != -1) {
+      std::cout << TO_ALG[move.fromLoc] << TO_ALG[move.toLoc] << std::endl;
+      std::cout << "See: " << seeCaptureNew(move) << std::endl;
+    }
+  }
+
   uint64_t whitePawns = whites & pieces[0];
   uint64_t blackPawns = blacks & pieces[0];
 
@@ -2093,6 +2142,9 @@ void Bitboard::evaluateDebug() {
 
   ret += whiteToMove? 12 : -12;
   ret += evaluateImbalance();
+  std::cout << canCastleK(true) << std::endl;
+  std::cout << canCastleK(false) << std::endl;
+
 
 
   std::cout << "----------------------------------------------------------" << std::endl;
@@ -2101,6 +2153,7 @@ void Bitboard::evaluateDebug() {
   std::cout << "White Pawns:       " << evaluatePawns(whitePawns, blackPawns, endgame, true) << std::endl;
   std::cout << "White Outposts:    " << evaluateOutposts(whiteKnights, whiteBishops, blackPawns, endgame, true) << std::endl;
   std::cout << "White Threats:     " << evaluateThreats(whitePawns, endgame, true) << std::endl;
+  std::cout << "White trapped:     " << evaluateTrappedPieces(whiteKingIndex, whiteRooks, true) << std::endl;
   std::cout << "----------------------------------------------------------" << std::endl;
 
   std::cout << "----------------------------------------------------------" << std::endl;
@@ -2108,7 +2161,8 @@ void Bitboard::evaluateDebug() {
   std::cout << "Black King Safety: " << evaluateKingSafety(whiteKingIndex, ~(blackPawns | pawnAttacks(true)), blackKnights, blackBishops, blackRooks, blackQueens, false) << std::endl;
   std::cout << "Black Pawns:       " << evaluatePawns(blackPawns, whitePawns, endgame, false) << std::endl;
   std::cout << "Black Outposts:    " << evaluateOutposts(blackKnights, blackBishops, whitePawns, endgame, false) << std::endl;
-  std::cout << "black Threats:     " << evaluateThreats(blackPawns, endgame, false) << std::endl;
+  std::cout << "Black Threats:     " << evaluateThreats(blackPawns, endgame, false) << std::endl;
+  std::cout << "Black trapped:     " << evaluateTrappedPieces(blackKingIndex, blackRooks, false) << std::endl;
   std::cout << "----------------------------------------------------------" << std::endl;
 
   std::cout << "----------------------------------------------------------" << std::endl;
@@ -2117,6 +2171,7 @@ void Bitboard::evaluateDebug() {
   std::cout << "Total Pawns:       " << evaluatePawns(whitePawns, blackPawns, endgame, true) - evaluatePawns(blackPawns, whitePawns, endgame, false) << std::endl;
   std::cout << "Total Outposts:    " << evaluateOutposts(whiteKnights, whiteBishops, blackPawns, endgame, true) - evaluateOutposts(blackKnights, blackBishops, whitePawns, endgame, false) << std::endl;
   std::cout << "Total threats:     " << evaluateThreats(whitePawns, endgame, true) - evaluateThreats(blackPawns, endgame, false) << std::endl;
+  std::cout << "Total trapped:     " << evaluateTrappedPieces(whiteKingIndex, whiteRooks, true) - evaluateTrappedPieces(blackKingIndex, blackRooks, false) << std::endl;
   std::cout << "----------------------------------------------------------" << std::endl;
 
 
@@ -2137,11 +2192,11 @@ int Bitboard::evaluateImbalance() {
   }
 
   if (countKnightsW >= 2) {
-    ret -= 20;
+    ret -= 16;
   }
 
   if (countKnightsB >= 2) {
-    ret += 20;
+    ret += 16;
   }
 
   if (countPawnsW == 0) {
@@ -2170,7 +2225,7 @@ int Bitboard::evaluateOutposts(uint64_t knights, uint64_t bishops, uint64_t pawn
   while (knights) {
     bscan = bitScanR(knights);
     if (!(passedPawnMask[bscan] & isolatedPawnMask[bscan] & pawns)) {
-      ret += 27;
+      ret += 25;
     }
     knights &= knights - 1;
   }
@@ -2178,7 +2233,7 @@ int Bitboard::evaluateOutposts(uint64_t knights, uint64_t bishops, uint64_t pawn
   while (bishops) {
     bscan = bitScanR(bishops);
     if (!(passedPawnMask[bscan] & isolatedPawnMask[bscan] & pawns)) {
-      ret += 13;
+      ret += 12;
     }
     bishops &= bishops - 1;
   }
@@ -2194,6 +2249,9 @@ int Bitboard::evaluateKingSafety(int kingIndex, uint64_t color, uint64_t knights
   int bscan;
   int valueOfAttacks = 0;
   int attackingPiecesCount = 0;
+
+  uint64_t bishopsCopy = bishops;
+  uint64_t rooksCopy = rooks;
   uint64_t kingZoneMask = isWhite? kingZoneMaskBlack[kingIndex] : kingZoneMaskWhite[kingIndex];
   kingZoneMask &= color;
 
@@ -2203,7 +2261,7 @@ int Bitboard::evaluateKingSafety(int kingIndex, uint64_t color, uint64_t knights
     ret -= (chebyshevArray[kingIndex][bscan] * pieceValues[1] / 512);
     if (kingZoneMask & knightAttacks(1ULL << bscan)) {
       attackingPiecesCount++;
-      valueOfAttacks += 32;
+      valueOfAttacks += 30;
     }
     knights &= knights - 1;
   }
@@ -2211,9 +2269,9 @@ int Bitboard::evaluateKingSafety(int kingIndex, uint64_t color, uint64_t knights
   while (bishops) {
     bscan = bitScanR(bishops);
     ret -= (chebyshevArray[kingIndex][bscan] * pieceValues[2] / 512);
-    if (kingZoneMask & magics->bishopAttacksMask(occupied, bscan)) {
+    if (kingZoneMask & xrayAttackBishop(bishopsCopy | queens, bscan)) {
       attackingPiecesCount++;
-      valueOfAttacks += 28;
+      valueOfAttacks += 20;
     }
     bishops &= bishops - 1;
   }
@@ -2221,9 +2279,9 @@ int Bitboard::evaluateKingSafety(int kingIndex, uint64_t color, uint64_t knights
   while (rooks) {
     bscan = bitScanR(rooks);
     ret -= (manhattanArray[kingIndex][bscan] * pieceValues[3] / 512);
-    if (kingZoneMask & magics->rookAttacksMask(occupied, bscan)) {
+    if (kingZoneMask & xrayAttackRook(rooksCopy | queens, bscan)) {
       attackingPiecesCount++;
-      valueOfAttacks += 42;
+      valueOfAttacks += 50;
     }
     rooks &= rooks - 1;
   }
@@ -2233,7 +2291,7 @@ int Bitboard::evaluateKingSafety(int kingIndex, uint64_t color, uint64_t knights
     ret -= (chebyshevArray[kingIndex][bscan] * pieceValues[4] / 512);
     if (kingZoneMask & (magics->rookAttacksMask(occupied, bscan) | magics->bishopAttacksMask(occupied, bscan))) {
       attackingPiecesCount++;
-      valueOfAttacks += 58;
+      valueOfAttacks += 80;
     }
     queens &= queens - 1;
   }
@@ -2250,13 +2308,16 @@ int Bitboard::evaluateMobility(int kingIndex, uint64_t pawns, uint64_t knights, 
   int board = 0;
   int bscan;
 
-  int *pawnTable;
-  int *knightTable;
-  int *bishopTable;
-  int *rookTable;
-  int *queenTable;
-  int *kingTable;
+  int8_t *pawnTable;
+  int8_t *knightTable;
+  int8_t *bishopTable;
+  int8_t *rookTable;
+  int8_t *queenTable;
+  int8_t *kingTable;
   uint64_t freeSquares;
+
+  uint64_t bishopsCopy = bishops;
+  uint64_t rooksCopy = rooks;
 
   if (isWhite) {
     pawnTable = endgame? whitePawnTableEG : whitePawnTable;
@@ -2292,14 +2353,14 @@ int Bitboard::evaluateMobility(int kingIndex, uint64_t pawns, uint64_t knights, 
 
   while (bishops) {
     bscan = bitScanR(bishops);
-    ret += count_population(magics->bishopAttacksMask(occupied, bscan) & freeSquares);
+    ret += count_population(xrayAttackBishop(bishopsCopy | queens, bscan) & freeSquares);
     board += bishopTable[bscan];
     bishops &= bishops - 1;
   }
 
   while (rooks) {
     bscan = bitScanR(rooks);
-    ret += count_population(magics->rookAttacksMask(occupied, bscan) & freeSquares);
+    ret += count_population(xrayAttackRook(rooksCopy | queens, bscan) & freeSquares);
     board += rookTable[bscan];
     rooks &= rooks - 1;
   }
@@ -2332,14 +2393,14 @@ int Bitboard::evaluatePawns(uint64_t allyPawns, uint64_t enemyPawns, bool endgam
 
   if (isWhite) {
     for (int i = 1; i < 7; i++) {
-      ret2 += count_population(adjPawns & rowMask[i]) * i * 2;
-      ret2 += count_population(supportedPawns & rowMask[i]) * i * 4;
+      ret2 += count_population(adjPawns & rowMask[i]) * i;
+      ret2 += count_population(supportedPawns & rowMask[i]) * i * 2;
     }
   }
   else {
     for (int i = 1; i < 7; i++) {
-      ret2 += count_population(adjPawns & rowMask[i]) * (7 - i) * 2;
-      ret2 += count_population(supportedPawns & rowMask[i]) * (7 - i) * 4;
+      ret2 += count_population(adjPawns & rowMask[i]) * (7 - i);
+      ret2 += count_population(supportedPawns & rowMask[i]) * (7 - i) * 2;
     }
   }
 
@@ -2348,7 +2409,7 @@ int Bitboard::evaluatePawns(uint64_t allyPawns, uint64_t enemyPawns, bool endgam
   for (int i = 0; i < 8; i++) {
     int popCount = count_population(allyPawns & columnMask[i]);
     if (popCount >= 2) {
-      ret -= (popCount - 1) * 12;
+      ret -= (popCount - 1) * 7;
     }
   }
 
@@ -2357,16 +2418,16 @@ int Bitboard::evaluatePawns(uint64_t allyPawns, uint64_t enemyPawns, bool endgam
     bscan = bitScanR(allyPawns);
 
     if ((pawnsCopy & isolatedPawnMask[bscan]) == 0) {
-      ret -= 16;
+      ret -= 9;
     }
 
     if ((enemyPawns & passedPawnMask[bscan]) == 0) {
-      ret += 23;
+      ret += 20;
     }
     allyPawns &= allyPawns - 1;
   }
 
-  return ret2 + endgame? ret * 2 : ret;
+  return ret2 + ret;
 
 }
 
@@ -2378,14 +2439,24 @@ int Bitboard::evaluateThreats(uint64_t pawns, bool endgame, bool isWhite) {
   int bscan;
   uint64_t validPawns = 0;
   uint64_t color;
+  uint64_t colorP;
+  uint64_t colorB;
+  uint64_t colorN;
+  uint64_t threats = 0;
 
   if (isWhite) {
     pawns <<= 8;
     color = blacks & ~pieces[0];
+    colorN = whites & pieces[1];
+    colorB = whites & pieces[2];
+    colorP = blacks;
   }
   else {
     pawns >>= 8;
     color = whites & ~pieces[0];
+    colorN = blacks & pieces[1];
+    colorB = blacks & pieces[2];
+    colorP = whites;
   }
 
   pawns &= ~(occupied | pawnAttacks(!isWhite));
@@ -2400,9 +2471,129 @@ int Bitboard::evaluateThreats(uint64_t pawns, bool endgame, bool isWhite) {
 
   if (validPawns) {
     ret += count_population(pawnAttacksMan(validPawns, isWhite) & color);
+    ret *= 4;
   }
 
-  return ret * 4;
+  threats |= knightAttacks(colorN) & colorP;
+
+  while (colorB) {
+    int bscan = bitScanR(colorB);
+    threats |= magics->bishopAttacksMask(occupied, bscan) & colorP;
+    colorB &= colorB - 1;
+  }
+
+  ret += count_population(threats & pieces[0]);
+  ret += count_population(threats & pieces[1]) * 2;
+  ret += count_population(threats & pieces[2]) * 3;
+  ret += count_population(threats & pieces[3]) * 4;
+  ret += count_population(threats & pieces[4]) * 5;
+  ret += count_population(threats & pieces[5]) * 6;
+
+
+  return ret;
+
+}
+
+
+
+int Bitboard::evaluateTrappedPieces(int kingIndex, uint64_t rooks, bool isWhite) {
+
+  int bscan;
+  int ret = 0;
+  if (isWhite) {
+    while (rooks) {
+      bscan = bitScanR(rooks);
+      if (bscan < 8) {
+        if (kingIndex > 3 && bscan > kingIndex) {
+          ret -= 40;
+        }
+        if (kingIndex < 4 && bscan < kingIndex) {
+          ret -= 40;
+        }
+      }
+      rooks &= rooks - 1;
+    }
+  }
+  else {
+    while (rooks) {
+      bscan = bitScanR(rooks);
+      if (bscan > 55) {
+        if (kingIndex > 59 && bscan > kingIndex) {
+          ret -= 40;
+        }
+        if (kingIndex < 60 && bscan < kingIndex) {
+          ret -= 40;
+        }
+      }
+      rooks &= rooks - 1;
+    }
+  }
+  return ret;
+}
+
+
+
+int Bitboard::evaluateKingPawnEndgame(int kingIndex, uint64_t allyPawns, uint64_t enemyPawns, bool endgame, bool isWhite) {
+
+  if (!endgame) {
+    return 0;
+  }
+
+  int ret = 0;
+  int count = 0;
+  int bscan;
+  uint64_t *passedPawnMaskA;
+  uint64_t *passedPawnMaskE;
+
+  uint64_t allyPawnsCopy = allyPawns;
+  uint64_t enemyPawnsCopy = enemyPawns;
+
+  if (isWhite) {
+    passedPawnMaskA = whitePassedPawnMask;
+    passedPawnMaskE = blackPassedPawnMask;
+  }
+  else {
+    passedPawnMaskA = blackPassedPawnMask;
+    passedPawnMaskE = whitePassedPawnMask;
+  }
+
+  // Passed Pawns and Isolated Pawns
+  while (allyPawns) {
+    bscan = bitScanR(allyPawns);
+
+    int tempret = 16 - manhattanArray[bscan][kingIndex];
+    if ((allyPawnsCopy & isolatedPawnMask[bscan]) == 0) {
+      tempret *= 2;
+    }
+
+    if ((enemyPawnsCopy & passedPawnMaskA[bscan]) == 0) {
+      tempret *= 3;
+    }
+
+    ret += tempret;
+    count++;
+    allyPawns &= allyPawns - 1;
+  }
+
+  // Passed Pawns and Isolated Pawns
+  while (enemyPawns) {
+    bscan = bitScanR(enemyPawns);
+
+    int tempret = 16 - manhattanArray[bscan][kingIndex];
+    if ((enemyPawnsCopy & isolatedPawnMask[bscan]) == 0) {
+      tempret *= 2;
+    }
+
+    if ((allyPawnsCopy & passedPawnMaskE[bscan]) == 0) {
+      tempret *= 3;
+    }
+
+    ret += tempret;
+    count++;
+    enemyPawns &= enemyPawns - 1;
+  }
+
+  return count? ret / count : 0;
 
 }
 
@@ -2420,7 +2611,7 @@ void Bitboard::scoreMoves(std::vector<Move> &moveList, Move &move, int depth, bo
     moveList.erase(p);
   }
 
-
+  int see;
   //MVV/LVA
   for (std::vector<Move>::iterator it = moveList.begin(); it != moveList.end(); ++it) {
 
@@ -2445,11 +2636,25 @@ void Bitboard::scoreMoves(std::vector<Move> &moveList, Move &move, int depth, bo
       }
       else {
 
-        if (mvvlva[it->pieceFrom][it->pieceTo] >= 1000) {
-          it->score = 1500000 + mvvlva[it->pieceFrom][it->pieceTo];
+        if (depth > 0) {
+          see = seeCaptureNew(*it);
+          if (see >= -75) {
+            it->score = it->score = 1500000 + see;
+          }
+          else if (see >= -300) {
+            it->score = it->score = 800000 + see;
+          }
+          else {
+            it->score = it->score = -800000 + see;
+          }
         }
         else {
-          it->score = 800000 + mvvlva[it->pieceFrom][it->pieceTo];
+          if (mvvlva[it->pieceFrom][it->pieceTo] >= 1000) {
+            it->score = 1500000 + mvvlva[it->pieceFrom][it->pieceTo];
+          }
+          else {
+            it->score = 800000 + mvvlva[it->pieceFrom][it->pieceTo];
+          }
         }
 
       }
@@ -2876,6 +3081,67 @@ int Bitboard::seeCapture(Move &capture, bool isWhite) {
   undoMoveCapture();
 
   return value;
+
+}
+
+
+uint64_t Bitboard::getLeastValuablePiece(uint64_t attadef, bool isWhite, int &piece) {
+
+  attadef &= isWhite? whites : blacks;
+  for (piece = 0; piece <= 5; piece++) {
+    uint64_t subset = attadef & pieces[piece];
+    if (subset) {
+      return subset & -subset;
+    }
+  }
+
+  return 0;
+
+}
+
+
+
+int Bitboard::seeCaptureNew(Move &capture) {
+
+  int gain[32], d = 0;
+  uint64_t mayXray = pieces[0] | pieces[2] | pieces[3] | pieces[4];
+
+  uint64_t fromSet = 1ULL << capture.fromLoc;
+
+  uint64_t occ = occupied;
+  uint64_t attadef = isAttackedSee(capture.toLoc);
+  int aPiece = capture.pieceFrom;
+  bool isWhite = fromSet & whites? true : false;
+  gain[d] = pieceValues[capture.pieceTo];
+
+  do {
+
+    d++;
+    gain[d] = pieceValues[aPiece] - gain[d - 1];
+    isWhite = !isWhite;
+
+    if (std::max(-gain[d - 1], gain[d]) < 0) {
+      break;
+    }
+
+    attadef ^= fromSet;
+    occ ^= fromSet;
+
+    if (fromSet & mayXray) {
+      attadef |= xrayAttackRookSee(fromSet, capture.toLoc) & (pieces[3] | pieces[4]);
+      attadef |= xrayAttackBishopSee(fromSet, capture.toLoc) & (pieces[2] | pieces[4]);
+    }
+
+    fromSet = getLeastValuablePiece(attadef, isWhite, aPiece);
+
+
+  } while (fromSet);
+
+  while (--d) {
+    gain[d - 1] = -std::max(-gain[d - 1], gain[d]);
+  }
+
+  return gain[0];
 
 }
 

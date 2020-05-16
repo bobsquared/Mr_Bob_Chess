@@ -100,6 +100,11 @@ int quiesceSearchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, i
       continue;
     }
 
+    if (move.pieceTo != -1 && bitboard.seeCaptureNew(move) < -75) {
+      bitboard.undoMove();
+      continue;
+    }
+
     ret = std::max(ret, -quiesceSearchR(!whiteMove, bitboard, tt, -beta, -alpha, seldepth, depth - 1));
     bitboard.undoMove();
 
@@ -128,8 +133,6 @@ int quiesceSearchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, i
     }
 
   }
-
-
 
   return ret == -INFINITY_VAL? standPat : ret;
 
@@ -219,10 +222,10 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
       if (abs(nullRet) >= MATE_VALUE) {
         nullRet = beta;
       }
-      int v = searchR(!whiteMove, bitboard, tt, depth - R - 1, beta - 1, beta, seldepth, false);
-      if (v >= beta) {
+      // int v = searchR(!whiteMove, bitboard, tt, depth - R - 1, beta - 1, beta, seldepth, false);
+      // if (v >= beta) {
         return nullRet;
-      }
+      // }
 
     }
 
@@ -331,7 +334,7 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
       // SERACHING STEP 4: Late Move Reduction:
       // We can also reduce the depth of late moves to reduce the size of the tree.
       // Again, this is assuming that the good moves are on the front of the list.
-      if (moveNumber > 2 && depth >= 3 && move.quiet && !isCheck && !giveCheck) {
+      if (moveNumber > 0 && depth >= 3 && (move.quiet || move.score < 0) && !isCheck && !giveCheck) {
         int reduction = 1;
 
         if (moveNumber > 6) {
@@ -391,6 +394,10 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
 
     }
 
+    if (move.quiet) {
+      bitboard.history[whiteMove][move.pieceFrom][move.toLoc] -= depth / 2;
+    }
+
     if (prevRet != ret) {
       bestMove = move;
     }
@@ -448,7 +455,7 @@ ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt
 
   Bitboard::Move bestMove;
 
-  for (Bitboard::Move move : vMoves) {
+  for (Bitboard::Move &move : vMoves) {
     newDepth = depth;
     bitboard.movePiece(move);
 
@@ -472,7 +479,7 @@ ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt
     else {
 
       //Late Move Reduction
-      if (numMoves > 14 && depth >= 4 && !isCheck && move.quiet && !giveCheck) {
+      if (numMoves > 140 && depth >= 4 && !isCheck && move.quiet && !giveCheck) {
         int reduction = 1;
 
         if (numMoves > 25) {
@@ -496,12 +503,24 @@ ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt
     }
     bitboard.undoMove();
 
+    if (ret < 4000000) {
+      vMoves[numMoves].score = ret;
+    }
+
     if (ret > alpha) {
       alpha = ret;
       bestMove = move;
       retInfo.move = move;
       retInfo.score = ret;
       retInfo.bestMove = TO_ALG[move.fromLoc] + TO_ALG[move.toLoc];
+
+      if (ret >= beta) {
+        tt.saveTT(bestMove, ret, depth, 1, hashF);
+        if (bestMove.promotion == 4) {
+          retInfo.bestMove += "q";
+        }
+        return retInfo;
+      }
     }
 
     ++numMoves;
