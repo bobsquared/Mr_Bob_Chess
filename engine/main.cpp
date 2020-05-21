@@ -36,7 +36,7 @@ void printInfo(int depth, std::string move, float branchingFactor, long long int
 
 // Info printing for Universal Chess Interface.
 // This function is used to communicate searching info to the chess GUI
-void printInfoUCI(int depth, int seldepth, long long int time, int cp, int mateInPlies, std::string pv) {
+void printInfoUCI(int depth, int seldepth, double time, double iteration_time, int cp, int mateInPlies, std::string pv) {
 
   // Print the score in centipawns
   // positive cp indicates that the engine is at an advantage, does not matter if engine is playing white or black.
@@ -51,7 +51,7 @@ void printInfoUCI(int depth, int seldepth, long long int time, int cp, int mateI
   }
 
   // Search efficiency and principal variation
-  std::cout << " nodes " << traversedNodes << " nps " << (uint64_t)(traversedNodes / (double)(time / 1000000000.0)) << " time " <<  (uint64_t)(time / 1000000.0) << " pv" << pv << std::endl;
+  std::cout << " nodes " << traversedNodes << " nps " << (uint64_t)(traversedNodes / (double)(iteration_time / 1000)) << " time " <<  (uint64_t)(time) << " pv" << pv << std::endl;
 
 }
 
@@ -72,6 +72,7 @@ void startPosMoves(bool &color, Bitboard & bitboard, std::string moves) {
     std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!color);
     for (Bitboard::Move move : vMoves) {
       if (move.fromLoc == TO_NUM[moves.substr(0, 2)] && move.toLoc == TO_NUM[moves.substr(2, 2)]) {
+        assert(move.fromLoc != 0 || move.toLoc != 0);
         bitboard.movePiece(move);
         break;
       }
@@ -87,6 +88,7 @@ void startPosMoves(bool &color, Bitboard & bitboard, std::string moves) {
     std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!color);
     for (Bitboard::Move move : vMoves) {
       if (move.fromLoc == TO_NUM[moves.substr(0, 2)] && move.toLoc == TO_NUM[moves.substr(2, 2)]) {
+        assert(move.fromLoc != 0 || move.toLoc != 0);
         bitboard.movePiece(move);
         break;
       }
@@ -120,6 +122,7 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
   int delta = ASPIRATION_WINDOW_DELTA;
   int seldepth;
   uint8_t numBestMove = 0;
+  double totalTime = 0;
 
   ReturnInfo bMove;
   Bitboard::Move tempM;
@@ -133,6 +136,7 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
   // Increment the depth each search and keep the positions in memory.
   for (int i = 1; i < depth + 1; i++) {
 
+    bool failLow = false;
     // If stop is called, cancel search and use previous iteration serach
     if (exit_thread_flag) {
       break;
@@ -153,8 +157,9 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
     auto t1 = std::chrono::high_resolution_clock::now();
     while (true) {
 
-      bMove = searchRoot(color, bitboard, tt, i, seldepth, vMoves, alpha, beta);
+      bMove = searchRoot(color, bitboard, tt, i, seldepth, vMoves, totalTime, alpha, beta);
       for (std::vector<Bitboard::Move>::iterator it = vMoves.begin(); it != vMoves.end(); ++it) {
+        assert(it->fromLoc != 0 || it->toLoc != 0);
         if (*it == bMove.move) {
           it->score = 4000000 + i;
         }
@@ -164,8 +169,7 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
       std::stable_sort(vMoves.begin(), vMoves.end());
 
 
-      // Record best move and the score
-      bestMove = bMove.bestMove;
+      // Record the score
       cp = bMove.score;
 
       if (cp >= beta) {
@@ -174,6 +178,7 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
       else if (cp <= alpha || (bMove.move.fromLoc == 0 && bMove.move.toLoc == 0)) {
         beta = (alpha + beta) / 2;
         alpha = cp - delta;
+        failLow = true;
       }
       else {
         break;
@@ -182,6 +187,8 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
       delta = delta * 1.25 + 4;
 
     }
+
+    bestMove = bMove.bestMove;
     auto t2 = std::chrono::high_resolution_clock::now();
 
 
@@ -212,7 +219,7 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
 
 
     // Debug print
-    std::cout << (double)(pruning) / (double)(pruningTotal) << " " << pruning << " " << pruningTotal << std::endl;
+    // std::cout << (double)(pruning) / (double)(pruningTotal) << " " << pruning << " " << pruningTotal << std::endl;
     // std::cout << (double)(pruningTT) / (double)(pruningTotalTT) << " " << pruningTT << " " << pruningTotalTT << std::endl;
     pruning = 0;
     pruningTotal = 0;
@@ -234,16 +241,15 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
     auto diff = std::chrono::duration_cast<std::chrono::nanoseconds> (t2 - t1).count();
     auto diff2 = std::chrono::duration_cast<std::chrono::milliseconds> (t2 - t1).count();
 
+    totalTime += (double) diff2;
 
     // If stop is not called, then print the info
     if (!exit_thread_flag) {
-      if (!color) {
-        printInfoUCI(i, seldepth, diff, cp, 0, pv);
-      }
-      else {
-        printInfoUCI(i, seldepth, diff, cp, 0, pv);
-      }
+      printInfoUCI(i, seldepth, totalTime, diff2, cp, 0, pv);
     }
+
+    // Reset this variable and restart search
+    traversedNodes = 0;
 
     if (diff2 >= (timeAllocated / 2)) {
       exit_thread_flag = true;
@@ -253,8 +259,7 @@ void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, u
     //   exit_thread_flag = true;
     // }
 
-    // Reset this variable and restart search
-    traversedNodes = 0;
+
 
 
   }

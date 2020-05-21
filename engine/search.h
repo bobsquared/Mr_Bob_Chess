@@ -11,8 +11,8 @@
 #include "bitboard.h"
 #include "zobrist_hashing.h"
 #include "transpositionTable.h"
-#include "defs.h"
 #include <cassert>
+#include "defs.h"
 
 extern uint64_t traversedNodes;
 
@@ -43,5 +43,5 @@ struct ReturnInfo {
 };
 
 
-ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int depth, int &seldepth, std::vector<Bitboard::Move> &vMoves, int alpha=-INFINITY_VAL, int beta=INFINITY_VAL, bool isMain=true);
+ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int depth, int &seldepth, std::vector<Bitboard::Move> &vMoves, double time, int alpha=-INFINITY_VAL, int beta=INFINITY_VAL, bool isMain=true);
 #endif

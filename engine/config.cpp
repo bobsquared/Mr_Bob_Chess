@@ -6,6 +6,6 @@
 
 
 std::string engineName = "'Mr Bob'";
-std::string version = "v0.5.1";
+std::string version = "v0.6.0";
 
 int hashSize = 2056;

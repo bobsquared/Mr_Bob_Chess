@@ -39,6 +39,7 @@ void TranspositionTable::updateHalfMove() {
 
 void TranspositionTable::saveTT(Bitboard::Move &move, int score, int depth, uint8_t flag, uint64_t key) {
 
+  assert(move.fromLoc != 0 || move.toLoc != 0);
   ttWrites++;
   uint64_t posKey = key % numHashes;
   // If there is a colision
@@ -65,8 +66,6 @@ void TranspositionTable::saveTT(Bitboard::Move &move, int score, int depth, uint
       return;
     }
 
-    ttOverwrites++;
-
   }
 
   hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, halfMove);
@@ -79,7 +78,7 @@ bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int dept
 
   ttCalls++;
   bool ret = false;
-  if (hashTable[key % numHashes].posKey == key) {
+  if (hashTable[key % numHashes].posKey == key && key != 0) {
     ret = true;
     ttHits++;
     // Store the hash table value
@@ -133,6 +132,7 @@ std::string TranspositionTable::getPV(Bitboard &bitboard) {
 
       hashedBoard = hashTable[hashF % numHashes];
       pv += " " + TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc];
+      assert(hashedBoard.move.fromLoc != 0 || hashedBoard.move.toLoc != 0);
       bitboard.movePiece(hashedBoard.move);
       numUndo++;
     }

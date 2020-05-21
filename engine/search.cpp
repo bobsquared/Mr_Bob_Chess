@@ -60,7 +60,8 @@ int quiesceSearchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, i
   // SEARCHING STEP 2: Transposition Principal variation search:
   // If there is a TT hit for this position, try this move first.
   // Many cutoffs will occur in doing this.
-  // if (hashed) {
+  // bool hasMove = whiteMove? bitboard.IsMoveWhite(hashedBoard.move) : bitboard.IsMoveBlack(hashedBoard.move);
+  // if (hashed && hasMove) {
   //   int prevRet = ret;
   //   bitboard.movePiece(hashedBoard.move);
   //
@@ -83,9 +84,10 @@ int quiesceSearchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, i
   //     if (ret != prevRet) {
   //       bestMove = hashedBoard.move;
   //     }
-  //
   //   }
   // }
+
+
 
   std::vector<Bitboard::Move> vMoves = bitboard.allValidCaptures(!whiteMove);
   bitboard.scoreMoves(vMoves, bestMove, depth, !whiteMove);
@@ -93,6 +95,7 @@ int quiesceSearchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, i
   while (!vMoves.empty()) {
     int prevRet = ret;
     Bitboard::Move move = bitboard.pickMove(vMoves);
+    assert(move.fromLoc != 0 || move.toLoc != 0);
     bitboard.movePiece(move);
 
     if (!bitboard.filterCheck(!whiteMove)) {
@@ -178,6 +181,7 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
   // Get the hash key
   TranspositionTable::ZobristVal hashedBoard;
   uint64_t hashF = bitboard.getPosKey();
+  // assert(bitboard.hashBoardDebug(hashF) == hashF);
   bool ttRet = false;
   bool hashed = tt.probeTT(hashF, hashedBoard, depth, ttRet, alpha, beta);
 
@@ -214,6 +218,7 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
     int R = 3 + depth / 8;
     Bitboard::Move nullMove = Bitboard::Move{65, 65, true, 0, 0, 0, 0, false};
 
+    assert(nullMove.fromLoc != 0 || nullMove.toLoc != 0);
     bitboard.movePiece(nullMove);
     int nullRet = -searchR(!whiteMove, bitboard, tt, depth - R - 1, -beta, -beta + 1, seldepth, true);
     bitboard.undoMove();
@@ -223,10 +228,10 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
       if (abs(nullRet) >= MATE_VALUE) {
         nullRet = beta;
       }
-      // int v = searchR(!whiteMove, bitboard, tt, depth - R - 1, beta - 1, beta, seldepth, false);
-      // if (v >= beta) {
+      int v = searchR(!whiteMove, bitboard, tt, depth - R - 1, beta - 1, beta, seldepth, false);
+      if (v >= beta) {
         return nullRet;
-      // }
+      }
 
     }
 
@@ -237,9 +242,10 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
   // SEARCHING STEP 2: Transposition Principal variation search:
   // If there is a TT hit for this position, try this move first.
   // Many cutoffs will occur in doing this.
-  hasMove = whiteMove? bitboard.IsMoveWhite(hashedBoard.move) : bitboard.IsMoveBlack(hashedBoard.move);
+  // hasMove = whiteMove? bitboard.IsMoveWhite(hashedBoard.move) : bitboard.IsMoveBlack(hashedBoard.move);
   if (hashed) {
     int prevRet = ret;
+    assert(hashedBoard.move.fromLoc != 0 || hashedBoard.move.toLoc != 0);
     bitboard.movePiece(hashedBoard.move);
     if (!bitboard.filterCheck(!whiteMove)) {
       bitboard.undoMove();
@@ -278,7 +284,6 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
         }
 
         alpha = ret;
-
       }
 
       if (prevRet != ret) {
@@ -305,6 +310,7 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
     Bitboard::Move move = bitboard.pickMove(vMoves);
 
     newDepth = depth;
+    assert(move.fromLoc != 0 || move.toLoc != 0);
     bitboard.movePiece(move);
 
     if (!bitboard.filterCheck(!whiteMove)) {
@@ -346,49 +352,26 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
           reduction += 1;
         }
 
-        if (move.quiet) {
-
-          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] < 0) {
+        if (moveNumber > 18) {
+          if (depth > 6) {
             reduction += 1;
           }
 
-          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] < -500) {
+          if (depth > 12) {
             reduction += 1;
           }
 
-          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] < -1000) {
+          if (depth > 18) {
             reduction += 1;
           }
-
-          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] < -1500) {
-            reduction += 1;
-          }
-
-
-          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] > 0) {
-            reduction -= 1;
-          }
-
-          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] > 500) {
-            reduction -= 1;
-          }
-
-          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] > 1000) {
-            reduction -= 1;
-          }
-
-          if (bitboard.history[whiteMove][move.pieceFrom][move.toLoc] > 1500) {
-            reduction -= 1;
-          }
-
-
         }
-
 
         // Reduce reduction if in PV
         if (IsPv || (hashed && hashedBoard.flag == 0)) {
           reduction -= 2;
         }
+
+        reduction = (reduction * LMR_REDUCTION_PERCENT) / 100;
 
         reduction = std::max(0, reduction);
         ret = std::max(ret, -searchR(!whiteMove, bitboard, tt, newDepth - reduction - 1, -alpha-1, -alpha, seldepth, nullMoves));
@@ -417,8 +400,8 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
       if (ret >= beta) {
         // Update killer moves and history heuristic
         if (move.quiet) {
-          bitboard.InsertKiller(move, depth);
           bitboard.history[whiteMove][move.pieceFrom][move.toLoc] += depth * depth;
+          bitboard.InsertKiller(move, depth);
         }
         tt.saveTT(move, ret, depth, 1, hashF);
 
@@ -432,13 +415,6 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
 
       alpha = ret;
 
-    }
-    else if (move.quiet) {
-      bitboard.history[whiteMove][move.pieceFrom][move.toLoc] -= depth;
-    }
-
-    if (std::abs((int)bitboard.history[whiteMove][move.pieceFrom][move.toLoc]) > 2250) {
-      bitboard.history[whiteMove][move.pieceFrom][move.toLoc] /= 2;
     }
 
     if (prevRet != ret) {
@@ -466,14 +442,16 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
   }
 
   // Update transposition table.
-  if (ret <= origAlpha) {
-    tt.saveTT(bestMove, ret, depth, 2, hashF);
-  }
-  else {
-    // if (bestMove.quiet) {
-    //   bitboard.history[whiteMove][bestMove.pieceFrom][bestMove.toLoc] += depth * depth;
-    // }
-    tt.saveTT(bestMove, ret, depth, 0, hashF);
+  if (ret != -INFINITY_VAL) {
+    if (ret <= origAlpha) {
+      tt.saveTT(bestMove, ret, depth, 2, hashF);
+    }
+    else {
+      if (bestMove.quiet) {
+        bitboard.history[whiteMove][bestMove.pieceFrom][bestMove.toLoc] += depth * depth;
+      }
+      tt.saveTT(bestMove, ret, depth, 0, hashF);
+    }
   }
 
   return ret;
@@ -486,25 +464,32 @@ int searchR(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int dept
 
 
 // Minimax root node
-ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int depth, int &seldepth, std::vector<Bitboard::Move> &vMoves, int alpha, int beta, bool isMain) {
+ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt, int depth, int &seldepth, std::vector<Bitboard::Move> &vMoves, double time, int alpha, int beta, bool isMain) {
 
   ReturnInfo retInfo = ReturnInfo{};
+  int prevAlpha = alpha;
   uint64_t hashF = bitboard.getPosKey();
   int ret = -INFINITY_VAL;
   uint8_t numMoves = 0;
-  bool isCheck = !bitboard.filterCheck(!whiteMove);
   int newDepth = depth;
 
 
   Bitboard::Move bestMove;
 
   for (Bitboard::Move &move : vMoves) {
+
+    int prevRet = ret;
     newDepth = depth;
+    assert(move.fromLoc != 0 || move.toLoc != 0);
     bitboard.movePiece(move);
 
     if (!bitboard.filterCheck(!whiteMove)) {
       bitboard.undoMove();
       continue;
+    }
+
+    if (time > 5000) {
+      std::cout << "info depth " << depth << " currmove " << TO_ALG[move.fromLoc] + TO_ALG[move.toLoc] << " currmovenumber " << numMoves + 1 << std::endl;
     }
 
     bool giveCheck = !bitboard.filterCheck(whiteMove);
@@ -520,25 +505,7 @@ ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt
       ret = std::max(ret, -searchR(!whiteMove, bitboard, tt, newDepth - 1, -beta, -alpha, seldepth, false));
     }
     else {
-
-      //Late Move Reduction
-      if (numMoves > 140 && depth >= 4 && !isCheck && move.quiet && !giveCheck) {
-        int reduction = 1;
-
-        if (numMoves > 25) {
-          reduction += 1;
-        }
-
-        ret = std::max(ret, -searchR(!whiteMove, bitboard, tt, newDepth - reduction - 1, -alpha-1, -alpha, seldepth, false));
-
-        if (ret > alpha && reduction != 0) {
-          ret = std::max(ret, -searchR(!whiteMove, bitboard, tt, newDepth - 1, -alpha-1, -alpha, seldepth, false));
-        }
-
-      }
-      else {
-        ret = std::max(ret, -searchR(!whiteMove, bitboard, tt, newDepth - 1, -alpha-1, -alpha, seldepth, false));
-      }
+      ret = std::max(ret, -searchR(!whiteMove, bitboard, tt, newDepth - 1, -alpha-1, -alpha, seldepth, false));
 
       if (ret > alpha && ret < beta) {
         ret = std::max(ret, -searchR(!whiteMove, bitboard, tt, newDepth - 1, -beta, -alpha, seldepth, false));
@@ -546,25 +513,30 @@ ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt
     }
     bitboard.undoMove();
 
-    if (ret < 4000000) {
+    if (vMoves[numMoves].score < 4000000) {
       vMoves[numMoves].score = ret;
     }
 
-    if (ret > alpha) {
-      alpha = ret;
+    if (prevRet != ret) {
       bestMove = move;
       retInfo.move = move;
       retInfo.score = ret;
       retInfo.bestMove = TO_ALG[move.fromLoc] + TO_ALG[move.toLoc];
+    }
 
+    if (ret > alpha) {
+      alpha = ret;
       if (ret >= beta) {
         tt.saveTT(bestMove, ret, depth, 1, hashF);
+        assert(move.fromLoc != 0 || move.toLoc != 0);
         if (bestMove.promotion == 4) {
           retInfo.bestMove += "q";
         }
         return retInfo;
       }
     }
+
+
 
     ++numMoves;
   }
@@ -573,8 +545,16 @@ ReturnInfo searchRoot(bool whiteMove, Bitboard &bitboard, TranspositionTable &tt
     exit_thread_flag = true;
   }
 
+  assert(bestMove.fromLoc != 0 || bestMove.toLoc != 0);
+  if (ret != -INFINITY_VAL) {
+    if (prevAlpha != alpha) {
+      tt.saveTT(bestMove, ret, depth, 0, hashF);
+    }
+    else {
+      tt.saveTT(bestMove, ret, depth, 2, hashF);
+    }
+  }
 
-  tt.saveTT(bestMove, ret, depth, 0, hashF);
 
   if (bestMove.promotion == 4) {
     retInfo.bestMove += "q";

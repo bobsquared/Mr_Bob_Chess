@@ -4,6 +4,17 @@
 #include <vector>
 #include "zobrist_hashing.h"
 #include "magic_bitboards.h"
+#include <bitset>
+#include <iostream>
+#include "dumb7flooding.h"
+#include <stdlib.h>
+#include <time.h>
+#include <assert.h>
+#include <string>
+#include <algorithm>
+#include "piecesquaretable.h"
+#include "config.h"
+#include <cmath>
 #include "defs.h"
 
 
@@ -80,6 +91,7 @@ public:
   std::string posToFEN();
   void updateHalfMove();
   int seeCaptureNew(Move &capture);
+  uint64_t hashBoardDebug(uint64_t hash);
 
 
 private:
@@ -116,6 +128,13 @@ private:
    25, 39, 14, 33, 19, 30,  9, 24,
    13, 18,  8, 12,  7,  6,  5, 63
  };
+
+ int PAWN_SHIELD[6][8] = {{ 25, 15, 10, 5, 5, 10, 15, 35},
+                          { 25, 15,  5, 2, 2,  5, 15, 25},
+                          { 10, 5, 0,  0,  0,  0,  5, 10},
+                          { 10, 0, -5, -10, -10, -5, 0,10},
+                          {-10,-15,-20,-25,-25,-20,-15,-10},
+                          {-20,-25,-30,-35,-35,-30,-25,-20}};
 
 
 
@@ -296,13 +315,15 @@ private:
 
   // Evaluation functions
   int evaluateImbalance();
-  int evaluateMobility(int kingIndex, uint64_t pawns, uint64_t knights, uint64_t bishops, uint64_t rooks, uint64_t queens, bool endgame, bool isWhite);
+  int evaluateMobility(int kingIndex, uint64_t pawns, uint64_t knights, uint64_t bishops, uint64_t rooks, uint64_t queens, bool isWhite);
   int evaluateKingSafety(int kingIndex, uint64_t color, uint64_t knights, uint64_t bishops, uint64_t rooks, uint64_t queens, bool isWhite);
-  int evaluatePawns(uint64_t allyPawns, uint64_t enemyPawns, bool endgame, bool isWhite);
+  int evaluatePawns(uint64_t allyPawns, uint64_t enemyPawns, bool isWhite);
   int evaluateOutposts(uint64_t knights, uint64_t bishops, uint64_t pawns, bool endgame, bool isWhite);
-  int evaluateThreats(uint64_t pawns, bool endgame, bool isWhite);
+  int evaluateThreats(uint64_t pawns, bool isWhite);
   int evaluateTrappedPieces(int kingIndex, uint64_t rooks, bool isWhite);
   int evaluateKingPawnEndgame(int kingIndex, uint64_t allyPawns, uint64_t enemyPawns, bool endgame, bool isWhite);
+  int evaluateEndgame(int kingIndex, uint64_t pawns, bool endgame, bool isWhite);
+  int evaluatePawnShields(int kingIndex, uint64_t pawns, bool isWhite);
 
 
 
@@ -318,6 +339,7 @@ private:
 
   //See
   uint64_t getLeastValuablePiece(uint64_t attadef, bool isWhite, int &piece);
+  std::vector<std::string> moveListAlg;
 
 
 };

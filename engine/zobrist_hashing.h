@@ -12,7 +12,8 @@ public:
 
   // Determine hashing key
   uint64_t hashBoard(uint64_t *pieces, uint64_t& occupied, uint64_t& blacks, bool turn);
-  uint64_t hashBoardM(uint64_t board, int pieceFrom, int pieceTo, int moveType, int captureType, bool turn, bool isEnpassant);
+  uint64_t test(uint64_t h);
+  uint64_t hashBoardM(uint64_t board, int pieceFrom, int pieceTo, int moveType, int captureType, bool turn, bool isEnpassant, bool whiteCastleK, bool whiteCastleQ, bool blackCastleK, bool blackCastleQ);
 
 private:
 
@@ -24,5 +25,10 @@ private:
   uint64_t blackKingCastle;
   uint64_t whiteQueenCastle;
   uint64_t blackQueenCastle;
+
+  bool whiteKingCastleFlag;
+  bool blackKingCastleFlag;
+  bool whiteQueenCastleFlag;
+  bool blackQueenCastleFlag;
 
 };
