@@ -1,458 +1,169 @@
 #include <iostream>
-#include "bitboard.h"
-#include "transpositionTable.h"
-#include <string>
-#include <chrono>
-#include <unordered_map>
+#include <cstdint>
 #include <regex>
-#include "search.h"
 #include <thread>
-#include <vector>
-#include <cmath>
-#include "config.h"
 #include "defs.h"
+#include "perft.h"
+#include "bitboard.h"
+#include "search.h"
+#include "uci.h"
 
 
-
-
-// Debug printing function. Includes effective branching factor to see how effective the pruning is.
-void printInfo(int depth, std::string move, float branchingFactor, long long int time) {
-
-  // If time is equal to zero, change nps.
-  if ((double) (time / 1000000000.0) == 0){
-    std::cout << "Iterative Deepening: Depth " << depth << " Number of Nodes traversed: " << traversedNodes << " NPS: " << " inf " << " time: " <<  time / 1000000.0 << "ms" << std::endl;
-    std::cout << "	Best move found: " << move <<  " Effective Branching Factor: " << branchingFactor << std::endl;
-  }
-  else {
-    std::cout << "Iterative Deepening: Depth " << depth << " Number of Nodes traversed: " << traversedNodes << " KNPS: " << (uint64_t)((traversedNodes / 1000.0) / (double) (time / 1000000000.0)) << " time: " << time / 1000000.0 << "ms" << std::endl;
-    std::cout << "	Best move found: " << move <<  " Effective Branching Factor: " << branchingFactor << std::endl;
-  }
-
-}
-
-
-
-
-
-// Info printing for Universal Chess Interface.
-// This function is used to communicate searching info to the chess GUI
-void printInfoUCI(int depth, int seldepth, double time, double iteration_time, int cp, int mateInPlies, std::string pv) {
-
-  // Print the score in centipawns
-  // positive cp indicates that the engine is at an advantage, does not matter if engine is playing white or black.
-  // Negative cp indicates that the engine is at a disadvantage.
-  std::cout << "info depth " << depth << " seldepth " << seldepth << " score cp " << cp;
-
-  // If a mate threat is found, print mate in number of moves.
-  // Positive indicates that engine will checkmate
-  // Negative indicates that engine will be checkmated
-  if (mateInPlies) {
-    std::cout << " score mate " << std::ceil((double)(mateInPlies / 2.0));
-  }
-
-  // Search efficiency and principal variation
-  std::cout << " nodes " << traversedNodes << " nps " << (uint64_t)(traversedNodes / (double)(iteration_time / 1000)) << " time " <<  (uint64_t)(time) << " pv" << pv << std::endl;
-
-}
-
-
-
-
-
-// Universal Chess Interface position startpos moves command
-// Moves the pieces on the board according to the command.
-void startPosMoves(bool &color, Bitboard & bitboard, std::string moves) {
-
-  // Reset the board to default position
-  bitboard.resetBoard();
-  color = true;
-
-  // Make all the moves.
-  while (moves.find(' ') != std::string::npos) {
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!color);
-    for (Bitboard::Move move : vMoves) {
-      if (move.fromLoc == TO_NUM[moves.substr(0, 2)] && move.toLoc == TO_NUM[moves.substr(2, 2)]) {
-        assert(move.fromLoc != 0 || move.toLoc != 0);
-        bitboard.movePiece(move);
-        break;
-      }
-    }
-
-
-    color = !color;
-    moves = moves.erase(0, moves.find(' ') + 1);
-  }
-
-  // If only one more move in the list
-  if (moves.find(' ') == std::string::npos && (moves.size() >= 4)) {
-    std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!color);
-    for (Bitboard::Move move : vMoves) {
-      if (move.fromLoc == TO_NUM[moves.substr(0, 2)] && move.toLoc == TO_NUM[moves.substr(2, 2)]) {
-        assert(move.fromLoc != 0 || move.toLoc != 0);
-        bitboard.movePiece(move);
-        break;
-      }
-    }
-    color = !color;
-  }
-
-}
-
-
-
-
-
-
-// Search for the best move in the position.
-// print the best move and the info for the search.
-// Position to search is the position of the bitboard reference passed in.
-void search(Bitboard &bitboard, TranspositionTable &tt, int depth, bool color, unsigned int timeAllocated) {
-
-  float branchingFactor = 0;
-  int prevNodes = 0;
-
-  // Keep track of previous variables to use if stop command is called.
-  std::string prevBestMove = "";
-  std::string bestMove = "";
-  std::string pv = "";
-
-  int cp = 0;
-  int alpha;
-  int beta;
-  int delta = ASPIRATION_WINDOW_DELTA;
-  int seldepth;
-  uint8_t numBestMove = 0;
-  double totalTime = 0;
-
-  ReturnInfo bMove;
-  Bitboard::Move tempM;
-
-
-
-  std::vector<Bitboard::Move> vMoves = bitboard.allValidMoves(!color);
-  bitboard.scoreMoves(vMoves, tempM, 1, !color);
-  std::stable_sort(vMoves.begin(), vMoves.end());
-  // Searching with Iterative deepining
-  // Increment the depth each search and keep the positions in memory.
-  for (int i = 1; i < depth + 1; i++) {
-
-    bool failLow = false;
-    // If stop is called, cancel search and use previous iteration serach
-    if (exit_thread_flag) {
-      break;
-    }
-    seldepth = i;
-
-    if (i >= 5) {
-      delta = ASPIRATION_WINDOW_DELTA;
-      alpha = cp - delta;
-      beta = cp + delta;
-    }
-    else {
-      alpha = -INFINITY_VAL;
-      beta = INFINITY_VAL;
-    }
-
-
-    auto t1 = std::chrono::high_resolution_clock::now();
-    while (true) {
-
-      bMove = searchRoot(color, bitboard, tt, i, seldepth, vMoves, totalTime, alpha, beta);
-      for (std::vector<Bitboard::Move>::iterator it = vMoves.begin(); it != vMoves.end(); ++it) {
-        assert(it->fromLoc != 0 || it->toLoc != 0);
-        if (*it == bMove.move) {
-          it->score = 4000000 + i;
-        }
-      }
-
-      // bitboard.scoreMoves(vMoves, tempM, i, !color);
-      std::stable_sort(vMoves.begin(), vMoves.end());
-
-
-      // Record the score
-      cp = bMove.score;
-
-      if (cp >= beta) {
-        beta = cp + delta;
-      }
-      else if (cp <= alpha || (bMove.move.fromLoc == 0 && bMove.move.toLoc == 0)) {
-        beta = (alpha + beta) / 2;
-        alpha = cp - delta;
-        failLow = true;
-      }
-      else {
-        break;
-      }
-
-      delta = delta * 1.25 + 4;
-
-    }
-
-    bestMove = bMove.bestMove;
-    auto t2 = std::chrono::high_resolution_clock::now();
-
-
-    seldepth = std::abs(seldepth) - 1 + i;
-    pv = tt.getPV(bitboard);
-
-
-    // If checkmate is found, store in variable to print later.
-    // if (bMove.mateIn) {
-    //   mateInPlies = i - bMove.mateIn;
-    // }
-    // else {
-    //   mateInPlies = 0;
-    // }
-
-    if (prevBestMove == bestMove) {
-      numBestMove++;
-    }
-    else {
-      numBestMove = 0;
-    }
-
-
-    // If stop is not called, then store current variables in previous variables (update)
-    if (!exit_thread_flag || prevBestMove == "") {
-      prevBestMove = bestMove;
-    }
-
-
-    // Debug print
-    // std::cout << (double)(pruning) / (double)(pruningTotal) << " " << pruning << " " << pruningTotal << std::endl;
-    // std::cout << (double)(pruningTT) / (double)(pruningTotalTT) << " " << pruningTT << " " << pruningTotalTT << std::endl;
-    pruning = 0;
-    pruningTotal = 0;
-    pruningTT = 0;
-    pruningTotalTT = 0;
-    //----/
-
-    // Calculate effective branching factor.
-    if (branchingFactor == 0.0) {
-      branchingFactor = traversedNodes;
-      prevNodes = traversedNodes;
-    }
-    else {
-      branchingFactor = (float)(traversedNodes) / (float)(prevNodes);
-      prevNodes = traversedNodes;
-    }
-
-    // Get the time the search took in nanoseconds
-    auto diff = std::chrono::duration_cast<std::chrono::nanoseconds> (t2 - t1).count();
-    auto diff2 = std::chrono::duration_cast<std::chrono::milliseconds> (t2 - t1).count();
-
-    totalTime += (double) diff2;
-
-    // If stop is not called, then print the info
-    if (!exit_thread_flag) {
-      printInfoUCI(i, seldepth, totalTime, diff2, cp, 0, pv);
-    }
-
-    // Reset this variable and restart search
-    traversedNodes = 0;
-
-    if (diff2 >= (timeAllocated / 2)) {
-      exit_thread_flag = true;
-    }
-
-    // if (numBestMove == 8 && timeAllocated != 0xFFFFFFFFU) {
-    //   exit_thread_flag = true;
-    // }
-
-
-
-
-  }
-
-
-  tt.updateHalfMove();
-  // Print the best move and clear the transposition table
-  std::cout << "bestmove " << prevBestMove << std::endl;
-
-
-}
-
-
-
-
-
-
-
-
-
-
-// Main function holds the loop of the program.
-// Universal Chess Interface: Loops and awaits command until program is terminated.
 int main() {
 
-  // Set seed for random
-  srand(time(NULL));
+    InitColumnsMask();
+    InitRowsMask();
+    InitHistory();
+    Bitboard pos = Bitboard();
 
-  // Initialize bitboard
-  Bitboard x = Bitboard();
-  TranspositionTable tt = TranspositionTable();
-  bool color = true;
+    std::regex r2("go\\swtime\\s(\\d+)\\sbtime\\s(\\d+)");
+    std::thread thr;
 
-  // Regular expressions, r for finding a Number
-  // r2 for go command with time.
-  std::regex r("\\d+");
-  std::regex r2("go\\swtime\\s(\\d+)\\sbtime\\s(\\d+)");
+    // Initial print
+    std::cout << "Mr Bob" << " " << "0.6.0" << " UCI engine by Vincent Yu" << std::endl;
 
-  // Initialize a second thread for Searching
-  // This way the stop command can be called to stop the search from another thread.
-  std::thread th1;
+    // Forever loop of awesomeness
+    while (1) {
 
-  // Initial print
-  std::cout << engineName << " " << version << " UCI engine by Vincent Yu" << std::endl;
+        std::smatch m;
+        std::string command = "";
 
-
-
-  // Forever loop of awesomeness
-  while (1) {
-
-
-    std::smatch m;
-    std::string command = "";
-
-    // Await command
-    std::getline(std::cin, command);
-
-
-    // Quit the program
-    if (command == "quit") {
-      break;
-    }
-
-    // Give reply for isready
-    if (command == "isready") {
-      std::cout << "readyok" << std::endl;
-      continue;
-    }
-
-    // Print engine info, with manditory uciok at the end
-    if (command == "uci") {
-      std::cout << "id name " << engineName << " " << version << std::endl;
-      std::cout << "id author Vincent Yu" << std::endl;
-      std::cout << "uciok" << std::endl;
-      continue;
-    }
-
-    // // Print engine info, with manditory uciok at the end
-    // if (command == "test") {
-    //   std::cout << searchRoot(color, x, 4).score << std::endl;
-    //   continue;
-    // }
-
-    // Debugging color command to switch sides
-    if (command.substr(0, 5) == "color") {
-      std::regex_search(command, m, r);
-      color = std::stoi(m[0]);
-      continue;
-    }
-
-    // Stop searching
-    if (command == "stop") {
-      if (th1.joinable()) {
-        exit_thread_flag = true;
-        th1.join();
+        // Await command
+        std::getline(std::cin, command);
         exit_thread_flag = false;
-      }
-      continue;
+
+
+        // Quit the program
+        if (command == "quit") {
+            break;
+        }
+
+        // Give reply for isready
+        if (command == "isready") {
+            readyCommand();
+            continue;
+        }
+
+        // Print engine info, with manditory uciok at the end
+        if (command == "uci") {
+            uciCommand();
+            continue;
+        }
+
+        // Stop searching
+        if (command == "stop") {
+            if (thr.joinable()) {
+                exit_thread_flag = true;
+                thr.join();
+                exit_thread_flag = false;
+            }
+            continue;
+        }
+
+        // go command with time for each side
+        if (std::regex_search(command, m, r2)) {
+
+            unsigned int time = 0;
+            if (!pos.getSideToMove()) {
+                time = std::stoi(m[1]);
+            }
+            else {
+                time = std::stoi(m[2]);
+            }
+
+            thr = std::thread(search, std::ref(pos), 99);
+            std::this_thread::sleep_for(std::chrono::milliseconds(time / 24));
+            if (thr.joinable()) {
+                exit_thread_flag = true;
+                thr.join();
+                exit_thread_flag = false;
+            }
+            continue;
+        }
+
+        // Search (virtually) forever.
+        if (command == "go infinite" && !thr.joinable()) {
+            thr = std::thread(search, std::ref(pos), 255);
+            continue;
+        }
+
+        // Perft.
+        if (command == "perft") {
+            PerftTest(pos);
+            continue;
+        }
+
+        // Reset postion to starting position
+        if (command == "position startpos") {
+            pos.reset();
+            continue;
+        }
+
+        // Make all moves in the list
+        if (command.substr(0, 24) == "position startpos moves ") {
+            pos.reset();
+            startPosMoves(pos, command.substr(24, command.size() - 24));
+            continue;
+        }
+
+        // Set position to FEN position
+        if (command.substr(0, 13) == "position fen ") {
+            size_t indexMoves = command.find("moves ");
+            pos.setPosFen(command.substr(13, indexMoves));
+
+            if (indexMoves != std::string::npos) {
+                startPosMoves(pos, command.substr(indexMoves, command.size() - indexMoves));
+            }
+            continue;
+        }
+
+        // Print the current board position
+        if (command == "print") {
+            pos.printPretty();
+            continue;
+        }
+
+        // Debug the evaluation
+        if (command == "evaluate debug") {
+            pos.evaluate_debug();
+            continue;
+        }
+
+        // Test static SEE function
+        if (command == "see") {
+            SeeTest(pos, "1k1r4/1pp4p/p7/4p3/8/P5P1/1PP4P/2K1R3 w - -", 4, 36, pieceValues[0]);
+            SeeTest(pos, "1k1r3q/1ppn3p/p4b2/4p3/8/P2N2P1/1PP1R1BP/2K1Q3 w - -", 19, 36, -pieceValues[1] + pieceValues[0]);
+            SeeTest(pos, "4R3/2r3p1/5bk1/1p1r3p/p2PR1P1/P1BK1P2/1P6/8 b - -", 39, 30, 0);
+            SeeTest(pos, "4R3/2r3p1/5bk1/1p1r1p1p/p2PR1P1/P1BK1P2/1P6/8 b - -", 39, 30, 0);
+            SeeTest(pos, "4r1k1/5pp1/nbp4p/1p2p2q/1P2P1b1/1BP2N1P/1B2QPPK/3R4 b - -", 30, 21, pieceValues[1] - pieceValues[2]);
+            SeeTest(pos, "2r1r1k1/pp1bppbp/3p1np1/q3P3/2P2P2/1P2B3/P1N1B1PP/2RQ1RK1 b - -", 43, 36, pieceValues[0]);
+            SeeTest(pos, "7r/5qpk/p1Qp1b1p/3r3n/BB3p2/5p2/P1P2P2/4RK1R w - -", 4, 60, 0);
+            SeeTest(pos, "6rr/6pk/p1Qp1b1p/2n5/1B3p2/5p2/P1P2P2/4RK1R w - -", 4, 60, -pieceValues[3]);
+            SeeTest(pos, "7r/5qpk/2Qp1b1p/1N1r3n/BB3p2/5p2/P1P2P2/4RK1R w - -", 4, 60, -pieceValues[3]);
+            SeeTest(pos, "6RR/4bP2/8/8/5r2/3K4/5p2/4k3 w - -", 53, 61, pieceValues[2] - pieceValues[0], QUEEN_PROMOTION_FLAG);
+            SeeTest(pos, "6RR/4bP2/8/8/5r2/3K4/5p2/4k3 w - -", 53, 61, pieceValues[1] - pieceValues[0], KNIGHT_PROMOTION_FLAG);
+            SeeTest(pos, "7R/5P2/8/8/8/3K2r1/5p2/4k3 w - -", 53, 61, pieceValues[4] - pieceValues[0], QUEEN_PROMOTION_FLAG);
+            SeeTest(pos, "7R/5P2/8/8/8/3K2r1/5p2/4k3 w - -", 53, 61, pieceValues[2] - pieceValues[0], BISHOP_PROMOTION_FLAG);
+            SeeTest(pos, "7R/4bP2/8/8/1q6/3K4/5p2/4k3 w - -", 53, 61, -pieceValues[0], ROOK_PROMOTION_FLAG);
+            SeeTest(pos, "8/4kp2/2npp3/1Nn5/1p2PQP1/7q/1PP1B3/4KR1r b - -", 7, 5, 0);
+            SeeTest(pos, "8/4kp2/2npp3/1Nn5/1p2P1P1/7q/1PP1B3/4KR1r b - -", 7, 5, 0);
+            SeeTest(pos, "2r2r1k/6bp/p7/2q2p1Q/3PpP2/1B6/P5PP/2RR3K b - -", 34, 2, 2 * pieceValues[3] - pieceValues[4]);
+            SeeTest(pos, "r2qk1nr/pp2ppbp/2b3p1/2p1p3/8/2N2N2/PPPP1PPP/R1BQR1K1 w kq -", 21, 36, pieceValues[0]);
+            SeeTest(pos, "6r1/4kq2/b2p1p2/p1pPb3/p1P2B1Q/2P4P/2B1R1P1/6K1 w - -", 29, 36, 0);
+            SeeTest(pos, "3q2nk/pb1r1p2/np6/3P2Pp/2p1P3/2R4B/PQ3P1P/3R2K1 w - h6", 38, 47, 0);
+            SeeTest(pos, "3q2nk/pb1r1p2/np6/3P2Pp/2p1P3/2R1B2B/PQ3P1P/3R2K1 w - h6", 38, 47, pieceValues[0]);
+            SeeTest(pos, "2r4r/1P4pk/p2p1b1p/7n/BB3p2/2R2p2/P1P2P2/4RK2 w - -", 18, 58, pieceValues[3]);
+            SeeTest(pos, "2r5/1P4pk/p2p1b1p/5b1n/BB3p2/2R2p2/P1P2P2/4RK2 w - -", 18, 58, pieceValues[3]);
+            SeeTest(pos, "2r4k/2r4p/p7/2b2p1b/4pP2/1BR5/P1R3PP/2Q4K w - -", 18, 34, pieceValues[2]);
+            SeeTest(pos, "8/pp6/2pkp3/4bp2/2R3b1/2P5/PP4B1/1K6 w - -", 14, 42, pieceValues[0] - pieceValues[2]);
+            SeeTest(pos, "4q3/1p1pr1k1/1B2rp2/6p1/p3PP2/P3R1P1/1P2R1K1/4Q3 b - -", 44, 28, pieceValues[0] - pieceValues[3]);
+            SeeTest(pos, "4q3/1p1pr1kb/1B2rp2/6p1/p3PP2/P3R1P1/1P2R1K1/4Q3 b - -", 55, 28, pieceValues[0]);
+            SeeTest(pos, "r2q1b1r/ppppP1Pp/3k4/8/8/8/PPPP1P1P/RNBQKBNR w KQ - 0 1", 54, 61, pieceValues[2] + pieceValues[3] - 2 * pieceValues[0], QUEEN_PROMOTION_CAPTURE_FLAG);
+            SeeTest(pos, "r2q1b1r/ppppPRPp/3k4/8/8/8/PPP4P/RNBQKBN1 w Q - 0 1", 53, 61, pieceValues[2] - 2 * pieceValues[0]);
+        }
+
+
     }
 
-    // Search (virtually) forever.
-    if (command == "go infinite") {
-      th1 = std::thread(search, std::ref(x), std::ref(tt), 512, color, 0xFFFFFFFFU);
-      continue;
-    }
-
-    // go command with time for each side
-    if (std::regex_search(command, m, r2)) {
-
-      unsigned int time = 0;
-      if (color) {
-        time = std::stoi(m[1]);
-      }
-      else {
-        time = std::stoi(m[2]);
-      }
-
-
-      th1 = std::thread(search, std::ref(x), std::ref(tt), 99, color, time / 32);
-      std::this_thread::sleep_for(std::chrono::milliseconds(time / 32));
-      if (th1.joinable()) {
-        exit_thread_flag = true;
-        th1.join();
-        exit_thread_flag = false;
-      }
-
-      continue;
-    }
-
-    // Go search for depth 10
-    if (command.substr(0, 2) == "go") {
-      std::cout << command << std::endl;
-      std::regex_search(command, m, r);
-      th1 = std::thread(search, std::ref(x), std::ref(tt), 10, color, 0xFFFFFFFFU);
-      th1.join();
-      continue;
-    }
-
-    // Reset postion to starting position
-    if (command == "position startpos") {
-      color = true;
-      x.resetBoard();
-      continue;
-    }
-
-    // Make all moves in the list
-    if (command.substr(0, 24) == "position startpos moves ") {
-      color = true;
-      startPosMoves(color, x, command.substr(24, command.size() - 24));
-      continue;
-    }
-
-    // Print current fen position
-    if (command == "print fen") {
-      std::cout << x.posToFEN() << std::endl;
-      continue;
-    }
-
-    // Print current board position
-    if (command == "print") {
-      x.printPretty();
-      continue;
-    }
-
-    // Evaluate current board position
-    if (command == "evaluate") {
-      std::cout << x.evaluate() << std::endl;
-      continue;
-    }
-
-    if (command.substr(0, 14) == "evaluate debug") {
-      x.evaluateDebug();
-      continue;
-    }
-
-    // Undo current position
-    if (command == "undo") {
-      x.undoMove();
-      continue;
-    }
-
-
-  }
-
-
-  // If search is still ongoing, terminate thread
-  if (th1.joinable()) {
-    exit_thread_flag = true;
-    th1.join();
-    exit_thread_flag = false;
-  }
-
-
-  // Terminate program
-  return 0;
+    return 0;
 }

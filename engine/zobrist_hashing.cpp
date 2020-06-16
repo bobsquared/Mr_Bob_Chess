@@ -2,7 +2,6 @@
 
 
 // Adapted from https://en.wikipedia.org/wiki/Zobrist_hashing
-
 #include "zobrist_hashing.h"
 #include <iostream>
 #include <stdlib.h>
@@ -14,204 +13,145 @@
 // Collisions are possible but rare.
 Zobrist::Zobrist() {
 
-  for (int i = 0; i < 64; i++) {
-    for (int j = 0; j < 12; j++) {
-      table[i][j] = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+    for (int i = 0; i < 64; i++) {
+        for (int j = 0; j < 12; j++) {
+            table[i][j] = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+        }
     }
-  }
 
-  // Flags for castling, and black turn
-  blackTurn = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
-  whiteKingCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
-  blackKingCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
-  whiteQueenCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
-  blackQueenCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+    for (int i = 0; i < 8; i++) {
+        enpassant[i] = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+    }
 
-  whiteKingCastleFlag = false;
-  blackKingCastleFlag = false;
-  whiteQueenCastleFlag = false;
-  blackQueenCastleFlag = false;
+    for (int i = 0; i < 4; i++) {
+        castle[i] = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+    }
 
-}
+    // Flags for castling, and black turn
+    blackTurn = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+    whiteKingCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+    blackKingCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+    whiteQueenCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+    blackQueenCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
 
+    whiteKingCastleFlag = false;
+    blackKingCastleFlag = false;
+    whiteQueenCastleFlag = false;
+    blackQueenCastleFlag = false;
 
-
-uint64_t Zobrist::test(uint64_t h) {
-  h ^= table[5][3];
-  h ^= table[7][3];
-  return h;
 }
 
 
 
 // Non iterative way to determine the hash key: loop through the board
 // Used to initialize the board's starting position
-uint64_t Zobrist::hashBoard(uint64_t *pieces, uint64_t& occupied, uint64_t& blacks, bool turn) {
+uint64_t Zobrist::hashBoard(uint64_t *pieces, uint8_t castleFlag, int enpassantSq, bool col) {
 
-  uint64_t ret = 0;
+    uint64_t ret = 0;
 
-  if (!turn) {
-    ret ^= blackTurn;
-  }
-
-
-  for (int i = 0; i < 64; ++i) {
-    uint64_t shiftI = 1ULL << i;
-
-    if ((occupied & shiftI) != 0) {
-      int j = 0;
-
-      if ((blacks & shiftI) != 0) {
-        j += 6;
-      }
-
-      if ((pieces[0] & shiftI) != 0) {
-        j += 0;
-      }
-      else if ((pieces[1] & shiftI) != 0) {
-        j += 1;
-      }
-      else if ((pieces[2] & shiftI) != 0) {
-        j += 2;
-      }
-      else if ((pieces[3] & shiftI) != 0) {
-        j += 3;
-      }
-      else if ((pieces[4] & shiftI) != 0) {
-        j += 4;
-      }
-      else if ((pieces[5] & shiftI) != 0) {
-        j += 5;
-      }
-
-      ret ^= table[i][j];
+    if (col) {
+        ret ^= blackTurn;
     }
-  }
 
-  return ret;
+    hashBoard_castle(ret, 15);
+    hashBoard_castle(ret, castleFlag);
+    if (enpassantSq) {
+        hashBoard_enpassant(ret, enpassantSq);
+    }
+
+
+    for (int i = 0; i < 64; ++i) {
+        uint64_t shiftI = 1ULL << i;
+        for (int j = 0; j < 12; j++) {
+            if (pieces[j] & shiftI) {
+                ret ^= table[i][j];
+                break;
+            }
+        }
+    }
+
+    return ret;
 }
 
 
 
 // Iterative way to determine hash key:
 // Used in making moves to keep track of the key much faster
-uint64_t Zobrist::hashBoardM(uint64_t board, int pieceFrom, int pieceTo, int i, int k, bool useWhite, bool isEnpassant, bool whiteCastleK, bool whiteCastleQ, bool blackCastleK, bool blackCastleQ) {
+void Zobrist::hashBoard_quiet(uint64_t &board, int from, int to, int pieceFrom) {
+    board ^= table[from][pieceFrom];
+    board ^= table[to][pieceFrom];
+}
 
-  // Change the turn to move no matter what.
-  uint64_t ret = board ^ blackTurn;
 
-  if (whiteCastleK != whiteKingCastleFlag) {
-    ret ^= whiteKingCastle;
-  }
-  if (whiteCastleQ != whiteQueenCastleFlag) {
-    ret ^= whiteQueenCastle;
-  }
-  if (blackCastleK != blackKingCastleFlag) {
-    ret ^= blackKingCastle;
-  }
-  if (blackCastleQ != blackQueenCastleFlag) {
-    ret ^= blackQueenCastle;
-  }
-
-  if (pieceFrom == 65) {
-    return ret;
-  }
+// Iterative way to determine hash key:
+// Update captures
+void Zobrist::hashBoard_capture(uint64_t &board, int from, int to, int pieceFrom, int pieceTo) {
+    board ^= table[from][pieceFrom];
+    board ^= table[to][pieceFrom];
+    board ^= table[to][pieceTo];
+}
 
 
 
-  // Any pawn moves. Captures may happen here
-  if (i == 0) {
-
-    // STEP 1: Check for any promotions
-    if (pieceTo > 55) {
-      // Remove Pawn
-      ret ^= table[pieceTo][0];
-      // Add queen
-      ret ^= table[pieceTo][4];
-    }
-    else if (pieceTo < 8) {
-      // Remove Pawn
-      ret ^= table[pieceTo][6];
-      // Add queen
-      ret ^= table[pieceTo][10];
-    }
+// Iterative way to determine hash key:
+// Update specific square
+void Zobrist::hashBoard_square(uint64_t &board, int square, int piece) {
+    board ^= table[square][piece];
+}
 
 
 
-    // STEP 2: Check for any enpassants
-    if (useWhite && isEnpassant){
-      ret ^= table[pieceTo - 8][6];
-    }
-    else if (isEnpassant) {
-      ret ^= table[pieceTo + 8][0];
-    }
-  }
+// Iterative way to determine hash key:
+// Update capture promotions
+void Zobrist::hashBoard_capture_promotion(uint64_t &board, int from, int to, int pieceFrom, int pieceTo, int promotionPiece) {
+    board ^= table[from][pieceFrom];
+    board ^= table[to][pieceTo];
+    board ^= table[to][promotionPiece];
+}
 
 
 
-  // STEP 3: Check for white castling or if its a king move
-  else if (i == 5){
-    if (useWhite && pieceFrom == 4) {
-      // King side castle
-      if (pieceTo == 6) {
-        // Move rook:
-        ret ^= table[5][3];
-        ret ^= table[7][3];
+// Iterative way to determine hash key:
+// Update promotions
+void Zobrist::hashBoard_promotion(uint64_t &board, int from, int to, int pieceFrom, int promotionPiece) {
+    board ^= table[from][pieceFrom];
+    board ^= table[to][promotionPiece];
+}
 
-      }
-      // Queen side Castle
-      else if (pieceTo == 2) {
-        // Move rook:
-        ret ^= table[3][3];
-        ret ^= table[0][3];
-      }
-    }
-    else if (!useWhite && pieceFrom == 60){
-      // King side castle
-      if (pieceTo == 62) {
-        // Move rook:
-        ret ^= table[61][9];
-        ret ^= table[63][9];
-      }
-      // Queen side Castle
-      else if (pieceTo == 58) {
-        // Move rook:
-        ret ^= table[59][9];
-        ret ^= table[56][9];
-      }
+
+
+// Iterative way to determine hash key:
+// Update enpassant square
+void Zobrist::hashBoard_enpassant(uint64_t &board, int square) {
+    board ^= enpassant[square];
+}
+
+
+
+// Iterative way to determine hash key:
+// Update castling rights
+void Zobrist::hashBoard_castle(uint64_t &board, uint8_t castleFlag) {
+    if (1 & castleFlag) {
+        board ^= castle[0];
     }
 
-  }
-
-
-
-  // STEP 4: Finally make the move
-  if (k == -1) {
-
-    if (useWhite) {
-      ret ^= table[pieceTo][i];
-      ret ^= table[pieceFrom][i];
-    }
-    else {
-      ret ^= table[pieceTo][i + 6];
-      ret ^= table[pieceFrom][i + 6];
+    if (2 & castleFlag) {
+        board ^= castle[1];
     }
 
-  }
-  else {
-
-    if (useWhite) {
-      ret ^= table[pieceTo][i];
-      ret ^= table[pieceFrom][i];
-      ret ^= table[pieceTo][k + 6];
-    }
-    else {
-      ret ^= table[pieceTo][i + 6];
-      ret ^= table[pieceFrom][i + 6];
-      ret ^= table[pieceTo][k];
+    if (4 & castleFlag) {
+        board ^= castle[2];
     }
 
-  }
+    if (8 & castleFlag) {
+        board ^= castle[3];
+    }
+}
 
-  return ret;
+
+
+// Iterative way to determine hash key:
+// Update turn to move
+void Zobrist::hashBoard_turn(uint64_t &board) {
+    board ^= blackTurn;
 }

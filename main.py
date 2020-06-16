@@ -1841,8 +1841,10 @@ def main():
 		clock.tick(144)
 
 
+	co.engine.kill()
 	pg.quit()
 	quit()
+
 	return 0
 
 

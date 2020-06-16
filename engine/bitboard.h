@@ -1,345 +1,183 @@
-// #include "bitboard.cpp"
 #pragma once
-#include <unordered_map>
-#include <vector>
-#include "zobrist_hashing.h"
-#include "magic_bitboards.h"
-#include <bitset>
 #include <iostream>
-#include "dumb7flooding.h"
-#include <stdlib.h>
-#include <time.h>
-#include <assert.h>
+#include <bitset>
 #include <string>
-#include <algorithm>
-#include "piecesquaretable.h"
-#include "config.h"
-#include <cmath>
+#include <regex>
+#include "movegen.h"
 #include "defs.h"
+#include "magic_bitboards.h"
+#include "eval.h"
+#include "movepick.h"
+#include "zobrist_hashing.h"
+#include "transpositionTable.h"
 
 
+// Castling flags
+#define CASTLE_FLAG_KING_WHITE  8
+#define CASTLE_FLAG_QUEEN_WHITE 4
+#define CASTLE_FLAG_KING_BLACK  2
+#define CASTLE_FLAG_QUEEN_BLACK 1
 
-class Bitboard{
+#define CASTLE_FLAG_WHITE (CASTLE_FLAG_KING_WHITE | CASTLE_FLAG_QUEEN_WHITE)
+#define CASTLE_FLAG_BLACK (CASTLE_FLAG_KING_BLACK | CASTLE_FLAG_QUEEN_BLACK)
+
+
+class Bitboard {
+
 
 public:
 
-  // All information about a move
-  struct Move {
-    uint8_t fromLoc;
-    uint8_t toLoc;
-    bool quiet;
-    int8_t pieceFrom;
-    int8_t pieceTo;
-    int score;
-    uint8_t promotion;
-    bool isEnpassant;
+    Bitboard();
+    ~Bitboard();
 
-    bool operator<(const Move& a) const { return score > a.score; }
-    bool operator==(const Move& rhs) {
-      return (fromLoc == rhs.fromLoc) && (toLoc == rhs.toLoc);
-    }
-    Move() :
-      fromLoc(0), toLoc(0), quiet(true), pieceFrom(0), pieceTo(-1), score(0), promotion(0), isEnpassant(false) {}
-    Move(uint8_t fromLoc, uint8_t toLoc, bool quiet, int8_t pieceFrom, int8_t pieceTo, int score, uint8_t promotion, bool isEnpassant) :
-      fromLoc(fromLoc), toLoc(toLoc), quiet(quiet), pieceFrom(pieceFrom), pieceTo(pieceTo), score(score), promotion(promotion), isEnpassant(isEnpassant) {}
-  };
+    void printPretty();
+    std::string getPv();
+    std::string posToFEN();
+    void setPosFen(std::string fen);
+
+    bool InCheck();
+    bool InCheckOther();
+
+    void generate(MoveList &moveList, int depth, MOVE pvMove);
+    void generate_captures_promotions(MoveList &moveList, MOVE pvMove);
+
+    bool pickMove(MOVE &move);
+    void make_move(MOVE move);
+    void undo_move(MOVE move);
+
+    int evaluate();
+    int evaluate_debug();
+    bool isDraw();
+
+    void reset();
+    bool getSideToMove();
+    void insertKiller(int depth, MOVE move);
 
 
-  int32_t history[2][64][64]; // For history heuristic
+    uint64_t getPosKey();
+    bool probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta);
+    void saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key);
+    void debugZobristHash();
 
-
-  Bitboard();
-  ~Bitboard();
-
-  // Insert into killer moves and transposition table
-  void InsertKiller(Move &move, int &depth);
-  uint64_t getPosKey();
-
-  // Printing utilities
-  void printBoard(uint64_t board);
-  void printPretty();
-
-  // Checking and generating moves
-  bool IsMoveWhite(Move &move);
-  bool IsMoveBlack(Move &move);
-  std::vector<Move> allValidMoves(bool color);
-  std::vector<Move> allValidCaptures(bool color);
-
-  // Filtering and scoring moves
-  bool filterCheck(bool color);
-  void scoreMoves(std::vector<Move> &moveList, Move &move, int depth, bool isWhite);
-  Move pickMove(std::vector<Move> &moveList);
-
-  // Checking moves
-  bool canNullMove();
-  bool isThreeFold();
-  bool isDraw();
-  bool isPassedPawn(int index, bool color);
-
-  // Moving pieces
-  void movePiece(Move &move);
-  void undoMove();
-
-  // Evaluate position
-  int evaluate();
-  void evaluateDebug();
-
-  // Reseting position to original
-  void resetBoard();
-
-  // Extras
-  std::string posToFEN();
-  void updateHalfMove();
-  int seeCaptureNew(Move &capture);
-  uint64_t hashBoardDebug(uint64_t hash);
+    bool nullMoveable();
+    int seeCapture(MOVE capture);
+    bool isRepetition();
 
 
 private:
 
-  const uint64_t ALL_ONES = 18446744073709551615U;
-  const uint64_t INNER_MASK = 35604928818740736U;
-  const uint64_t RIGHT_MASK = 9187201950435737471U;
-  const uint64_t LEFT_MASK = 18374403900871474942U;
-  const uint64_t DOWN_MASK = 18446744073709551360U;
-  const uint64_t UP_MASK = 72057594037927935U;
+    struct MoveInfo {
+        int captureType;
+        int enpassantSq;
+        int halfMoves;
+        uint8_t castleRights;
+        uint64_t posKey;
 
-  const int pieceValues[6] = {100, 330, 345, 550, 975, 20000};
-  const std::string NUM_TO_STR[9] = {"0", "1", "2", "3", "4", "5", "6", "7", "8"};
+        bool operator==(const uint64_t& rhs) {
+            return posKey == rhs;
+        }
 
-  const int attackWeight[8] = {
-    0, 0, 50, 75, 88, 94, 97, 99
-  };
+        MoveInfo() :
+            captureType(-1), enpassantSq(0), halfMoves(0), castleRights(15), posKey(0) {}
 
-  const int knightWeight[9] = {
-    -25, -16, -12, -8, -4, 0, 8, 16, 24
-  };
-
-  const int rookWeight[9] = {
-    24, 12, 9, 6, 3, 0, -6, -9, -12
-  };
-
-  const int MSB_TABLE[64] = {
-    0, 47,  1, 56, 48, 27,  2, 60,
-   57, 49, 41, 37, 28, 16,  3, 61,
-   54, 58, 35, 52, 50, 42, 21, 44,
-   38, 32, 29, 23, 17, 11,  4, 62,
-   46, 55, 26, 59, 40, 36, 15, 53,
-   34, 51, 20, 43, 31, 22, 10, 45,
-   25, 39, 14, 33, 19, 30,  9, 24,
-   13, 18,  8, 12,  7,  6,  5, 63
- };
-
- int PAWN_SHIELD[6][8] = {{ 25, 15, 10, 5, 5, 10, 15, 35},
-                          { 25, 15,  5, 2, 2,  5, 15, 25},
-                          { 10, 5, 0,  0,  0,  0,  5, 10},
-                          { 10, 0, -5, -10, -10, -5, 0,10},
-                          {-10,-15,-20,-25,-25,-20,-15,-10},
-                          {-20,-25,-30,-35,-35,-30,-25,-20}};
+        MoveInfo(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey) :
+            captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), castleRights(castleRights), posKey(posKey) {}
+    };
 
 
+    struct MoveInfoStack {
+        MoveInfo move[1024];
+        int count;
 
+        MoveInfoStack() : count(0) {}
 
-  // Moves
-  uint64_t whitePawnMoves[64];
-  uint64_t blackPawnMoves[64];
-  uint64_t whitePawnAttacks[64];
-  uint64_t blackPawnAttacks[64];
-  void InitWhitePawnMoves();
-  void InitBlackPawnMoves();
-  uint64_t pawnAttacksMan(uint64_t bitboard, bool isWhite);
-  uint64_t pawnAttacks(bool isWhite);
-  uint64_t whitePawns;
-  uint64_t blackPawns;
+        void insert(MoveInfo moveInfo) {
+            move[count] = moveInfo;
+            count++;
+        }
 
-  uint64_t knightMoves[64];
-  void InitKnightMoves();
-  uint64_t knightAttacks(uint64_t knights);
-  uint64_t whiteKnights;
-  uint64_t blackKnights;
+        MoveInfo pop() {
+            count--;
+            return move[count];
+        }
 
-  uint64_t bishopMoves[64];
-  void InitBishopMoves();
-  uint64_t whiteBishops;
-  uint64_t blackBishops;
+        void clear() {
+            count = 0;
+        }
+    };
 
-  uint64_t rookMoves[64];
-  void InitRookMoves();
-  uint64_t whiteRooks;
-  uint64_t blackRooks;
+    // Material location
+    uint64_t whitePawns;
+    uint64_t blackPawns;
+    uint64_t whiteKnights;
+    uint64_t blackKnights;
+    uint64_t whiteBishops;
+    uint64_t blackBishops;
+    uint64_t whiteRooks;
+    uint64_t blackRooks;
+    uint64_t whiteQueens;
+    uint64_t blackQueens;
+    uint64_t whiteKings;
+    uint64_t blackKings;
 
-  uint64_t queenMoves[64];
-  void InitQueenMoves();
-  uint64_t whiteQueens;
-  uint64_t blackQueens;
+    // Piece movement
+    uint64_t blackPawnMoves[64];
+    uint64_t whitePawnMoves[64];
+    uint64_t pawnAttacks[64][2];
+    uint64_t knightMoves[64];
+    uint64_t bishopMoves[64];
+    uint64_t rookMoves[64];
+    uint64_t queenMoves[64];
+    uint64_t kingMoves[64];
 
-  uint64_t kingMoves[64];
-  void InitKingMoves();
-  uint64_t whiteKings;
-  uint64_t blackKings;
+    // Position info
+    uint64_t pieces[12];
+    uint64_t color[2];
+    int pieceAt[64];
+    int material[2];
+    int pieceCount[12];
+    uint8_t rookCastleFlagMask[64];
+    uint64_t occupied;
+    bool toMove;
 
+    // Move info
+    MoveInfoStack moveHistory;
+    uint64_t posKey;
+    int enpassantSq;
+    int fullMoves;
+    int halfMoves;
+    uint8_t castleRights;
 
+    // Additional objects
+    MoveGen *moveGen;
+    Magics *magics;
+    Eval *eval;
+    MovePick *movePick;
+    Zobrist *zobrist;
+    TranspositionTable *tt;
 
-  // Find 1 bit in bitboard
-  int bitScanR(uint64_t bitboard);
+    // Initialization functions
+    void InitWhitePawnMoves();
+    void InitBlackPawnMoves();
+    void InitBlackPawnAttacks();
+    void InitWhitePawnAttacks();
+    void InitKnightMoves();
+    void InitBishopMoves();
+    void InitRookMoves();
+    void InitQueenMoves();
+    void InitKingMoves();
+    void InitPieceAt();
+    void InitRookCastleFlags(uint64_t whiteRooks, uint64_t blackRooks);
+    void InitMaterial();
+    void InitPieceCount();
 
-  // Mvv Lva
-  void InitMvvLva();
-  int mvvlva[6][6];
+    // Move helpers
+    void move_quiet(int from, int to, int piece, uint64_t i1i2);
 
-  // ---------------------------------------------
+    // SEE helpers
+    uint64_t isAttackedSee(int index);
+    uint64_t getLeastValuablePiece(uint64_t attadef, bool col, int &piece);
 
-
-  // Moves and Pieces -------------------------------------
-
-  struct MoveStack {
-    uint64_t fromLoc;
-    uint64_t toLoc;
-    int movePiece;
-    int capturePiece;
-    bool color;
-    bool promote;
-    bool kingMoved;
-    int rookMoved;
-    int castled;
-    int enpassant;
-
-    MoveStack(uint64_t fromLoc, uint64_t toLoc, int movePiece, int capturePiece, bool color, bool promote, bool kingMoved, int rookMoved, int castled, int enpassant) :
-      fromLoc(fromLoc), toLoc(toLoc), movePiece(movePiece), capturePiece(capturePiece), color(color), promote(promote), kingMoved(kingMoved), rookMoved(rookMoved), castled(castled), enpassant(enpassant) {}
-  };
-
-
-  Zobrist zobrist;
-
-  // Pieces bitboards
-  uint64_t pieces[6];
-  uint64_t whites;
-  uint64_t blacks;
-  uint64_t occupied;
-  int materialScore; // Material score updates incrementally
-  uint16_t halfMove; // Half moves (plies)
-
-  // Game flags
-  uint8_t enpasssantFlag;
-  bool endgameFlag;
-  bool whiteToMove;
-
-  // Rook and king flags
-  bool kingMovedWhite;
-  bool kingMovedBlack;
-  bool rookMovedWhiteA;
-  bool rookMovedWhiteH;
-  bool rookMovedBlackA;
-  bool rookMovedBlackH;
-  bool whiteCastled;
-  bool blackCastled;
-
-  std::vector<MoveStack> moveStack = {}; // MoveStack for undo move
-  std::vector<uint64_t> prevPositions = {}; // Holds zobrist key in move/undo stack
-
-  // Count pieces
-  int countPawnsW;
-  int countPawnsB;
-
-  int countKnightsW;
-  int countKnightsB;
-
-  int countBishopsW;
-  int countBishopsB;
-
-  int countRooksW;
-  int countRooksB;
-
-  int countQueensW;
-  int countQueensB;
-
-  // Piece square tables
-  int8_t whitePawnTable[64];
-  int8_t blackPawnTable[64];
-  int8_t whitePawnTableEG[64];
-  int8_t blackPawnTableEG[64];
-  int8_t whiteKnightTable[64];
-  int8_t blackKnightTable[64];
-  int8_t whiteBishopTable[64];
-  int8_t blackBishopTable[64];
-  int8_t whiteRookTable[64];
-  int8_t blackRookTable[64];
-  int8_t whiteQueenTable[64];
-  int8_t blackQueenTable[64];
-  int8_t whiteKingTable[64];
-  int8_t blackKingTable[64];
-  int8_t whiteKingTableEG[64];
-  int8_t blackKingTableEG[64];
-
-  // Initializing masks
-  void InitPieceBoards();
-  void InitDistanceArray();
-  void InitPassedPawnsMask();
-  void InitIsolatedPawnsMask();
-  void InitColumnsMask();
-  void InitRowsMask();
-  void InitKingZoneMask();
-
-  uint64_t whitePassedPawnMask[64];
-  uint64_t blackPassedPawnMask[64];
-  uint64_t isolatedPawnMask[64];
-  uint64_t columnMask[8];
-  uint64_t rowMask[8];
-  uint64_t kingZoneMaskWhite[64];
-  uint64_t kingZoneMaskBlack[64];
-  uint64_t enemyTerritoryWhite;
-  uint64_t enemyTerritoryBlack;
-
-  Magics *magics; // Magic bitboard
-
-
-  // Castling rights
-  bool canCastleQ(bool isWhite);
-  bool canCastleK(bool isWhite);
-
-  // ----------------------------------------------
-
-
-  // Generating moves helpers
-  uint64_t validMovesWhite(uint64_t index);
-  uint64_t validMovesBlack(uint64_t index);
-
-
-  bool isAttacked(int index, bool color); // Is square attacked
-  uint64_t isAttackedSee(int index);
-  uint64_t xrayAttackRook(uint64_t blockers, int index);
-  uint64_t xrayAttackBishop(uint64_t blockers, int index);
-  uint64_t xrayAttackQueen(uint64_t blockers, int index);
-  uint64_t xrayAttackRookSee(uint64_t blockers, int index);
-  uint64_t xrayAttackBishopSee(uint64_t blockers, int index);
-  uint64_t xrayAttackQueenSee(uint64_t blockers, int index);
-
-  // Evaluation functions
-  int evaluateImbalance();
-  int evaluateMobility(int kingIndex, uint64_t pawns, uint64_t knights, uint64_t bishops, uint64_t rooks, uint64_t queens, bool isWhite);
-  int evaluateKingSafety(int kingIndex, uint64_t color, uint64_t knights, uint64_t bishops, uint64_t rooks, uint64_t queens, bool isWhite);
-  int evaluatePawns(uint64_t allyPawns, uint64_t enemyPawns, bool isWhite);
-  int evaluateOutposts(uint64_t knights, uint64_t bishops, uint64_t pawns, bool endgame, bool isWhite);
-  int evaluateThreats(uint64_t pawns, bool isWhite);
-  int evaluateTrappedPieces(int kingIndex, uint64_t rooks, bool isWhite);
-  int evaluateKingPawnEndgame(int kingIndex, uint64_t allyPawns, uint64_t enemyPawns, bool endgame, bool isWhite);
-  int evaluateEndgame(int kingIndex, uint64_t pawns, bool endgame, bool isWhite);
-  int evaluatePawnShields(int kingIndex, uint64_t pawns, bool isWhite);
-
-
-
-  uint64_t hashBoard(bool turn); // zobrist hashing
-  int enpassantConditions(bool isWhite, int pawnLocation); // Can enpassant
-
-
-  Move killerMoves[2][1024][2];  // Killer Moves
-  uint8_t manhattanArray[64][64]; // Distance arrays
-  uint8_t chebyshevArray[64][64]; // Distance arrays
-
-  int count_population(uint64_t bitboard); // Count number of 1 bits
-
-  //See
-  uint64_t getLeastValuablePiece(uint64_t attadef, bool isWhite, int &piece);
-  std::vector<std::string> moveListAlg;
 
 
 };

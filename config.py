@@ -16,7 +16,7 @@ darkSquareColorSelected  = (128, 118, 98)
 
 color_side = 'white' # The side of the board in which you are viewing
 is_playing_white = True # Manual control over white pieces, False = Engine
-is_playing_black = True # Manual control over white pieces, False = Engine
+is_playing_black = False # Manual control over white pieces, False = Engine
 
 # Engine depth (Obviously, More depth is better, but lower depth is faster)
 white_Max_Depth = 7

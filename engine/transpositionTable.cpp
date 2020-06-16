@@ -4,163 +4,100 @@
 
 
 
+// Initialize transposition table
 TranspositionTable::TranspositionTable() {
 
-  numHashes = (double) hashSize / (double) sizeof(ZobristVal) * 0xFFFFF;
-  hashTable = new ZobristVal [numHashes];
-  halfMove = 1;
+    numHashes = (double) HASH_SIZE / (double) sizeof(ZobristVal) * 0xFFFFF;
+    hashTable = new ZobristVal [numHashes];
+    halfMove = 1;
 
-  for (uint64_t i = 0; i < numHashes; i++) {
-    hashTable[i] = ZobristVal();
-  }
+    for (uint64_t i = 0; i < numHashes; i++) {
+        hashTable[i] = ZobristVal();
+    }
 
-  ttHits = 0;
-  ttCalls = 0;
+    ttHits = 0;
+    ttCalls = 0;
 
-  ttOverwrites = 0;
-  ttWrites = 0;
+    ttOverwrites = 0;
+    ttWrites = 0;
 
 }
 
 
 
-
+// Delete the hash table
 TranspositionTable::~TranspositionTable() {
-  delete [] hashTable;
+    delete [] hashTable;
 }
 
 
 
-void TranspositionTable::updateHalfMove() {
-  halfMove++;
+// Save the position into the transposition table
+// Currently using: Always Replace
+void TranspositionTable::saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key) {
+    ttWrites++;
+    uint64_t posKey = key % numHashes;
+    hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, halfMove);
 }
 
 
 
-void TranspositionTable::saveTT(Bitboard::Move &move, int score, int depth, uint8_t flag, uint64_t key) {
-
-  assert(move.fromLoc != 0 || move.toLoc != 0);
-  ttWrites++;
-  uint64_t posKey = key % numHashes;
-  // If there is a colision
-  if (hashTable[posKey].posKey != 0) {
-
-    // if (flag == 0) {
-    //   ttOverwrites++;
-    //   hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, halfMove);
-    //   return;
-    // }
-    // else if (hashTable[posKey].flag != 0 && halfMove >= hashTable[posKey].halfMove + 2){
-    //   ttOverwrites++;
-    //   hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, halfMove);
-    //   return;
-    // }
-
-    if (halfMove >= hashTable[posKey].halfMove + 2) {
-      ttOverwrites++;
-      hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, halfMove);
-      return;
-    }
-
-    if (hashTable[posKey].depth > depth) {
-      return;
-    }
-
-  }
-
-  hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, halfMove);
-
-}
-
-
-
+// Probe the transposition table
+// Currently using: Always Replace
 bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta) {
 
-  ttCalls++;
-  bool ret = false;
-  if (hashTable[key % numHashes].posKey == key && key != 0) {
-    ret = true;
-    ttHits++;
-    // Store the hash table value
-    hashedBoard = hashTable[key % numHashes];
+    ttCalls++;
+    bool ret = false;
+    if (hashTable[key % numHashes].posKey == key) {
 
-    // Ensure hashedBoard depth >= current depth
-    if (hashedBoard.depth >= depth) {
+        ret = true;
+        ttHits++;
+        // Store the hash table value
+        hashedBoard = hashTable[key % numHashes];
 
-      if (hashedBoard.flag == 1) { // Low bound
-        alpha = std::max(alpha, (int) hashedBoard.score);
-      }
-      else if (hashedBoard.flag == 2) { // Upper bound
-        beta = std::min(beta, (int) hashedBoard.score);
-      }
-      else { //Exact
-        ttRet = true;
-      }
+        // Ensure hashedBoard depth >= current depth
+        if (hashedBoard.depth >= depth) {
 
-      if (alpha >= beta) {
-        ttRet = true;
-      }
+            if (hashedBoard.flag == 1) { // Low bound
+                alpha = std::max(alpha, (int) hashedBoard.score);
+            }
+            else if (hashedBoard.flag == 2) { // Upper bound
+                beta = std::min(beta, (int) hashedBoard.score);
+            }
+            else { //Exact
+                ttRet = true;
+            }
 
+            if (alpha >= beta) {
+                ttRet = true;
+            }
+
+        }
     }
-  }
 
-  return ret;
+    return ret;
 
 }
 
 
 
-std::string TranspositionTable::getPV(Bitboard &bitboard) {
-
-  std::string pv = "";
-  std::vector<uint64_t> loopChecker;
-  int numUndo = 0;
-
-  while (true) {
-    // Transposition table for duplicate detection:
-    // Get the hash key
-    uint64_t hashF = bitboard.getPosKey();
-    loopChecker.push_back(hashF);
-
-    if (std::count(loopChecker.begin(), loopChecker.end(), loopChecker.back()) >= 3) {
-      break;
-    }
-
-    ZobristVal hashedBoard = ZobristVal();
-
-    if (hashTable[hashF % numHashes].posKey == hashF) {
-
-      hashedBoard = hashTable[hashF % numHashes];
-      pv += " " + TO_ALG[hashedBoard.move.fromLoc] + TO_ALG[hashedBoard.move.toLoc];
-      assert(hashedBoard.move.fromLoc != 0 || hashedBoard.move.toLoc != 0);
-      bitboard.movePiece(hashedBoard.move);
-      numUndo++;
-    }
-    else {
-      break;
-    }
-
-  }
-
-  for (int j = 0; j < numUndo; j++) {
-    bitboard.undoMove();
-  }
-
-  return pv;
-
+// Return the hash value of the position key
+ZobristVal TranspositionTable::getHashValue(uint64_t posKey) {
+    return hashTable[posKey % numHashes];
 }
 
 
 
+// Print hash table statistics
 void TranspositionTable::getHashStats() {
 
-  std::cout << "ttHitRate: " << (double) ttHits / (double) ttCalls << " " << ttHits << " " << ttCalls << std::endl;
-  std::cout << "ttOverwriteRate: " << (double) ttOverwrites / (double) ttWrites << " " << ttOverwrites << " " << ttWrites << std::endl;
+    std::cout << "ttHitRate: " << (double) ttHits / (double) ttCalls << " " << ttHits << " " << ttCalls << std::endl;
+    std::cout << "ttOverwriteRate: " << (double) ttOverwrites / (double) ttWrites << " " << ttOverwrites << " " << ttWrites << std::endl;
 
-  ttHits = 0;
-  ttCalls = 0;
+    ttHits = 0;
+    ttCalls = 0;
 
-  ttOverwrites = 0;
-  ttWrites = 0;
+    ttOverwrites = 0;
+    ttWrites = 0;
 
 }
