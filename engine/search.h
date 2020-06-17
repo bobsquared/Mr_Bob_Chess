@@ -5,6 +5,10 @@
 #include "bitboard.h"
 
 
+
+#define ASPIRATION_DELTA 19
+
+
 struct BestMoveInfo {
     uint16_t move;
     int eval;

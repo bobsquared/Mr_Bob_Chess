@@ -250,18 +250,17 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove) {
 
 
 
-BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha=-INFINITY, int beta=INFINITY) {
+BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha, int beta) {
 
     nodes++;
     MOVE move;
     MOVE bestMove = 0;
     MoveList moveList;
     int numMoves = 0;
-
+    int prevAlpha = alpha;
     int ret = -INFINITY;
 
     // Transposition table for duplicate detection:
-    // Get the hash key
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
@@ -290,14 +289,28 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha=-INFINITY, int beta=
                 tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true);
             }
         }
-
         b.undo_move(move);
+
+        if (exit_thread_flag) {
+            break;
+        }
+
         if (tempRet > ret) {
-            if (tempRet > alpha) {
-                alpha = tempRet;
-            }
             ret = tempRet;
             bestMove = move;
+            if (tempRet > alpha) {
+                if (tempRet >= beta) {
+                    if ((move & MOVE_FLAGS) == QUIET_MOVES_FLAG){
+                        b.insertKiller(depth, move);
+                        history[b.getSideToMove()][get_move_from(move)][get_move_to(move)] += depth * depth;
+                    }
+                    break;
+                }
+                alpha = tempRet;
+            }
+            else {
+                history[b.getSideToMove()][get_move_from(move)][get_move_to(move)] -= depth;
+            }
         }
 
         numMoves++;
@@ -305,6 +318,8 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha=-INFINITY, int beta=
 
 
     if (!exit_thread_flag) {
+        assert(alpha >= prevAlpha);
+        assert (bestMove != 0);
         b.saveTT(bestMove, ret, depth, 0, posKey);
     }
 
@@ -325,15 +340,60 @@ void search(Bitboard &b, int depth) {
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
 
+    int alpha;
+    int beta;
+    int tempAlpha;
+    int tempBeta;
 
 
     for (int i = 1; i <= depth; i++) {
 
+        int delta = ASPIRATION_DELTA;
         nodes = 0;
         seldepth = i;
 
+        // Use aspiration window with depth >= 4
+        if (i >= 4) {
+            alpha = hashedBoard.score - delta;
+            beta = hashedBoard.score + delta;
+        }
+        else {
+            alpha = -INFINITY;
+            beta = INFINITY;
+        }
+
         auto t1 = std::chrono::high_resolution_clock::now();
-        BestMoveInfo newMove = pvSearchRoot(b, i);
+        while (true) {
+
+            pvSearchRoot(b, i, alpha, beta);
+            bool hashed = b.probeTT(posKey, hashedBoard, i, ttRet, tempAlpha, tempBeta);
+
+            if (i > 1) {
+                assert(hashed);
+            }
+
+            if (exit_thread_flag) {
+                break;
+            }
+
+            // Update the aspiration score
+            // Fail high
+            if (hashedBoard.score >= beta) {
+                beta = hashedBoard.score + delta;
+            }
+            // Fail low
+            else if (hashedBoard.score <= alpha) {
+                beta = (alpha + beta) / 2;
+                alpha = hashedBoard.score - delta;
+            }
+            // exact
+            else {
+                break;
+            }
+
+            delta += delta / 3 + 3;
+
+        }
         auto t2 = std::chrono::high_resolution_clock::now();
 
         if (exit_thread_flag) {
@@ -350,11 +410,6 @@ void search(Bitboard &b, int depth) {
             nps = (uint64_t) ((double) nodes * 1000000000.0) / ((double) diff);
         }
 
-
-        // bestMove = newMove.move;
-        int alpha = 0;
-        int beta = 0;
-        b.probeTT(posKey, hashedBoard, i, ttRet, alpha, beta);
         bestMove = hashedBoard.move;
         algMove = TO_ALG[get_move_from(bestMove)] + TO_ALG[get_move_to(bestMove)];
 
@@ -385,7 +440,8 @@ void search(Bitboard &b, int depth) {
                 break;
         }
 
-        std::cout << "info depth " << i << " seldepth " << std::abs(seldepth) - 1 + i << " score cp " << newMove.eval << " nodes " << nodes << " nps " << nps << " time " << (int) totalTime << " pv" << b.getPv() << std::endl;
+        std::cout << "info depth " << i << " seldepth " << std::abs(seldepth) - 1 + i << " score cp " << hashedBoard.score <<
+            " nodes " << nodes << " nps " << nps << " time " << (int) totalTime << " pv" << b.getPv() << std::endl;
 
     }
 
