@@ -218,6 +218,14 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove) {
             bestMove = move;
         }
 
+        if (std::abs(history[b.getSideToMove()][get_move_from(move)][get_move_to(move)]) > 600000) {
+            for (int i = 0; i < 64; i++) {
+                for (int j = 0; j < 64; j++) {
+                    history[b.getSideToMove()][i][j] /= 4;
+                }
+            }
+        }
+
         numMoves++;
     }
 
@@ -277,7 +285,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha, int beta) {
         }
 
         if (totalTime > 3000) {
-            std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber " << numMoves + 1 << std::endl;
+            std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
         if (numMoves == 0) {
@@ -300,16 +308,9 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha, int beta) {
             bestMove = move;
             if (tempRet > alpha) {
                 if (tempRet >= beta) {
-                    if ((move & MOVE_FLAGS) == QUIET_MOVES_FLAG){
-                        b.insertKiller(depth, move);
-                        history[b.getSideToMove()][get_move_from(move)][get_move_to(move)] += depth * depth;
-                    }
                     break;
                 }
                 alpha = tempRet;
-            }
-            else {
-                history[b.getSideToMove()][get_move_from(move)][get_move_to(move)] -= depth;
             }
         }
 
