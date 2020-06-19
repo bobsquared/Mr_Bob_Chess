@@ -4,6 +4,43 @@
 
 Eval::Eval() {
     InitPieceBoards();
+    InitKingZoneMask();
+}
+
+
+
+void Eval::InitKingZoneMask() {
+
+    for (int i = 0; i < 64; i++) {
+        uint64_t tempBitBoard = 0;
+        uint64_t tempBitBoard1 = 0;
+        uint64_t tempBitBoard2 = 0;
+
+        tempBitBoard = 1ULL << i;
+
+        tempBitBoard |= tempBitBoard >> 8;
+        tempBitBoard |= tempBitBoard << 8;
+
+        tempBitBoard1 |= tempBitBoard >> 1;
+        tempBitBoard1 &= ~columnMask[7];
+
+        tempBitBoard2 |= tempBitBoard << 1;
+        tempBitBoard2 &= ~columnMask[0];
+
+        tempBitBoard |= tempBitBoard1 | tempBitBoard2;
+        tempBitBoard &= ~(1ULL << i);
+
+        kingZoneMask[0][i] = tempBitBoard | (1ULL << i);
+        // kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
+        // kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
+        // kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
+
+        kingZoneMask[1][i] = tempBitBoard | (1ULL << i);
+        // kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
+        // kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
+        // kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
+    }
+
 }
 
 
@@ -98,9 +135,12 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     int ret = material[0] - material[1];
     ret += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
     ret += evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
+    ret += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
+
 
     int evalMidgame = ret;
     int evalEndgame = ret;
+
 
     evalMidgame += evaluate_piece_square_values(pieces, false, false) - evaluate_piece_square_values(pieces, false, true);
     evalEndgame += evaluate_piece_square_values(pieces, true, false) - evaluate_piece_square_values(pieces, true, true);
@@ -176,18 +216,21 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "White piece square: " << evaluate_piece_square_values(pieces, false, false) << std::endl;
     std::cout << "White trapped rook: " << evaluateTrappedRook(pieces, false) << std::endl;
     std::cout << "White mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, false) << std::endl;
+    std::cout << "White safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << "Black piece square: " << evaluate_piece_square_values(pieces, false, true) << std::endl;
     std::cout << "Black trapped rook: " << evaluateTrappedRook(pieces, true) << std::endl;
     std::cout << "Black mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, true) << std::endl;
+    std::cout << "Black safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << "All trapped rook: " << evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true) << std::endl;
     std::cout << "All piece square: " << evaluate_piece_square_values(pieces, false, false) - evaluate_piece_square_values(pieces, false, true) << std::endl;
     std::cout << "All mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true) << std::endl;
+    std::cout << "All safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
 
     int phase = TOTALPHASE;
@@ -258,6 +301,60 @@ int Eval::evaluateMobility(uint64_t *pieces, Magics *magics, uint64_t *knightMov
         piece &= piece - 1;
     }
 
+    return ret;
+}
+
+
+
+// Evaluate mobility
+int Eval::evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col) {
+
+    int ret = 0;
+    int attackers = 0;
+    uint64_t unsafeSquares = kingZoneMask[col][bitScan(pieces[10 + !col])] & ~(pawnAttacksAll(pieces[!col], !col) | knightAttacks(pieces[2 + !col]) | pieces[col]);
+
+    uint64_t piece = pieces[2 + col];
+    while (piece) {
+        int attacks = count_population(knightMoves[bitScan(piece)] & unsafeSquares);
+        if (attacks) {
+            ret += attacks * pieceAttackValue[1];
+            attackers++;
+        }
+        piece &= piece - 1;
+    }
+
+    piece = pieces[4 + col];
+    while (piece) {
+        int attacks = count_population(magics->bishopAttacksMask(occupied ^ pieces[8 + col], bitScan(piece)) & unsafeSquares);
+        if (attacks) {
+            ret += attacks * pieceAttackValue[2];
+            attackers++;
+        }
+        piece &= piece - 1;
+    }
+
+    piece = pieces[6 + col];
+    while (piece) {
+        int attacks = count_population(magics->rookAttacksMask(occupied ^ pieces[8 + col], bitScan(piece)) & unsafeSquares);
+        if (attacks) {
+            ret += attacks * pieceAttackValue[3];
+            attackers++;
+        }
+        piece &= piece - 1;
+    }
+
+    piece = pieces[8 + col];
+    while (piece) {
+        int attacks = count_population(magics->queenAttacksMask(occupied, bitScan(piece)) & unsafeSquares);
+        if (attacks) {
+            ret += attacks * pieceAttackValue[4];
+            attackers++;
+        }
+        piece &= piece - 1;
+    }
+
+    attackers = std::min(attackers, 7);
+    ret = ret * pieceAttackWeight[attackers] / 100;
     return ret;
 }
 

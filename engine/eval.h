@@ -25,16 +25,24 @@ public:
 private:
 
     void InitPieceBoards();
+    void InitKingZoneMask();
     int evaluate_piece_square_values(uint64_t *pieces, bool eg, bool col);
     int evaluateTrappedRook(uint64_t *pieces, bool col);
     int evaluateMobility(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col);
+    int evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col);
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];
+    uint64_t kingZoneMask[2][64];
 
+    // Mobility
     const int knightMobilityBonus[9] =  {-35, -25, -8, -4, 5, 8, 12, 18, 25};
     const int bishopMobilityBonus[14] = {-25, -15, 8, 12, 16, 18, 20, 25, 32, 40, 45, 47, 52, 57};
     const int rookMobilityBonus[15] =   {-32, -15, 1, 4, 5, 8, 12, 14, 15, 21, 27, 30, 34, 36, 42};
     const int queenMobilityBonus[27] =  {-15, -15, -10, -5, 12, 12, 15, 16, 18, 21, 26, 29, 35, 35, 37, 37, 42, 42, 43, 43, 49, 49, 55, 62, 66, 67, 69};
+
+    // King safety
+    const int pieceAttackValue[5] = {0, 20, 25, 42, 75};
+    const int pieceAttackWeight[8] = {0, 0, 50, 75, 88, 94, 97, 100};
 
 
 };
