@@ -85,7 +85,7 @@ void Eval::InitPieceBoards() {
 
 
 // Evaluate the position
-int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occupied) {
+int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occupied, bool col) {
 
     // Asserts for debugging mode
     #ifndef NDEBUG
@@ -136,6 +136,8 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     ret += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
     ret += evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
     ret += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
+    ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
+    ret += col? -16 : 16;
 
 
     int evalMidgame = ret;
@@ -217,6 +219,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "White trapped rook: " << evaluateTrappedRook(pieces, false) << std::endl;
     std::cout << "White mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, false) << std::endl;
     std::cout << "White safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) << std::endl;
+    std::cout << "White imbalance: " << evaluateImbalance(pieceCount, false) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -224,6 +227,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "Black trapped rook: " << evaluateTrappedRook(pieces, true) << std::endl;
     std::cout << "Black mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "Black safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
+    std::cout << "Black imbalance: " << evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -231,6 +235,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "All piece square: " << evaluate_piece_square_values(pieces, false, false) - evaluate_piece_square_values(pieces, false, true) << std::endl;
     std::cout << "All mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "All safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
+    std::cout << "All imbalance: " << evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
 
     int phase = TOTALPHASE;
@@ -377,6 +382,28 @@ int Eval::evaluateTrappedRook(uint64_t *pieces, bool col) {
             }
         }
         piece &= piece - 1;
+    }
+
+    return ret;
+}
+
+
+
+// Evaluate trapped rook
+int Eval::evaluateImbalance(int *pieceCount, bool col) {
+
+    int ret = 0;
+
+    if (pieceCount[4 + col] >= 2) {
+        ret += 54;
+    }
+
+    if (pieceCount[2 + col] >= 2) {
+        ret -= 19;
+    }
+
+    if (pieceCount[col] == 0) {
+        ret -= 87;
     }
 
     return ret;

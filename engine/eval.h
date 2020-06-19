@@ -19,7 +19,7 @@ class Eval {
 
 public:
     Eval();
-    int evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occupied);
+    int evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occupied, bool col);
     int evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occupied);
 
 private:
@@ -30,6 +30,7 @@ private:
     int evaluateTrappedRook(uint64_t *pieces, bool col);
     int evaluateMobility(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col);
     int evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col);
+    int evaluateImbalance(int *pieceCount, bool col);
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];
     uint64_t kingZoneMask[2][64];

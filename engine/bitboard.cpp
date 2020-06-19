@@ -878,7 +878,7 @@ bool Bitboard::InCheck() {
 
 // Returns the heuristic evaluation for the current position.
 int Bitboard::evaluate() {
-    return toMove? -eval->evaluate(material, pieces, magics, knightMoves, pieceCount, occupied) : eval->evaluate(material, pieces, magics, knightMoves, pieceCount, occupied);
+    return toMove? -eval->evaluate(material, pieces, magics, knightMoves, pieceCount, occupied, toMove) : eval->evaluate(material, pieces, magics, knightMoves, pieceCount, occupied, toMove);
 }
 
 
