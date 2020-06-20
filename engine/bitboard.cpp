@@ -901,7 +901,7 @@ int Bitboard::evaluate_debug() {
 bool Bitboard::isDraw() {
 
     // 50 move rule
-    if (moveHistory.move[moveHistory.count - 1].halfMoves >= 49) {
+    if (moveHistory.move[moveHistory.count - 1].halfMoves >= 100) {
         return true;
     }
 
