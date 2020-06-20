@@ -46,4 +46,8 @@ private:
     const int pieceAttackWeight[8] = {0, 0, 50, 75, 88, 94, 97, 100};
 
 
+    const int knightWeight[9] = {-35, -28, -12, -8, -4, 0, 12, 17, 27};
+    const int rookWeight[9] = {32, 26, 15, 8, 4, 0, -16, -23, -25};
+
+
 };

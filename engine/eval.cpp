@@ -394,17 +394,23 @@ int Eval::evaluateImbalance(int *pieceCount, bool col) {
 
     int ret = 0;
 
+    // Bishop pair
     if (pieceCount[4 + col] >= 2) {
         ret += 54;
     }
 
+    // Knight pair
     if (pieceCount[2 + col] >= 2) {
         ret -= 19;
     }
 
+    // Pawn count
     if (pieceCount[col] == 0) {
         ret -= 87;
     }
+
+    ret += knightWeight[pieceCount[0 + col]] * pieceCount[2 + col];
+    ret += rookWeight[pieceCount[0 + col]] * pieceCount[6 + col];
 
     return ret;
 }
