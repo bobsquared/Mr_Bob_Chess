@@ -434,6 +434,9 @@ int Eval::evaluatePawns(uint64_t *pieces, bool col) {
     int ret = 0;
     uint64_t supportedPawns = pieces[col] & pawnAttacksAll(pieces[col], col);
     uint64_t adjacentPawns = pieces[col] & adjacentMask(pieces[col]);
+    uint64_t doubledPawns = col? ((pieces[col] ^ supportedPawns) << 8) & pieces[col] : ((pieces[col] ^ supportedPawns) >> 8) & pieces[col];
+
+    ret -= 18 * count_population(doubledPawns);
 
     while (supportedPawns) {
         int bscan = bitScan(supportedPawns) / 8;
@@ -446,6 +449,7 @@ int Eval::evaluatePawns(uint64_t *pieces, bool col) {
         ret += col? (7 - bscan) * 3 : (bscan) * 3;
         adjacentPawns &= adjacentPawns - 1;
     }
+
     return ret;
 
 }
