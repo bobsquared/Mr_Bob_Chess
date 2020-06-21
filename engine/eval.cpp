@@ -64,8 +64,8 @@ void Eval::InitPieceBoards() {
             pieceSquare[10][i * 8 + j] = WHITE_KING_TABLE[(7 - i) * 8 + j];
             pieceSquare[11][i * 8 + j] = BLACK_KING_TABLE[(7 - i) * 8 + j];
 
-            pieceSquareEG[0][i * 8 + j] = WHITE_PAWN_TABLE_ENDGAME[(7 - i) * 8 + j];
-            pieceSquareEG[1][i * 8 + j] = BLACK_PAWN_TABLE_ENDGAME[(7 - i) * 8 + j];
+            pieceSquareEG[0][i * 8 + j] = WHITE_PAWN_TABLE[(7 - i) * 8 + j];
+            pieceSquareEG[1][i * 8 + j] = BLACK_PAWN_TABLE[(7 - i) * 8 + j];
             pieceSquareEG[2][i * 8 + j] = WHITE_KNIGHT_TABLE[(7 - i) * 8 + j];
             pieceSquareEG[3][i * 8 + j] = BLACK_KNIGHT_TABLE[(7 - i) * 8 + j];
             pieceSquareEG[4][i * 8 + j] = WHITE_BISHOP_TABLE[(7 - i) * 8 + j];
