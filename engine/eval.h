@@ -26,11 +26,13 @@ private:
 
     void InitPieceBoards();
     void InitKingZoneMask();
+    uint64_t adjacentMask(uint64_t pawns);
     int evaluate_piece_square_values(uint64_t *pieces, bool eg, bool col);
     int evaluateTrappedRook(uint64_t *pieces, bool col);
     int evaluateMobility(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col);
     int evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col);
     int evaluateImbalance(int *pieceCount, bool col);
+    int evaluatePawns(uint64_t *pieces, bool col);
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];
     uint64_t kingZoneMask[2][64];
@@ -45,7 +47,7 @@ private:
     const int pieceAttackValue[5] = {0, 20, 25, 42, 75};
     const int pieceAttackWeight[8] = {0, 0, 50, 75, 88, 94, 97, 100};
 
-
+    // Knight and rook weights
     const int knightWeight[9] = {-35, -28, -12, -8, -4, 0, 12, 17, 27};
     const int rookWeight[9] = {32, 26, 15, 8, 4, 0, -16, -23, -25};
 

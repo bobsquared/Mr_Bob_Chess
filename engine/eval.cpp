@@ -84,6 +84,14 @@ void Eval::InitPieceBoards() {
 
 
 
+// Find all adjacent pawns
+uint64_t Eval::adjacentMask(uint64_t pawns) {
+    uint64_t ret = (pawns << 1) & ~columnMask[0];
+    return ret | ((pawns >> 1) & ~columnMask[7]);
+}
+
+
+
 // Evaluate the position
 int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occupied, bool col) {
 
@@ -137,6 +145,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     ret += evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
     ret += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
     ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
+    ret += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
     ret += col? -16 : 16;
 
 
@@ -220,6 +229,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "White mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, false) << std::endl;
     std::cout << "White safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) << std::endl;
     std::cout << "White imbalance: " << evaluateImbalance(pieceCount, false) << std::endl;
+    std::cout << "White pawns: " << evaluatePawns(pieces, false) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -228,6 +238,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "Black mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "Black safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "Black imbalance: " << evaluateImbalance(pieceCount, true) << std::endl;
+    std::cout << "Black pawns: " << evaluatePawns(pieces, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -236,6 +247,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "All mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "All safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "All imbalance: " << evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true) << std::endl;
+    std::cout << "All pawns: " << evaluatePawns(pieces, false) - evaluatePawns(pieces, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
 
     int phase = TOTALPHASE;
@@ -389,7 +401,7 @@ int Eval::evaluateTrappedRook(uint64_t *pieces, bool col) {
 
 
 
-// Evaluate trapped rook
+// Evaluate material imbalance
 int Eval::evaluateImbalance(int *pieceCount, bool col) {
 
     int ret = 0;
@@ -413,4 +425,27 @@ int Eval::evaluateImbalance(int *pieceCount, bool col) {
     ret += rookWeight[pieceCount[0 + col]] * pieceCount[6 + col];
 
     return ret;
+}
+
+
+
+int Eval::evaluatePawns(uint64_t *pieces, bool col) {
+
+    int ret = 0;
+    uint64_t supportedPawns = pieces[col] & pawnAttacksAll(pieces[col], col);
+    uint64_t adjacentPawns = pieces[col] & adjacentMask(pieces[col]);
+
+    while (supportedPawns) {
+        int bscan = bitScan(supportedPawns) / 8;
+        ret += col? (7 - bscan) * 5 : (bscan) * 5;
+        supportedPawns &= supportedPawns - 1;
+    }
+
+    while (adjacentPawns) {
+        int bscan = bitScan(adjacentPawns) / 8;
+        ret += col? (7 - bscan) * 3 : (bscan) * 3;
+        adjacentPawns &= adjacentPawns - 1;
+    }
+    return ret;
+
 }
