@@ -5,6 +5,8 @@
 Eval::Eval() {
     InitPieceBoards();
     InitKingZoneMask();
+    InitPassedPawnsMask();
+    InitForwardBackwardMask();
 }
 
 
@@ -84,6 +86,92 @@ void Eval::InitPieceBoards() {
 
 
 
+void Eval::InitPassedPawnsMask() {
+
+  for (int i = 0; i < 64; i++) {
+
+    passedPawnMask[0][i] = 0;
+    passedPawnMask[1][i] = 0;
+
+    if (i % 8 == 0) {
+
+      if (i + 8 <= 63) {
+        passedPawnMask[0][i] |= 1ULL << (i + 8);
+        passedPawnMask[0][i] |= passedPawnMask[0][i] << 1;
+      }
+
+      if (i - 8 >= 0) {
+        passedPawnMask[1][i] |= 1ULL << (i - 8);
+        passedPawnMask[1][i] |= passedPawnMask[1][i] << 1;
+      }
+
+    }
+    else if (i % 8 == 7) {
+
+      if (i + 8 <= 63) {
+        passedPawnMask[0][i] |= 1ULL << (i + 8);
+        passedPawnMask[0][i] |= passedPawnMask[0][i] >> 1;
+      }
+
+      if (i - 8 >= 0) {
+        passedPawnMask[1][i] |= 1ULL << (i - 8);
+        passedPawnMask[1][i] |= passedPawnMask[1][i] >> 1;
+      }
+    }
+    else {
+
+      if (i + 8 <= 63) {
+        passedPawnMask[0][i] |= 1ULL << (i + 8);
+        passedPawnMask[0][i] |= passedPawnMask[0][i] << 1;
+        passedPawnMask[0][i] |= passedPawnMask[0][i] >> 1;
+      }
+
+      if (i - 8 >= 0) {
+        passedPawnMask[1][i] |= 1ULL << (i - 8);
+        passedPawnMask[1][i] |= passedPawnMask[1][i] << 1;
+        passedPawnMask[1][i] |= passedPawnMask[1][i] >> 1;
+      }
+    }
+
+    passedPawnMask[0][i] |= passedPawnMask[0][i] << 8;
+    passedPawnMask[0][i] |= passedPawnMask[0][i] << 16;
+    passedPawnMask[0][i] |= passedPawnMask[0][i] << 32;
+
+    passedPawnMask[1][i] |= passedPawnMask[1][i] >> 8;
+    passedPawnMask[1][i] |= passedPawnMask[1][i] >> 16;
+    passedPawnMask[1][i] |= passedPawnMask[1][i] >> 32;
+
+  }
+
+}
+
+
+
+// Initialize the forward and backwards masks bitboard
+void Eval::InitForwardBackwardMask() {
+
+    for (int i = 0; i < 64; i++) {
+
+        forwardMask[0][i] = 1ULL << i;
+        forwardMask[1][i] = 1ULL << i;
+
+        forwardMask[0][i] |= forwardMask[0][i] << 8;
+        forwardMask[0][i] |= forwardMask[0][i] << 16;
+        forwardMask[0][i] |= forwardMask[0][i] << 32;
+
+        forwardMask[1][i] |= forwardMask[1][i] >> 8;
+        forwardMask[1][i] |= forwardMask[1][i] >> 16;
+        forwardMask[1][i] |= forwardMask[1][i] >> 32;
+
+        forwardMask[0][i] ^= 1ULL << i;
+        forwardMask[1][i] ^= 1ULL << i;
+
+    }
+
+}
+
+
+
 // Find all adjacent pawns
 uint64_t Eval::adjacentMask(uint64_t pawns) {
     uint64_t ret = (pawns << 1) & ~columnMask[0];
@@ -146,6 +234,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     ret += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
     ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
     ret += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
+    ret += evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
     ret += col? -16 : 16;
 
 
@@ -230,6 +319,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "White safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) << std::endl;
     std::cout << "White imbalance: " << evaluateImbalance(pieceCount, false) << std::endl;
     std::cout << "White pawns: " << evaluatePawns(pieces, false) << std::endl;
+    std::cout << "White passed pawns: " << evaluatePassedPawns(pieces, false) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -239,6 +329,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "Black safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "Black imbalance: " << evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "Black pawns: " << evaluatePawns(pieces, true) << std::endl;
+    std::cout << "Black passed pawns: " << evaluatePassedPawns(pieces, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -248,6 +339,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "All safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "All imbalance: " << evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "All pawns: " << evaluatePawns(pieces, false) - evaluatePawns(pieces, true) << std::endl;
+    std::cout << "All passed pawns: " << evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
 
     int phase = TOTALPHASE;
@@ -448,6 +540,24 @@ int Eval::evaluatePawns(uint64_t *pieces, bool col) {
         int bscan = bitScan(adjacentPawns) / 8;
         ret += col? (7 - bscan) * 3 : (bscan) * 3;
         adjacentPawns &= adjacentPawns - 1;
+    }
+
+    return ret;
+
+}
+
+
+
+int Eval::evaluatePassedPawns(uint64_t *pieces, bool col) {
+
+    int ret = 0;
+    uint64_t piece = pieces[col];
+    while (piece) {
+        int bscan = bitScan(piece);
+        if ((passedPawnMask[col][bscan] & pieces[!col]) == 0 && (forwardMask[col][bscan] & pieces[col]) == 0) {
+            ret += col? (7 - (bscan / 8)) * 12 : (bscan / 8) * 12;
+        }
+        piece &= piece - 1;
     }
 
     return ret;

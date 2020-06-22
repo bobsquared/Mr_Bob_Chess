@@ -26,6 +26,8 @@ private:
 
     void InitPieceBoards();
     void InitKingZoneMask();
+    void InitPassedPawnsMask();
+    void InitForwardBackwardMask();
     uint64_t adjacentMask(uint64_t pawns);
     int evaluate_piece_square_values(uint64_t *pieces, bool eg, bool col);
     int evaluateTrappedRook(uint64_t *pieces, bool col);
@@ -33,9 +35,12 @@ private:
     int evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col);
     int evaluateImbalance(int *pieceCount, bool col);
     int evaluatePawns(uint64_t *pieces, bool col);
+    int evaluatePassedPawns(uint64_t *pieces, bool col);
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];
     uint64_t kingZoneMask[2][64];
+    uint64_t passedPawnMask[2][64];
+    uint64_t forwardMask[2][64];
 
     // Mobility
     const int knightMobilityBonus[9] =  {-35, -25, -8, -4, 5, 8, 12, 18, 25};
