@@ -43,7 +43,6 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
     while (moveList.get_next_move(move)) {
         assert(CAPTURE_FLAG & move || PROMOTION_FLAG & move);
 
-        int score = ret;
         b.make_move(move);
         if (b.InCheckOther()) {
             b.undo_move(move);
@@ -55,12 +54,15 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
             continue;
         }
 
-        ret = std::max(score, -qsearch(b, depth - 1, -beta, -alpha));
+        int score = -qsearch(b, depth - 1, -beta, -alpha);
         b.undo_move(move);
-        if (ret > alpha) {
-            alpha = score;
-            if (ret >= beta) {
-                return ret;
+        if (score > ret) {
+            ret = score;
+            if (score > alpha) {
+                alpha = score;
+                if (score >= beta) {
+                    return score;
+                }
             }
         }
 
