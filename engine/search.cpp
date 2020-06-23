@@ -369,7 +369,7 @@ void search(Bitboard &b, int depth) {
             pvSearchRoot(b, i, alpha, beta);
             bool hashed = b.probeTT(posKey, hashedBoard, i, ttRet, tempAlpha, tempBeta);
 
-            if (i > 1) {
+            if (i > 1 && !exit_thread_flag) {
                 assert(hashed);
             }
 
