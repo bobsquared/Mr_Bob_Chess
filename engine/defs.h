@@ -30,6 +30,7 @@ struct Move {
     move(move), score(score) {}
 
     bool operator<(const Move& a) const { return score > a.score; }
+    bool operator>(const Move& a) const { return score < a.score; }
 };
 
 
@@ -75,6 +76,14 @@ struct MoveList {
     void set_score_index(int index, int score) {
         assert(index < count && index >= 0);
         moveList[index].score = score;
+    }
+
+    void set_score_move(MOVE move, int score) {
+        for (int i = 0; i < count; i++) {
+            if (moveList[i].move == move) {
+                moveList[i].score = score;
+            }
+        }
     }
 
 };

@@ -260,12 +260,12 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove) {
 
 
 
-BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha, int beta) {
+BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, int beta) {
 
     nodes++;
     MOVE move;
     MOVE bestMove = 0;
-    MoveList moveList;
+    // MoveList moveList;
     int numMoves = 0;
     int prevAlpha = alpha;
     int ret = -INFINITY;
@@ -276,7 +276,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha, int beta) {
     bool ttRet = false;
     b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta);
 
-    b.generate(moveList, depth, hashedBoard.move);
+    // b.generate(moveList, depth, hashedBoard.move);
     while (moveList.get_next_move(move)) {
 
         int tempRet;
@@ -335,6 +335,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha, int beta) {
 void search(Bitboard &b, int depth) {
 
     MOVE bestMove;
+    MoveList moveList;
     std::string algMove;
     uint64_t nps;
     totalTime = 0;
@@ -348,10 +349,11 @@ void search(Bitboard &b, int depth) {
     int tempAlpha;
     int tempBeta;
 
-
+    b.generate(moveList, 0, NO_MOVE);
     for (int i = 1; i <= depth; i++) {
 
         int delta = ASPIRATION_DELTA;
+        int aspNum = 0;
         nodes = 0;
         seldepth = i;
 
@@ -368,12 +370,14 @@ void search(Bitboard &b, int depth) {
         auto t1 = std::chrono::high_resolution_clock::now();
         while (true) {
 
-            pvSearchRoot(b, i, alpha, beta);
+            pvSearchRoot(b, i, moveList, alpha, beta);
             bool hashed = b.probeTT(posKey, hashedBoard, i, ttRet, tempAlpha, tempBeta);
 
             if (i > 1 && !exit_thread_flag) {
                 assert(hashed);
             }
+
+            moveList.set_score_move(hashedBoard.move, 1400000 + (i * 100) + aspNum);
 
             if (exit_thread_flag) {
                 break;
@@ -394,6 +398,7 @@ void search(Bitboard &b, int depth) {
                 break;
             }
 
+            aspNum++;
             delta += delta / 3 + 3;
 
         }
