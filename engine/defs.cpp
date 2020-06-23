@@ -90,31 +90,6 @@ void InitHistory() {
 
 
 
-// Initialize the forward and backwards masks bitboard
-void InitForwardBackwardMask() {
-
-    for (int i = 0; i < 64; i++) {
-
-        forwardMask[i] = 1ULL << i;
-        backwardMask[i] = 1ULL << i;
-
-        forwardMask[i] |= forwardMask[i] << 8;
-        forwardMask[i] |= forwardMask[i] << 16;
-        forwardMask[i] |= forwardMask[i] << 32;
-
-        backwardMask[i] |= backwardMask[i] >> 8;
-        backwardMask[i] |= backwardMask[i] >> 16;
-        backwardMask[i] |= backwardMask[i] >> 32;
-
-        forwardMask[i] ^= 1ULL << i;
-        backwardMask[i] ^= 1ULL << i;
-
-    }
-
-}
-
-
-
 // All pawn attacks
 // Useful for obtaining bitboard for multiple pawn attacks
 uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag) {
