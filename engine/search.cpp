@@ -25,13 +25,17 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
         return 0;
     }
 
-    int stand_pat = b.evaluate();
-    if (stand_pat >= beta) {
-        return stand_pat;
-    }
+    bool inCheck = b.InCheck();
+    int stand_pat = inCheck? -9999 + depth : 0;
+    if (!inCheck) {
+        stand_pat = b.evaluate();
+        if (stand_pat >= beta) {
+            return stand_pat;
+        }
 
-    if (alpha < stand_pat) {
-        alpha = stand_pat;
+        if (alpha < stand_pat) {
+            alpha = stand_pat;
+        }
     }
 
     MOVE move;
@@ -39,9 +43,9 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
     int ret = -INFINITY;
     int numMoves = 0;
 
-    b.generate_captures_promotions(moveList, NO_MOVE);
+    inCheck? b.generate(moveList, 0, NO_MOVE) : b.generate_captures_promotions(moveList, NO_MOVE);
     while (moveList.get_next_move(move)) {
-        assert(CAPTURE_FLAG & move || PROMOTION_FLAG & move);
+        // assert(CAPTURE_FLAG & move || PROMOTION_FLAG & move);
 
         b.make_move(move);
         if (b.InCheckOther()) {
@@ -49,7 +53,9 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
             continue;
         }
 
-        if ((move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
+
+        numMoves++;
+        if ((move & MOVE_FLAGS) != QUIET_MOVES_FLAG && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
             b.undo_move(move);
             continue;
         }
@@ -66,7 +72,6 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
             }
         }
 
-        numMoves++;
     }
 
 

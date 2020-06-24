@@ -231,7 +231,6 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     int ret = material[0] - material[1];
     ret += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
     ret += evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
-    ret += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
     ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
     ret += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
     ret += evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
@@ -243,6 +242,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
 
 
     evalMidgame += evaluate_piece_square_values(pieces, false, false) - evaluate_piece_square_values(pieces, false, true);
+    evalMidgame += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
     evalEndgame += evaluate_piece_square_values(pieces, true, false) - evaluate_piece_square_values(pieces, true, true);
 
     int phase = TOTALPHASE;
@@ -463,6 +463,9 @@ int Eval::evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightM
     }
 
     attackers = std::min(attackers, 7);
+    if (pieces[8 + col] == 0) {
+        ret = 0;
+    }
     ret = ret * pieceAttackWeight[attackers] / 100;
     return ret;
 }
