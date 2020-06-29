@@ -55,10 +55,10 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
 
 
         numMoves++;
-        if ((move & MOVE_FLAGS) != QUIET_MOVES_FLAG && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
-            b.undo_move(move);
-            continue;
-        }
+        // if ((move & MOVE_FLAGS) != QUIET_MOVES_FLAG && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
+        //     b.undo_move(move);
+        //     continue;
+        // }
 
         int score = -qsearch(b, depth - 1, -beta, -alpha);
         b.undo_move(move);
