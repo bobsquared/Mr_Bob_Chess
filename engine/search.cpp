@@ -36,6 +36,10 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
         if (alpha < stand_pat) {
             alpha = stand_pat;
         }
+
+        if (stand_pat < alpha - pieceValues[4]) {
+            return stand_pat;
+        }
     }
 
     MOVE move;
