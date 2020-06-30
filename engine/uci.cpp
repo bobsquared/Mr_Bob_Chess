@@ -2,17 +2,25 @@
 
 
 
+UCI::UCI() {}
+
 // Prints the commands
-void uciCommand() {
-    std::cout << "id name " << "Mr Bob" << " " << "0.6.0" << std::endl;
-    std::cout << "id author Vincent Yu" << std::endl;
+void UCI::startMessage() {
+    std::cout << NAME << " " << VERSION << " UCI chess engine by " << AUTHOR << std::endl;
+}
+
+
+// Prints the commands
+void UCI::uciCommand() {
+    std::cout << "id name " << NAME << " " << VERSION << std::endl;
+    std::cout << "id author " << AUTHOR << std::endl;
     std::cout << "uciok" << std::endl;
 }
 
 
 
 // Prints the commands
-void readyCommand() {
+void UCI::readyCommand() {
     std::cout << "readyok" << std::endl;
 }
 
@@ -20,7 +28,7 @@ void readyCommand() {
 
 // Universal Chess Interface position startpos moves command
 // Moves the pieces on the board according to the command.
-void startPosMoves(Bitboard & b, std::string moves) {
+void UCI::startPosMoves(Bitboard & b, std::string moves) {
 
     // Make all the moves.
     while (moves.find(' ') != std::string::npos) {

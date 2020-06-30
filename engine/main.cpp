@@ -15,12 +15,13 @@ int main() {
     InitRowsMask();
     InitHistory();
     Bitboard pos = Bitboard();
+    UCI uci = UCI();
 
     std::regex r2("go\\swtime\\s(\\d+)\\sbtime\\s(\\d+)");
     std::thread thr;
 
     // Initial print
-    std::cout << "Mr Bob" << " " << "0.6.0" << " UCI engine by Vincent Yu" << std::endl;
+    uci.startMessage();
 
     // Forever loop of awesomeness
     while (1) {
@@ -40,13 +41,13 @@ int main() {
 
         // Give reply for isready
         if (command == "isready") {
-            readyCommand();
+            uci.readyCommand();
             continue;
         }
 
         // Print engine info, with manditory uciok at the end
         if (command == "uci") {
-            uciCommand();
+            uci.uciCommand();
             continue;
         }
 
@@ -102,7 +103,7 @@ int main() {
         // Make all moves in the list
         if (command.substr(0, 24) == "position startpos moves ") {
             pos.reset();
-            startPosMoves(pos, command.substr(24, command.size() - 24));
+            uci.startPosMoves(pos, command.substr(24, command.size() - 24));
             continue;
         }
 
@@ -112,7 +113,7 @@ int main() {
             pos.setPosFen(command.substr(13, indexMoves));
 
             if (indexMoves != std::string::npos) {
-                startPosMoves(pos, command.substr(indexMoves, command.size() - indexMoves));
+                uci.startPosMoves(pos, command.substr(indexMoves, command.size() - indexMoves));
             }
             continue;
         }
