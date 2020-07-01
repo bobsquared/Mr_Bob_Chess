@@ -13,7 +13,7 @@
 #define TOTALPHASE (PAWNPHASE * 16 + KNIGHTPHASE * 4 + BISHOPPHASE * 4 + ROOKPHASE * 4 + QUEENPHASE * 2)
 
 
-const int pieceValues[6] = {100, 320, 350, 500, 900, 2000};
+const int pieceValues[6] = {100, 320, 350, 550, 900, 2000};
 
 class Eval {
 

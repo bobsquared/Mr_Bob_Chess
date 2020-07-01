@@ -503,7 +503,7 @@ int Eval::evaluateImbalance(int *pieceCount, bool col) {
 
     // Bishop pair
     if (pieceCount[4 + col] >= 2) {
-        ret += 54;
+        ret += 35;
     }
 
     // Knight pair
