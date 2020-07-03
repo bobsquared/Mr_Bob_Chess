@@ -141,7 +141,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove) {
     }
 
 
-    if (canNullMove && !isCheck && depth >= 2 && b.nullMoveable()) {
+    if (!isPv && canNullMove && !isCheck && eval >= beta && depth >= 2 && b.nullMoveable()) {
         int R = 3 + depth / 8;
         b.make_move(NULL_MOVE);
         int nullRet = -pvSearch(b, depth - R - 1, -beta, -beta + 1, false);
