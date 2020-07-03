@@ -56,10 +56,10 @@ void MovePick::scoreMoves(MoveList &moveList, int *pieceAt, int depth, bool col,
         else if (move & PROMOTION_FLAG) {
             moveList.set_score_index(i, 1000000);
         }
-        else if ((move & MOVE_BITS) == (killers[col][depth][0] & MOVE_BITS)) {
+        else if (killers[col][depth][0] == move) {
             moveList.set_score_index(i, 900000);
         }
-        else if ((move & MOVE_BITS) == (killers[col][depth][1] & MOVE_BITS)) {
+        else if (killers[col][depth][1] == move) {
             moveList.set_score_index(i, 800000);
         }
         else {
