@@ -5,6 +5,7 @@
 uint64_t nodes;
 double totalTime;
 int seldepth;
+int height;
 std::atomic<bool> exit_thread_flag;
 
 
@@ -87,7 +88,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
 
 
 
-int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove) {
+int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int height) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
@@ -127,14 +128,16 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove) {
     // Get the hash key
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
-    b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta);
+    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta);
 
     if (ttRet) {
         return hashedBoard.score;
     }
 
 
-    int eval = b.evaluate();
+    int eval = hashed? hashedBoard.score : b.evaluate();
+    evalStack[height] = eval;
+    bool improving = height >= 2? eval > evalStack[height - 2] : false;
     bool isCheck = b.InCheck();
     if (!isPv && !isCheck && depth == 1 && eval - 220 >= beta &&  eval < 5000) {
         return eval;
@@ -144,7 +147,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove) {
     if (!isPv && canNullMove && !isCheck && eval >= beta && depth >= 2 && b.nullMoveable()) {
         int R = 3 + depth / 8;
         b.make_move(NULL_MOVE);
-        int nullRet = -pvSearch(b, depth - R - 1, -beta, -beta + 1, false);
+        int nullRet = -pvSearch(b, depth - R - 1, -beta, -beta + 1, false, height + 1);
         b.undo_move(NULL_MOVE);
 
         if (nullRet >= beta && nullRet < 9000) {
@@ -171,36 +174,36 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove) {
 
         int newDepth = depth + extension;
         if (numMoves == 0) {
-            score = -pvSearch(b, newDepth - 1, -beta, -alpha, true);
+            score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
         }
         else if (depth >= 3 && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0 && !isCheck && !giveCheck && !extension) {
             int lmr = 1;
 
-            if (numMoves > 6) {
-                lmr += 1;
-            }
+            // if (numMoves > 6) {
+            //     lmr += 1;
+            // }
 
             if (numMoves > 14) {
                 lmr += 1;
             }
 
-            if (isPv) {
-                lmr -= 2;
-            }
+            lmr += !improving;
+            lmr -= 2 * isPv;
 
-            lmr = std::max(lmr, 0);
-            score = -pvSearch(b, newDepth - 1 - lmr, -alpha - 1, -alpha, true);
+
+            lmr = std::min(depth - 1, std::max(lmr, 0));
+            score = -pvSearch(b, newDepth - 1 - lmr, -alpha - 1, -alpha, true, height + 1);
             if (score > alpha) {
-                score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true);
+                score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true, height + 1);
                 if (score > alpha && score < beta) {
-                    score = -pvSearch(b, newDepth - 1, -beta, -alpha, true);
+                    score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
                 }
             }
         }
         else {
-            score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true);
+            score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true, height + 1);
             if (score > alpha && score < beta) {
-                score = -pvSearch(b, newDepth - 1, -beta, -alpha, true);
+                score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
             }
         }
         b.undo_move(move);
@@ -278,13 +281,16 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     int numMoves = 0;
     int prevAlpha = alpha;
     int ret = -INFINITY;
+    int height = 0;
 
     // Transposition table for duplicate detection:
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta);
+    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta);
 
+    int eval = hashed? hashedBoard.score : b.evaluate();
+    evalStack[height] = eval;
     // b.generate(moveList, depth, hashedBoard.move);
     while (moveList.get_next_move(move)) {
 
@@ -300,12 +306,12 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
         }
 
         if (numMoves == 0) {
-            tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true);
+            tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, height + 1);
         }
         else {
-            tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true);
+            tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, height + 1);
             if (tempRet > alpha && tempRet < beta) {
-                tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true);
+                tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, height + 1);
             }
         }
         b.undo_move(move);

@@ -6,6 +6,7 @@ uint64_t forwardMask[64];
 uint64_t backwardMask[64];
 int history[2][64][64];
 MOVE killers[2][1024][2];
+int evalStack[1024];
 
 
 // Algebra to number

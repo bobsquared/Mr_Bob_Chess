@@ -138,6 +138,7 @@ const std::string TO_ALG[64] = {
 // Algebra to number
 extern std::unordered_map<std::string, uint8_t> TO_NUM;
 
+extern int evalStack[1024];
 extern int history[2][64][64];
 extern MOVE killers[2][1024][2];
 extern uint64_t columnMask[64];
