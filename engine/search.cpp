@@ -302,6 +302,8 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
             continue;
         }
 
+        numMoves++;
+
         if (totalTime > 3000) {
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
@@ -332,9 +334,11 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
             }
         }
 
-        numMoves++;
     }
 
+    if (numMoves == 0) {
+        exit_thread_flag = true;
+    }
 
     if (!exit_thread_flag) {
         assert(alpha >= prevAlpha);
