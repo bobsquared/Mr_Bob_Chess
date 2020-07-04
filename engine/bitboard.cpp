@@ -1120,8 +1120,18 @@ bool Bitboard::getSideToMove() {
 
 // Insert killer moves into array
 void Bitboard::insertKiller(int depth, MOVE move) {
+    if (killers[toMove][depth][0] == move) {
+        return;
+    }
     killers[toMove][depth][1] = killers[toMove][depth][0];
     killers[toMove][depth][0] = move;
+}
+
+
+
+// Checks to see if a move (opposite side) is a killer move
+bool Bitboard::isKiller(int depth, MOVE move) {
+    return killers[!toMove][depth][0] == move || killers[!toMove][depth][1] == move? true : false;
 }
 
 

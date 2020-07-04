@@ -62,6 +62,7 @@ public:
     bool nullMoveable();
     int seeCapture(MOVE capture);
     bool isRepetition();
+    bool isKiller(int depth, MOVE move);
 
 
 private:

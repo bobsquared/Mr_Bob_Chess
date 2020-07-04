@@ -187,6 +187,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
                 lmr += 1;
             }
 
+            lmr -= b.isKiller(depth, move);
             lmr += !improving;
             lmr -= 2 * isPv;
 
