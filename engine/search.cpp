@@ -157,7 +157,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
 
 
-    b.generate(moveList, depth, hashedBoard.move);
+    b.generate(moveList, height, hashedBoard.move);
     while (moveList.get_next_move(move)) {
         int score;
         b.make_move(move);
@@ -187,7 +187,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
                 lmr += 1;
             }
 
-            lmr -= b.isKiller(depth, move);
+            lmr -= b.isKiller(height, move);
             lmr += !improving;
             lmr -= 2 * isPv;
 
@@ -218,7 +218,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             if (score > alpha) {
                 if (score >= beta) {
                     if (((move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0)){
-                        b.insertKiller(depth, move);
+                        b.insertKiller(height, move);
                         history[b.getSideToMove()][get_move_from(move)][get_move_to(move)] += depth * depth;
                     }
                     assert(move != 0);
