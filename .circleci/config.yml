@@ -9,6 +9,6 @@ jobs:
     steps:
       - checkout
       - run: test.py
-          command: |
+          command:
             py test.py
           name: Test
