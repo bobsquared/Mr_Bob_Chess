@@ -13,7 +13,7 @@ public:
 private:
 
     const std::string NAME = "Mr Bob";
-    const std::string VERSION = "v0.6.0";
+    const std::string VERSION = "v0.6.1";
     const std::string AUTHOR = "Vincent Yu";
 
 };
