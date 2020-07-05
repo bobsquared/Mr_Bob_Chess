@@ -8,7 +8,7 @@ jobs:
     executor: python/default
     steps:
       - checkout
-      - run: test.py
-          command:
+      - run:
+          command: |
             py test.py
           name: Test
