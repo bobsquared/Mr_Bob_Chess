@@ -26,6 +26,15 @@ void UCI::readyCommand() {
 
 
 
+// New game has started, clear hash, killers, histories, etc.
+void UCI::newGameCommand(Bitboard &b) {
+    InitHistory();
+    InitKillers();
+    b.clearHashTable();
+}
+
+
+
 // Universal Chess Interface position startpos moves command
 // Moves the pieces on the board according to the command.
 void UCI::startPosMoves(Bitboard & b, std::string moves) {

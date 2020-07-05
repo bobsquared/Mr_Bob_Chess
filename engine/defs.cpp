@@ -91,6 +91,21 @@ void InitHistory() {
 
 
 
+// Initialize the history
+void InitKillers() {
+
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 1024; j++) {
+            for (int k = 0; k < 2; k++) {
+                killers[i][j][k] = 0;
+            }
+        }
+    }
+
+}
+
+
+
 // All pawn attacks
 // Useful for obtaining bitboard for multiple pawn attacks
 uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag) {

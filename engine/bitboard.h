@@ -59,6 +59,7 @@ public:
     void saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key);
     void debugZobristHash();
     void clearHashStats();
+    void clearHashTable();
     int getHashFull();
 
     bool nullMoveable();

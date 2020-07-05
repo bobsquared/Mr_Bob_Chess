@@ -19,6 +19,7 @@ public:
     bool probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta);
     int getHashFull();
     void clearHashStats();
+    void clearHashTable();
     ZobristVal getHashValue(uint64_t posKey);
 
 

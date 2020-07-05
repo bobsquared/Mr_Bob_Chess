@@ -150,6 +150,7 @@ extern int bitScan(const uint64_t bitboard);
 extern void InitHistory();
 extern void InitColumnsMask();
 extern void InitRowsMask();
+extern void InitKillers();
 extern uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag);
 extern uint64_t knightAttacks(uint64_t knights);
 extern int count_population(uint64_t bitboard);

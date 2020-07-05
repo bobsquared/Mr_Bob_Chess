@@ -11,9 +11,7 @@ TranspositionTable::TranspositionTable() {
     hashTable = new ZobristVal [numHashes];
     halfMove = 1;
 
-    for (uint64_t i = 0; i < numHashes; i++) {
-        hashTable[i] = ZobristVal();
-    }
+    clearHashTable();
 
     ttHits = 0;
     ttCalls = 0;
@@ -99,13 +97,23 @@ int TranspositionTable::getHashFull() {
 
 
 
-// Print hash table statistics
+// Clear the statistics
 void TranspositionTable::clearHashStats() {
 
     ttHits = 0;
     ttCalls = 0;
 
     ttOverwrites = 0;
-    // ttWrites = 0;
 
+}
+
+
+
+// Clear hash table
+void TranspositionTable::clearHashTable() {
+    for (uint64_t i = 0; i < numHashes; i++) {
+        hashTable[i] = ZobristVal();
+    }
+    clearHashStats();
+    ttWrites = 0;
 }

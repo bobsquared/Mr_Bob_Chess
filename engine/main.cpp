@@ -45,6 +45,11 @@ int main() {
             continue;
         }
 
+        if (command == "ucinewgame") {
+            uci.newGameCommand(pos);
+            continue;
+        }
+
         // Print engine info, with manditory uciok at the end
         if (command == "uci") {
             uci.uciCommand();

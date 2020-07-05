@@ -9,6 +9,7 @@ public:
     void uciCommand();
     void readyCommand();
     void startPosMoves(Bitboard & b, std::string moves);
+    void newGameCommand(Bitboard &b);
 
 private:
 
