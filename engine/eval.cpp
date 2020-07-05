@@ -7,6 +7,7 @@ Eval::Eval() {
     InitKingZoneMask();
     InitPassedPawnsMask();
     InitForwardBackwardMask();
+    InitDistanceArray();
 }
 
 
@@ -167,6 +168,24 @@ void Eval::InitForwardBackwardMask() {
         forwardMask[1][i] ^= 1ULL << i;
 
     }
+
+}
+
+
+
+// Initialize the distance arrays
+void Eval::InitDistanceArray() {
+
+  for (int i = 0; i < 64; i++) {
+    for (int j = 0; j < 64; j++) {
+      int colI = i % 8;
+      int rowI = i / 8;
+      int colJ = j % 8;
+      int rowJ = j / 8;
+      manhattanArray[i][j] = std::abs(colI - colJ) + std::abs(rowI - rowJ);
+      chebyshevArray[i][j] = std::max(abs(colI - colJ), std::abs(rowI - rowJ));
+    }
+  }
 
 }
 
@@ -418,6 +437,10 @@ int Eval::evaluateMobility(uint64_t *pieces, Magics *magics, uint64_t *knightMov
 // Evaluate mobility
 int Eval::evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col) {
 
+    if (pieces[8 + col] == 0) {
+        return 0;
+    }
+
     int ret = 0;
     int attackers = 0;
     uint64_t unsafeSquares = kingZoneMask[col][bitScan(pieces[10 + !col])] & ~(pawnAttacksAll(pieces[!col], !col) | knightAttacks(pieces[2 + !col]) | pieces[col]);
@@ -463,9 +486,6 @@ int Eval::evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightM
     }
 
     attackers = std::min(attackers, 7);
-    if (pieces[8 + col] == 0) {
-        ret = 0;
-    }
     ret = ret * pieceAttackWeight[attackers] / 100;
     return ret;
 }
