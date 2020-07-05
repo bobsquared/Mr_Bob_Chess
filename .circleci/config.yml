@@ -5,8 +5,10 @@ version: 2.1
 jobs:
   # Name the workflow "test"
   build:
-    docker:
-      - image: circleci/node:8.9.0
+    executor: python/default
     steps:
       - checkout
       - run: test.py
+          command: |
+            py test.py
+          name: Test
