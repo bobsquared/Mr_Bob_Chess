@@ -369,6 +369,8 @@ void search(Bitboard &b, int depth) {
     int tempAlpha;
     int tempBeta;
 
+    b.clearHashStats();
+
     b.generate(moveList, 0, NO_MOVE);
     for (int i = 1; i <= depth; i++) {
 
@@ -469,7 +471,7 @@ void search(Bitboard &b, int depth) {
         }
 
         std::cout << "info depth " << i << " seldepth " << std::abs(seldepth) - 1 + i << " score cp " << hashedBoard.score <<
-            " nodes " << nodes << " nps " << nps << " time " << (int) totalTime << " pv" << b.getPv() << std::endl;
+            " nodes " << nodes << " nps " << nps << " hashfull " << b.getHashFull() << " time " << (int) totalTime << " pv" << b.getPv() << std::endl;
 
     }
 

@@ -963,6 +963,20 @@ void Bitboard::saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t ke
 
 
 
+// Save the current searched position into the transposition table
+int Bitboard::getHashFull() {
+    return tt->getHashFull();
+}
+
+
+
+// Save the current searched position into the transposition table
+void Bitboard::clearHashStats() {
+    tt->clearHashStats();
+}
+
+
+
 // Return the principal variation as a string.
 // It returns the string as a list of moves, (ex. 'e2e4 e7e5 d2d4 e5d4')
 std::string Bitboard::getPv() {

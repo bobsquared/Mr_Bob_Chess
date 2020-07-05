@@ -58,6 +58,8 @@ public:
     bool probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta);
     void saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key);
     void debugZobristHash();
+    void clearHashStats();
+    int getHashFull();
 
     bool nullMoveable();
     int seeCapture(MOVE capture);

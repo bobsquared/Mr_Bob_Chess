@@ -17,11 +17,12 @@ public:
 
     void saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key);
     bool probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta);
-    void getHashStats();
+    int getHashFull();
+    void clearHashStats();
     ZobristVal getHashValue(uint64_t posKey);
 
 
-    
+
 private:
 
     int halfMove;

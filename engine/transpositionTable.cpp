@@ -35,8 +35,12 @@ TranspositionTable::~TranspositionTable() {
 // Save the position into the transposition table
 // Currently using: Always Replace
 void TranspositionTable::saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key) {
-    ttWrites++;
     uint64_t posKey = key % numHashes;
+
+    if (hashTable[posKey].posKey == 0) {
+        ttWrites++;
+    }
+
     hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, halfMove);
 }
 
@@ -89,15 +93,19 @@ ZobristVal TranspositionTable::getHashValue(uint64_t posKey) {
 
 
 // Print hash table statistics
-void TranspositionTable::getHashStats() {
+int TranspositionTable::getHashFull() {
+    return (1000 * ttWrites) / numHashes;
+}
 
-    std::cout << "ttHitRate: " << (double) ttHits / (double) ttCalls << " " << ttHits << " " << ttCalls << std::endl;
-    std::cout << "ttOverwriteRate: " << (double) ttOverwrites / (double) ttWrites << " " << ttOverwrites << " " << ttWrites << std::endl;
+
+
+// Print hash table statistics
+void TranspositionTable::clearHashStats() {
 
     ttHits = 0;
     ttCalls = 0;
 
     ttOverwrites = 0;
-    ttWrites = 0;
+    // ttWrites = 0;
 
 }
