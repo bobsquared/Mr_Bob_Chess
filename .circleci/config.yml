@@ -5,6 +5,8 @@ version: 2.1
 jobs:
   # Name the workflow "test"
   test:
+    docker:
+      - image: circleci/node:8.9.0
     steps:
       - checkout
       - run: test.py
