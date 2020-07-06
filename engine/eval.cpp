@@ -299,7 +299,6 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
     ret += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
     ret += evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
-    ret += evaluateOutposts(pieces, false) - evaluateOutposts(pieces, true);
     ret += col? -16 : 16;
 
 
@@ -603,6 +602,15 @@ int Eval::evaluatePawns(uint64_t *pieces, bool col) {
 
     ret -= 18 * count_population(doubledPawns);
 
+    uint64_t piece = pieces[col] & (!supportedPawns & !adjacentPawns);
+    while (piece) {
+        int bscan = bitScan(piece);
+        if ((isolatedPawnMask[bscan] & pieces[col]) == 0) {
+            ret -= 12;
+        }
+        piece &= piece - 1;
+    }
+
     while (supportedPawns) {
         int bscan = bitScan(supportedPawns) / 8;
         ret += col? (7 - bscan) * 5 : (bscan) * 5;
@@ -639,6 +647,7 @@ int Eval::evaluatePassedPawns(uint64_t *pieces, bool col) {
 
 
 
+// ELO LOSS FOR NOW????
 int Eval::evaluateOutposts(uint64_t *pieces, bool col) {
 
     int ret = 0;
