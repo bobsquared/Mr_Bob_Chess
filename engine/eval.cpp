@@ -8,6 +8,8 @@ Eval::Eval() {
     InitPassedPawnsMask();
     InitForwardBackwardMask();
     InitDistanceArray();
+    InitIsolatedPawnsMask();
+    InitOutpostMask();
 }
 
 
@@ -191,6 +193,50 @@ void Eval::InitDistanceArray() {
 
 
 
+// Initialize the Isolated Pawns arrays
+void Eval::InitIsolatedPawnsMask() {
+
+  for (int i = 0; i < 64; i++) {
+
+    isolatedPawnMask[i] = 0;
+
+    if (i % 8 == 0) {
+      isolatedPawnMask[i] |= 1ULL << (i + 1);
+    }
+    else if (i % 8 == 7) {
+      isolatedPawnMask[i] |= 1ULL << (i - 1);
+    }
+    else {
+      isolatedPawnMask[i] |= 1ULL << (i + 1);
+      isolatedPawnMask[i] |= 1ULL << (i - 1);
+    }
+
+    isolatedPawnMask[i] |= isolatedPawnMask[i] << 8;
+    isolatedPawnMask[i] |= isolatedPawnMask[i] << 16;
+    isolatedPawnMask[i] |= isolatedPawnMask[i] << 32;
+
+    isolatedPawnMask[i] |= isolatedPawnMask[i] >> 8;
+    isolatedPawnMask[i] |= isolatedPawnMask[i] >> 16;
+    isolatedPawnMask[i] |= isolatedPawnMask[i] >> 32;
+
+  }
+
+}
+
+
+
+// Initialize the Outpost detection mask arrays
+void Eval::InitOutpostMask() {
+
+  for (int i = 0; i < 64; i++) {
+    outpostMask[0][i] = isolatedPawnMask[i] & passedPawnMask[0][i];
+    outpostMask[1][i] = isolatedPawnMask[i] & passedPawnMask[1][i];
+  }
+
+}
+
+
+
 // Find all adjacent pawns
 uint64_t Eval::adjacentMask(uint64_t pawns) {
     uint64_t ret = (pawns << 1) & ~columnMask[0];
@@ -253,6 +299,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
     ret += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
     ret += evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
+    ret += evaluateOutposts(pieces, false) - evaluateOutposts(pieces, true);
     ret += col? -16 : 16;
 
 
@@ -339,6 +386,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "White imbalance: " << evaluateImbalance(pieceCount, false) << std::endl;
     std::cout << "White pawns: " << evaluatePawns(pieces, false) << std::endl;
     std::cout << "White passed pawns: " << evaluatePassedPawns(pieces, false) << std::endl;
+    std::cout << "White outposts: " << evaluateOutposts(pieces, false) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -349,6 +397,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "Black imbalance: " << evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "Black pawns: " << evaluatePawns(pieces, true) << std::endl;
     std::cout << "Black passed pawns: " << evaluatePassedPawns(pieces, true) << std::endl;
+    std::cout << "Black outposts: " << evaluateOutposts(pieces, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -359,6 +408,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "All imbalance: " << evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "All pawns: " << evaluatePawns(pieces, false) - evaluatePawns(pieces, true) << std::endl;
     std::cout << "All passed pawns: " << evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true) << std::endl;
+    std::cout << "All outposts: " << evaluateOutposts(pieces, false) - evaluateOutposts(pieces, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
 
     int phase = TOTALPHASE;
@@ -581,6 +631,26 @@ int Eval::evaluatePassedPawns(uint64_t *pieces, bool col) {
             ret += col? (7 - (bscan / 8)) * 12 : (bscan / 8) * 12;
         }
         piece &= piece - 1;
+    }
+
+    return ret;
+
+}
+
+
+
+int Eval::evaluateOutposts(uint64_t *pieces, bool col) {
+
+    int ret = 0;
+    uint64_t piece = pieces[2 + col];
+    uint64_t holes = pawnAttacksAll(pieces[col], col);
+
+    while (holes) {
+        int bscan = bitScan(holes);
+        if ((outpostMask[col][bscan] & pieces[!col]) == 0 && (piece & (1ULL << bscan))) {
+            ret += outpostPotential[col][bscan];
+        }
+        holes &= holes - 1;
     }
 
     return ret;
