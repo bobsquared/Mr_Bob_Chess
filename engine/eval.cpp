@@ -285,20 +285,22 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     ret += evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
     ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
     ret += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
-    ret += evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
     ret += col? -16 : 16;
 
 
     int evalMidgame = ret;
     int evalEndgame = ret;
     int pieceSquareEval = evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true);
+    int passedPawnsEval = evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
 
     evalMidgame += MGVAL(material[0] - material[1]);
     evalMidgame += MGVAL(pieceSquareEval);
     evalMidgame += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
+    evalMidgame += MGVAL(passedPawnsEval);
 
     evalEndgame += EGVAL(material[0] - material[1]);
     evalEndgame += EGVAL(pieceSquareEval);
+    evalEndgame += EGVAL(passedPawnsEval);
 
     int phase = TOTALPHASE;
     phase -= (pieceCount[0] + pieceCount[1]) * PAWNPHASE;
@@ -625,7 +627,7 @@ int Eval::evaluatePassedPawns(uint64_t *pieces, bool col) {
     while (piece) {
         int bscan = bitScan(piece);
         if ((passedPawnMask[col][bscan] & pieces[!col]) == 0 && (forwardMask[col][bscan] & pieces[col]) == 0) {
-            ret += col? (7 - (bscan / 8)) * 12 : (bscan / 8) * 12;
+            ret += col? passedPawnWeight[(7 - (bscan / 8))] : passedPawnWeight[(bscan / 8)];
         }
         piece &= piece - 1;
     }

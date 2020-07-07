@@ -88,5 +88,8 @@ private:
     const int knightWeight[9] = {-35, -28, -12, -8, -4, 0, 12, 17, 27};
     const int rookWeight[9] = {32, 26, 15, 8, 4, 0, -16, -23, -25};
 
+    // Passed Pawn weights
+    const int passedPawnWeight[7] = {S(0, 0), S(6, 12), S(8, 15), S(9, 16), S(32, 38), S(87, 96), S(122, 125)};
+
 
 };
