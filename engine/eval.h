@@ -38,7 +38,7 @@ private:
     void InitIsolatedPawnsMask();
     void InitOutpostMask();
     uint64_t adjacentMask(uint64_t pawns);
-    int evaluate_piece_square_values(uint64_t *pieces, bool eg, bool col);
+    int evaluate_piece_square_values(uint64_t *pieces, bool col);
     int evaluateTrappedRook(uint64_t *pieces, bool col);
     int evaluateMobility(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col);
     int evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col);

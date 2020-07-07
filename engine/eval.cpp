@@ -56,31 +56,18 @@ void Eval::InitPieceBoards() {
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
 
-            pieceSquare[0][i * 8 + j] = WHITE_PAWN_TABLE[(7 - i) * 8 + j];
-            pieceSquare[1][i * 8 + j] = BLACK_PAWN_TABLE[(7 - i) * 8 + j];
-            pieceSquare[2][i * 8 + j] = WHITE_KNIGHT_TABLE[(7 - i) * 8 + j];
-            pieceSquare[3][i * 8 + j] = BLACK_KNIGHT_TABLE[(7 - i) * 8 + j];
-            pieceSquare[4][i * 8 + j] = WHITE_BISHOP_TABLE[(7 - i) * 8 + j];
-            pieceSquare[5][i * 8 + j] = BLACK_BISHOP_TABLE[(7 - i) * 8 + j];
-            pieceSquare[6][i * 8 + j] = WHITE_ROOK_TABLE[(7 - i) * 8 + j];
-            pieceSquare[7][i * 8 + j] = BLACK_ROOK_TABLE[(7 - i) * 8 + j];
-            pieceSquare[8][i * 8 + j] = WHITE_QUEEN_TABLE[(7 - i) * 8 + j];
-            pieceSquare[9][i * 8 + j] = BLACK_QUEEN_TABLE[(7 - i) * 8 + j];
-            pieceSquare[10][i * 8 + j] = WHITE_KING_TABLE[(7 - i) * 8 + j];
-            pieceSquare[11][i * 8 + j] = BLACK_KING_TABLE[(7 - i) * 8 + j];
-
-            pieceSquareEG[0][i * 8 + j] = WHITE_PAWN_TABLE[(7 - i) * 8 + j];
-            pieceSquareEG[1][i * 8 + j] = BLACK_PAWN_TABLE[(7 - i) * 8 + j];
-            pieceSquareEG[2][i * 8 + j] = WHITE_KNIGHT_TABLE[(7 - i) * 8 + j];
-            pieceSquareEG[3][i * 8 + j] = BLACK_KNIGHT_TABLE[(7 - i) * 8 + j];
-            pieceSquareEG[4][i * 8 + j] = WHITE_BISHOP_TABLE[(7 - i) * 8 + j];
-            pieceSquareEG[5][i * 8 + j] = BLACK_BISHOP_TABLE[(7 - i) * 8 + j];
-            pieceSquareEG[6][i * 8 + j] = WHITE_ROOK_TABLE[(7 - i) * 8 + j];
-            pieceSquareEG[7][i * 8 + j] = BLACK_ROOK_TABLE[(7 - i) * 8 + j];
-            pieceSquareEG[8][i * 8 + j] = WHITE_QUEEN_TABLE[(7 - i) * 8 + j];
-            pieceSquareEG[9][i * 8 + j] = BLACK_QUEEN_TABLE[(7 - i) * 8 + j];
-            pieceSquareEG[10][i * 8 + j] = WHITE_KING_TABLE_EG[(7 - i) * 8 + j];
-            pieceSquareEG[11][i * 8 + j] = BLACK_KING_TABLE_EG[(7 - i) * 8 + j];
+            pieceSquare[0][i * 8 + j] = S(WHITE_PAWN_TABLE[(7 - i) * 8 + j], WHITE_PAWN_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[1][i * 8 + j] = S(BLACK_PAWN_TABLE[(7 - i) * 8 + j], BLACK_PAWN_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[2][i * 8 + j] = S(WHITE_KNIGHT_TABLE[(7 - i) * 8 + j], WHITE_KNIGHT_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[3][i * 8 + j] = S(BLACK_KNIGHT_TABLE[(7 - i) * 8 + j], BLACK_KNIGHT_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[4][i * 8 + j] = S(WHITE_BISHOP_TABLE[(7 - i) * 8 + j], WHITE_BISHOP_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[5][i * 8 + j] = S(BLACK_BISHOP_TABLE[(7 - i) * 8 + j], BLACK_BISHOP_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[6][i * 8 + j] = S(WHITE_ROOK_TABLE[(7 - i) * 8 + j], WHITE_ROOK_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[7][i * 8 + j] = S(BLACK_ROOK_TABLE[(7 - i) * 8 + j], BLACK_ROOK_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[8][i * 8 + j] = S(WHITE_QUEEN_TABLE[(7 - i) * 8 + j], WHITE_QUEEN_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[9][i * 8 + j] = S(BLACK_QUEEN_TABLE[(7 - i) * 8 + j], BLACK_QUEEN_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[10][i * 8 + j] = S(WHITE_KING_TABLE[(7 - i) * 8 + j], WHITE_KING_TABLE_EG[(7 - i) * 8 + j]);
+            pieceSquare[11][i * 8 + j] = S(BLACK_KING_TABLE[(7 - i) * 8 + j], BLACK_KING_TABLE_EG[(7 - i) * 8 + j]);
 
         }
     }
@@ -304,13 +291,14 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
 
     int evalMidgame = ret;
     int evalEndgame = ret;
+    int pieceSquareEval = evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true);
 
     evalMidgame += MGVAL(material[0] - material[1]);
-    evalMidgame += evaluate_piece_square_values(pieces, false, false) - evaluate_piece_square_values(pieces, false, true);
+    evalMidgame += MGVAL(pieceSquareEval);
     evalMidgame += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
 
     evalEndgame += EGVAL(material[0] - material[1]);
-    evalEndgame += evaluate_piece_square_values(pieces, true, false) - evaluate_piece_square_values(pieces, true, true);
+    evalEndgame += EGVAL(pieceSquareEval);
 
     int phase = TOTALPHASE;
     phase -= (pieceCount[0] + pieceCount[1]) * PAWNPHASE;
@@ -380,7 +368,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     int evalEndgame = ret;
 
     std::cout << "----------------------------------------------------------" << std::endl;
-    std::cout << "White piece square: " << evaluate_piece_square_values(pieces, false, false) << std::endl;
+    std::cout << "White piece square: " << evaluate_piece_square_values(pieces, false) << std::endl;
     std::cout << "White trapped rook: " << evaluateTrappedRook(pieces, false) << std::endl;
     std::cout << "White mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, false) << std::endl;
     std::cout << "White safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) << std::endl;
@@ -391,7 +379,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
-    std::cout << "Black piece square: " << evaluate_piece_square_values(pieces, false, true) << std::endl;
+    std::cout << "Black piece square: " << evaluate_piece_square_values(pieces, true) << std::endl;
     std::cout << "Black trapped rook: " << evaluateTrappedRook(pieces, true) << std::endl;
     std::cout << "Black mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "Black safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
@@ -403,7 +391,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << "All trapped rook: " << evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true) << std::endl;
-    std::cout << "All piece square: " << evaluate_piece_square_values(pieces, false, false) - evaluate_piece_square_values(pieces, false, true) << std::endl;
+    std::cout << "All piece square: " << evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true) << std::endl;
     std::cout << "All mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "All safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "All imbalance: " << evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true) << std::endl;
@@ -428,16 +416,15 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
 
 
 // Evaluate piece square values
-int Eval::evaluate_piece_square_values(uint64_t *pieces, bool eg, bool col) {
+int Eval::evaluate_piece_square_values(uint64_t *pieces, bool col) {
 
     int ret = 0;
     uint64_t piece;
-    int (*psqtb)[64] = eg? pieceSquareEG : pieceSquare;
 
     for (int i = col; i < 12; i += 2) {
         piece = pieces[i];
         while (piece) {
-            ret += psqtb[i][bitScan(piece)];
+            ret += pieceSquare[i][bitScan(piece)];
             piece &= piece - 1;
         }
     }
