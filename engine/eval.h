@@ -92,7 +92,7 @@ private:
     const int passedPawnWeight[7] = {S(0, 0), S(6, 12), S(8, 15), S(9, 16), S(32, 38), S(87, 96), S(122, 125)};
 
     // Supported and adjacent pawn weights
-    const int supportedPawnWeight[7] = {S(0, 0), S(0, 0), S(12, 25), S(15, 38), S(20, 42), S(32, 88), S(94, 115)};
+    const int supportedPawnWeight[7] = {S(0, 0), S(0, 0), S(12, 17), S(15, 19), S(20, 25), S(32, 40), S(53, 62)};
     const int adjacentPawnWeight[7]  = {S(0, 0), S(3, 12), S(7, 21), S(9, 22), S(13, 25), S(18, 32), S(20, 34)};
 
 
