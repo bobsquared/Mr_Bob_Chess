@@ -38,7 +38,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
             alpha = stand_pat;
         }
 
-        if (stand_pat < alpha - pieceValues[4]) {
+        if (stand_pat < alpha - EGVAL(pieceValues[4])) {
             return stand_pat;
         }
     }

@@ -257,13 +257,13 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     int rookCount = count_population(pieces[6]);
     int queenCount = count_population(pieces[8]);
     int kingCount = count_population(pieces[10]);
-    debugMaterialCount += pawnCount * pieceValues[0];
-    debugMaterialCount += knightCount * pieceValues[1];
-    debugMaterialCount += bishopCount * pieceValues[2];
-    debugMaterialCount += rookCount * pieceValues[3];
-    debugMaterialCount += queenCount * pieceValues[4];
-    debugMaterialCount += kingCount * pieceValues[5];
-    assert(debugMaterialCount == material[0]);
+    debugMaterialCount += pawnCount * MGVAL(pieceValues[0]);
+    debugMaterialCount += knightCount * MGVAL(pieceValues[1]);
+    debugMaterialCount += bishopCount * MGVAL(pieceValues[2]);
+    debugMaterialCount += rookCount * MGVAL(pieceValues[3]);
+    debugMaterialCount += queenCount * MGVAL(pieceValues[4]);
+    debugMaterialCount += kingCount * MGVAL(pieceValues[5]);
+    assert(debugMaterialCount == MGVAL(material[0]));
     assert(pawnCount == pieceCount[0]);
     assert(knightCount == pieceCount[2]);
     assert(bishopCount == pieceCount[4]);
@@ -277,13 +277,13 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     rookCount = count_population(pieces[7]);
     queenCount = count_population(pieces[9]);
     kingCount = count_population(pieces[11]);
-    debugMaterialCount = pawnCount * pieceValues[0];
-    debugMaterialCount += knightCount * pieceValues[1];
-    debugMaterialCount += bishopCount * pieceValues[2];
-    debugMaterialCount += rookCount * pieceValues[3];
-    debugMaterialCount += queenCount * pieceValues[4];
-    debugMaterialCount += kingCount * pieceValues[5];
-    assert(debugMaterialCount == material[1]);
+    debugMaterialCount = pawnCount * EGVAL(pieceValues[0]);
+    debugMaterialCount += knightCount * EGVAL(pieceValues[1]);
+    debugMaterialCount += bishopCount * EGVAL(pieceValues[2]);
+    debugMaterialCount += rookCount * EGVAL(pieceValues[3]);
+    debugMaterialCount += queenCount * EGVAL(pieceValues[4]);
+    debugMaterialCount += kingCount * EGVAL(pieceValues[5]);
+    assert(debugMaterialCount == EGVAL(material[1]));
     assert(pawnCount == pieceCount[1]);
     assert(knightCount == pieceCount[3]);
     assert(bishopCount == pieceCount[5]);
@@ -293,7 +293,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     #endif
 
 
-    int ret = material[0] - material[1];
+    int ret = 0;
     ret += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
     ret += evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
     ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
@@ -305,9 +305,11 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     int evalMidgame = ret;
     int evalEndgame = ret;
 
-
+    evalMidgame += MGVAL(material[0] - material[1]);
     evalMidgame += evaluate_piece_square_values(pieces, false, false) - evaluate_piece_square_values(pieces, false, true);
     evalMidgame += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
+
+    evalEndgame += EGVAL(material[0] - material[1]);
     evalEndgame += evaluate_piece_square_values(pieces, true, false) - evaluate_piece_square_values(pieces, true, true);
 
     int phase = TOTALPHASE;
@@ -336,13 +338,13 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     int rookCount = count_population(pieces[6]);
     int queenCount = count_population(pieces[8]);
     int kingCount = count_population(pieces[10]);
-    debugMaterialCount += pawnCount * pieceValues[0];
-    debugMaterialCount += knightCount * pieceValues[1];
-    debugMaterialCount += bishopCount * pieceValues[2];
-    debugMaterialCount += rookCount * pieceValues[3];
-    debugMaterialCount += queenCount * pieceValues[4];
-    debugMaterialCount += kingCount * pieceValues[5];
-    assert(debugMaterialCount == material[0]);
+    debugMaterialCount += pawnCount * MGVAL(pieceValues[0]);
+    debugMaterialCount += knightCount * MGVAL(pieceValues[1]);
+    debugMaterialCount += bishopCount * MGVAL(pieceValues[2]);
+    debugMaterialCount += rookCount * MGVAL(pieceValues[3]);
+    debugMaterialCount += queenCount * MGVAL(pieceValues[4]);
+    debugMaterialCount += kingCount * MGVAL(pieceValues[5]);
+    assert(debugMaterialCount == MGVAL(material[0]));
     assert(pawnCount == pieceCount[0]);
     assert(knightCount == pieceCount[2]);
     assert(bishopCount == pieceCount[4]);
@@ -356,13 +358,13 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     rookCount = count_population(pieces[7]);
     queenCount = count_population(pieces[9]);
     kingCount = count_population(pieces[11]);
-    debugMaterialCount = pawnCount * pieceValues[0];
-    debugMaterialCount += knightCount * pieceValues[1];
-    debugMaterialCount += bishopCount * pieceValues[2];
-    debugMaterialCount += rookCount * pieceValues[3];
-    debugMaterialCount += queenCount * pieceValues[4];
-    debugMaterialCount += kingCount * pieceValues[5];
-    assert(debugMaterialCount == material[1]);
+    debugMaterialCount = pawnCount * EGVAL(pieceValues[0]);
+    debugMaterialCount += knightCount * EGVAL(pieceValues[1]);
+    debugMaterialCount += bishopCount * EGVAL(pieceValues[2]);
+    debugMaterialCount += rookCount * EGVAL(pieceValues[3]);
+    debugMaterialCount += queenCount * EGVAL(pieceValues[4]);
+    debugMaterialCount += kingCount * EGVAL(pieceValues[5]);
+    assert(debugMaterialCount == EGVAL(material[1]));
     assert(pawnCount == pieceCount[1]);
     assert(knightCount == pieceCount[3]);
     assert(bishopCount == pieceCount[5]);
@@ -372,7 +374,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     #endif
 
 
-    int ret = material[0] - material[1];
+    int ret = MGVAL(material[0] - material[1]);
 
     int evalMidgame = ret;
     int evalEndgame = ret;

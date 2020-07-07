@@ -13,7 +13,12 @@
 #define TOTALPHASE (PAWNPHASE * 16 + KNIGHTPHASE * 4 + BISHOPPHASE * 4 + ROOKPHASE * 4 + QUEENPHASE * 2)
 
 
-const int pieceValues[6] = {100, 315, 320, 525, 1025, 2000};
+#define S(mg, eg) ((int)((unsigned int)(mg) << 16) + (eg))
+#define MGVAL(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
+#define EGVAL(s) ((int16_t)((uint16_t)((unsigned)((s)))))
+
+
+const int pieceValues[6] = {S(85, 100), S(305, 305), S(315, 315), S(475, 535), S(925, 985), S(2000, 2000)};
 
 class Eval {
 
