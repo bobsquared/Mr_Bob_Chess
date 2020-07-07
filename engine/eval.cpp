@@ -284,7 +284,6 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     ret += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
     ret += evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
     ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
-    ret += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
     ret += col? -16 : 16;
 
 
@@ -292,15 +291,18 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     int evalEndgame = ret;
     int pieceSquareEval = evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true);
     int passedPawnsEval = evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
+    int pawnsEval = evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
 
     evalMidgame += MGVAL(material[0] - material[1]);
     evalMidgame += MGVAL(pieceSquareEval);
     evalMidgame += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
     evalMidgame += MGVAL(passedPawnsEval);
+    evalMidgame += MGVAL(pawnsEval);
 
     evalEndgame += EGVAL(material[0] - material[1]);
     evalEndgame += EGVAL(pieceSquareEval);
     evalEndgame += EGVAL(passedPawnsEval);
+    evalEndgame += EGVAL(pawnsEval);
 
     int phase = TOTALPHASE;
     phase -= (pieceCount[0] + pieceCount[1]) * PAWNPHASE;
@@ -591,26 +593,27 @@ int Eval::evaluatePawns(uint64_t *pieces, bool col) {
     uint64_t adjacentPawns = pieces[col] & adjacentMask(pieces[col]);
     uint64_t doubledPawns = col? ((pieces[col] ^ supportedPawns) << 8) & pieces[col] : ((pieces[col] ^ supportedPawns) >> 8) & pieces[col];
 
-    ret -= 18 * count_population(doubledPawns);
+    int doubledPawnsCount = count_population(doubledPawns);
+    ret -= S(18 * doubledPawnsCount, 18 * doubledPawnsCount);
 
     uint64_t piece = pieces[col] & (!supportedPawns & !adjacentPawns);
     while (piece) {
         int bscan = bitScan(piece);
         if ((isolatedPawnMask[bscan] & pieces[col]) == 0) {
-            ret -= 12;
+            ret -= S(12, 12);
         }
         piece &= piece - 1;
     }
 
     while (supportedPawns) {
         int bscan = bitScan(supportedPawns) / 8;
-        ret += col? (7 - bscan) * 5 : (bscan) * 5;
+        ret += supportedPawnWeight[col? 7 - bscan : bscan];
         supportedPawns &= supportedPawns - 1;
     }
 
     while (adjacentPawns) {
         int bscan = bitScan(adjacentPawns) / 8;
-        ret += col? (7 - bscan) * 3 : (bscan) * 3;
+        ret += adjacentPawnWeight[col? 7 - bscan : bscan];
         adjacentPawns &= adjacentPawns - 1;
     }
 
