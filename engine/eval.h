@@ -97,6 +97,7 @@ private:
 
     // Doubled pawns and isolated pawns
     const int doublePawnValue = S(18, 12);
+    const int isolatedPawnValue = S(10, 16);
 
 
 };

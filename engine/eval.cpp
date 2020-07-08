@@ -599,7 +599,7 @@ int Eval::evaluatePawns(uint64_t *pieces, bool col) {
     while (piece) {
         int bscan = bitScan(piece);
         if ((isolatedPawnMask[bscan] & pieces[col]) == 0) {
-            ret -= S(12, 12);
+            ret -= isolatedPawnValue;
         }
         piece &= piece - 1;
     }
