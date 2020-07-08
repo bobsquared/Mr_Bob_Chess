@@ -282,7 +282,6 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
 
     int ret = 0;
     ret += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
-    ret += evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
     ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
     ret += col? -16 : 16;
 
@@ -292,17 +291,20 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     int pieceSquareEval = evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true);
     int passedPawnsEval = evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
     int pawnsEval = evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
+    int mobilityEval = evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
 
     evalMidgame += MGVAL(material[0] - material[1]);
     evalMidgame += MGVAL(pieceSquareEval);
     evalMidgame += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
     evalMidgame += MGVAL(passedPawnsEval);
     evalMidgame += MGVAL(pawnsEval);
+    evalMidgame += MGVAL(mobilityEval);
 
     evalEndgame += EGVAL(material[0] - material[1]);
     evalEndgame += EGVAL(pieceSquareEval);
     evalEndgame += EGVAL(passedPawnsEval);
     evalEndgame += EGVAL(pawnsEval);
+    evalMidgame += EGVAL(mobilityEval);
 
     int phase = TOTALPHASE;
     phase -= (pieceCount[0] + pieceCount[1]) * PAWNPHASE;
@@ -449,7 +451,7 @@ int Eval::evaluateMobility(uint64_t *pieces, Magics *magics, uint64_t *knightMov
 
     uint64_t piece = pieces[2 + col];
     while (piece) {
-        ret += knightMobilityBonus[count_population(knightMoves[bitScan(piece)]) & ~minorUnsafe];
+        ret += knightMobilityBonus[count_population(knightMoves[bitScan(piece)] & ~minorUnsafe)];
         piece &= piece - 1;
     }
 
