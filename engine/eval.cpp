@@ -593,8 +593,7 @@ int Eval::evaluatePawns(uint64_t *pieces, bool col) {
     uint64_t adjacentPawns = pieces[col] & adjacentMask(pieces[col]);
     uint64_t doubledPawns = col? ((pieces[col] ^ supportedPawns) << 8) & pieces[col] : ((pieces[col] ^ supportedPawns) >> 8) & pieces[col];
 
-    int doubledPawnsCount = count_population(doubledPawns);
-    ret -= S(18 * doubledPawnsCount, 18 * doubledPawnsCount);
+    ret -= doublePawnValue * count_population(doubledPawns);
 
     uint64_t piece = pieces[col] & (!supportedPawns & !adjacentPawns);
     while (piece) {
