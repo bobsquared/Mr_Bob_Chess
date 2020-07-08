@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <cassert>
 
-#define HASH_SIZE 2048
+#define HASH_SIZE 256
 #define MAX_NUM_MOVES 256
 
 #define FROM_LOC_MOVE ((1ULL << 15) | (1ULL << 14) | (1ULL << 13) | (1ULL << 12) | (1ULL << 11) | (1ULL << 10))

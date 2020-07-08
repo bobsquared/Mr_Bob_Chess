@@ -17,4 +17,4 @@ endif
 CXX := main.cpp bitboard.cpp magic_bitboards.cpp defs.cpp dumb7flooding.cpp movegen.cpp perft.cpp eval.cpp search.cpp uci.cpp movepick.cpp zobrist_hashing.cpp transpositionTable.cpp
 
 all: $(CXX)
-	g++ -O3 $(CXXFLAGS) -o "Mr Bob" $(CXX)
+	g++ -O3 $(CXXFLAGS) -o "bob" $(CXX)
