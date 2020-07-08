@@ -1020,6 +1020,34 @@ std::string Bitboard::getPv() {
         if (hashedBoard.posKey == posKey) {
             movesToUndo.push(hashedBoard.move);
             pv += " " + TO_ALG[get_move_from(hashedBoard.move)] + TO_ALG[get_move_to(hashedBoard.move)];
+
+            switch (hashedBoard.move & MOVE_FLAGS) {
+                case QUEEN_PROMOTION_FLAG:
+                    pv += "q";
+                    break;
+                case QUEEN_PROMOTION_CAPTURE_FLAG:
+                    pv += "q";
+                    break;
+                case ROOK_PROMOTION_FLAG:
+                    pv += "r";
+                    break;
+                case ROOK_PROMOTION_CAPTURE_FLAG:
+                    pv += "r";
+                    break;
+                case BISHOP_PROMOTION_FLAG:
+                    pv += "b";
+                    break;
+                case BISHOP_PROMOTION_CAPTURE_FLAG:
+                    pv += "b";
+                    break;
+                case KNIGHT_PROMOTION_FLAG:
+                    pv += "n";
+                    break;
+                case KNIGHT_PROMOTION_CAPTURE_FLAG:
+                    pv += "n";
+                    break;
+            }
+            
             make_move(hashedBoard.move);
         }
         else {
