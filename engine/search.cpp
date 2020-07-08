@@ -108,6 +108,12 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         }
     }
 
+    if (beta > 0 && b.noPotentialWin()) {
+        if (alpha >= 0) {
+            return 0;
+        }
+    }
+
     if (depth <= 0) {
         return qsearch(b, depth - 1, alpha, beta);
     }

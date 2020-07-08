@@ -48,6 +48,7 @@ public:
     int evaluate();
     int evaluate_debug();
     bool isDraw();
+    bool noPotentialWin();
 
     void reset();
     bool getSideToMove();

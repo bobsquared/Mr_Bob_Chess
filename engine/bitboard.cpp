@@ -925,6 +925,22 @@ bool Bitboard::isDraw() {
 
 
 
+// Returns true if there are no potential win material (only knight, only bishop)
+bool Bitboard::noPotentialWin() {
+
+    if (pieceCount[toMove] + pieceCount[6 + toMove] + pieceCount[8 + toMove] > 0) {
+        return false;
+    }
+
+    if (pieceCount[2 + toMove] + pieceCount[4 + toMove] == 1) {
+        return true;
+    }
+
+    return false;
+}
+
+
+
 // Determines if there is one repetition in the position
 bool Bitboard::isRepetition() {
     if (std::count(moveHistory.move, moveHistory.move + moveHistory.count, posKey) >= 1) {
