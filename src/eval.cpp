@@ -282,7 +282,6 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
 
     int ret = 0;
     ret += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
-    ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
     ret += col? -16 : 16;
 
 
@@ -292,6 +291,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     int passedPawnsEval = evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
     int pawnsEval = evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
     int mobilityEval = evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
+    int imbalanceEval = evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
 
     evalMidgame += MGVAL(material[0] - material[1]);
     evalMidgame += MGVAL(pieceSquareEval);
@@ -299,12 +299,14 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     evalMidgame += MGVAL(passedPawnsEval);
     evalMidgame += MGVAL(pawnsEval);
     evalMidgame += MGVAL(mobilityEval);
+    evalMidgame += MGVAL(imbalanceEval);
 
     evalEndgame += EGVAL(material[0] - material[1]);
     evalEndgame += EGVAL(pieceSquareEval);
     evalEndgame += EGVAL(passedPawnsEval);
     evalEndgame += EGVAL(pawnsEval);
-    evalMidgame += EGVAL(mobilityEval);
+    evalEndgame += EGVAL(mobilityEval);
+    evalEndgame += EGVAL(imbalanceEval);
 
     int phase = TOTALPHASE;
     phase -= (pieceCount[0] + pieceCount[1]) * PAWNPHASE;
@@ -567,17 +569,17 @@ int Eval::evaluateImbalance(int *pieceCount, bool col) {
 
     // Bishop pair
     if (pieceCount[4 + col] >= 2) {
-        ret += 35;
+        ret += S(35, 35);
     }
 
     // Knight pair
     if (pieceCount[2 + col] >= 2) {
-        ret -= 19;
+        ret -= S(19, 19);
     }
 
     // Pawn count
     if (pieceCount[col] == 0) {
-        ret -= 87;
+        ret -= S(87, 87);
     }
 
     ret += knightWeight[pieceCount[0 + col]] * pieceCount[2 + col];
