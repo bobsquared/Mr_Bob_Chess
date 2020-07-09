@@ -87,7 +87,7 @@ private:
     const int pieceAttackWeight[8] = {0, 0, 50, 75, 88, 94, 97, 100};
 
     // Knight and rook weights
-    const int knightWeight[9] = {S(-35, -35), S(-28, -28), S(-12, -12), S(-8, -8), S(-4, -4), S(0, 0), S(12, 12), S(17, 17), S(27, 27)};
+    const int knightWeight[9] = {S(-35, -37), S(-28, -26), S(-12, -10), S(-8, -3), S(-4, 0), S(0, 2), S(12, 14), S(17, 15), S(27, 26)};
     const int rookWeight[9] = {S(32, 25), S(26, 20), S(15, 12), S(8, 2), S(4, 0), S(0, -12), S(-16, -28), S(-23, -34), S(-25, -35)};
 
     // Passed Pawn weights
