@@ -173,7 +173,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         }
 
 
-        if (depth == 1 && numMoves > 0 && !giveCheck && !isCheck && !isPv && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0 && eval + 250 + 220 * improving <= alpha && alpha < 9000) {
+        if (depth == 1 && numMoves > 0 && !giveCheck && !isCheck && !isPv && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0 && eval + 215 + 186 * improving <= alpha && alpha < 9000) {
             numMoves++;
             continue;
         }
