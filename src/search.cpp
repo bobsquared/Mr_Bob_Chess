@@ -162,21 +162,28 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
 
-
     b.generate(moveList, height, hashedBoard.move);
     while (moveList.get_next_move(move)) {
         int score;
-        b.make_move(move);
-        if (b.InCheckOther()) {
-            b.undo_move(move);
-            continue;
-        }
 
         int extension = 0;
         bool giveCheck = b.InCheck();
         if (giveCheck) {
             extension = 1;
         }
+
+
+        if (depth == 1 && numMoves > 0 && !giveCheck && !isCheck && !isPv && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0 && eval + 250 + 220 * improving <= alpha && alpha < 9000) {
+            numMoves++;
+            continue;
+        }
+
+        b.make_move(move);
+        if (b.InCheckOther()) {
+            b.undo_move(move);
+            continue;
+        }
+
 
         int newDepth = depth + extension;
         if (numMoves == 0) {
@@ -246,6 +253,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
                 }
             }
         }
+
 
         numMoves++;
     }
