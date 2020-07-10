@@ -14,6 +14,7 @@ int main() {
     InitColumnsMask();
     InitRowsMask();
     InitHistory();
+    InitLateMoveArray();
     Bitboard pos = Bitboard();
     UCI uci = UCI();
 

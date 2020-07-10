@@ -9,6 +9,16 @@ int height;
 std::atomic<bool> exit_thread_flag;
 
 
+int lmrReduction[64][64];
+void InitLateMoveArray() {
+    for (int i = 0; i < 64; i++) {
+        for (int j = 0; j < 64; j++) {
+            lmrReduction[i][j] = (exp(2) * log(i) * log(j) + 12) / (exp(exp(1)));
+        }
+    }
+}
+
+
 
 int qsearch(Bitboard &b, int depth, int alpha, int beta) {
 
@@ -45,7 +55,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
 
     MOVE move;
     MoveList moveList;
-    int ret = -INFINITY;
+    int ret = -INFINITY_VAL;
     int numMoves = 0;
 
     inCheck? b.generate(moveList, 0, NO_MOVE) : b.generate_captures_promotions(moveList, NO_MOVE);
@@ -124,7 +134,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     MOVE bestMove;
     MoveList moveList;
 
-    int ret = -INFINITY;
+    int ret = -INFINITY_VAL;
     int numMoves = 0;
     int prevAlpha = alpha;
     bool isPv = alpha == beta - 1? false : true;
@@ -190,20 +200,11 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
         }
         else if (depth >= 3 && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0 && !isCheck && !giveCheck && !extension) {
-            int lmr = 1;
-
-            // if (numMoves > 6) {
-            //     lmr += 1;
-            // }
-
-            if (numMoves > 14) {
-                lmr += 1;
-            }
+            int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
 
             lmr -= b.isKiller(height, move);
             lmr += !improving;
             lmr -= 2 * isPv;
-
 
             lmr = std::min(depth - 1, std::max(lmr, 0));
             score = -pvSearch(b, newDepth - 1 - lmr, -alpha - 1, -alpha, true, height + 1);
@@ -295,7 +296,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     // MoveList moveList;
     int numMoves = 0;
     int prevAlpha = alpha;
-    int ret = -INFINITY;
+    int ret = -INFINITY_VAL;
     int height = 0;
 
     // Transposition table for duplicate detection:
@@ -399,8 +400,8 @@ void search(Bitboard &b, int depth) {
             beta = hashedBoard.score + delta;
         }
         else {
-            alpha = -INFINITY;
-            beta = INFINITY;
+            alpha = -INFINITY_VAL;
+            beta = INFINITY_VAL;
         }
 
         auto t1 = std::chrono::high_resolution_clock::now();
