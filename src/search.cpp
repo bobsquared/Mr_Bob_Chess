@@ -29,7 +29,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
     bool inCheck = b.InCheck();
     int stand_pat = inCheck? -9999 + depth : 0;
     if (!inCheck) {
-        stand_pat = b.evaluate();
+        stand_pat = std::max(alpha, b.evaluate());
         if (stand_pat >= beta) {
             return stand_pat;
         }
@@ -123,7 +123,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     MOVE move;
     MOVE bestMove;
     MoveList moveList;
-    bool ttRet = false;
+
     int ret = -INFINITY;
     int numMoves = 0;
     int prevAlpha = alpha;
@@ -134,6 +134,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     // Get the hash key
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
+    bool ttRet = false;
     bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta);
 
     if (ttRet) {
@@ -145,7 +146,8 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     evalStack[height] = eval;
     bool improving = height >= 2? eval > evalStack[height - 2] : false;
     bool isCheck = b.InCheck();
-    if (!isPv && !isCheck && depth == 1 && eval - 220 >= beta &&  eval < 5000) {
+
+    if (!isPv && !isCheck && depth == 1 && eval - 220 >= beta && eval < 9000) {
         return eval;
     }
 
@@ -172,7 +174,6 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             extension = 1;
         }
 
-
         if (depth == 1 && numMoves > 0 && !giveCheck && !isCheck && !isPv && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0 && eval + 215 <= alpha && alpha < 9000) {
             numMoves++;
             continue;
@@ -183,7 +184,6 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             b.undo_move(move);
             continue;
         }
-
 
         int newDepth = depth + extension;
         if (numMoves == 0) {
