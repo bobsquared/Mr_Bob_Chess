@@ -326,6 +326,18 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
         if (numMoves == 0) {
             tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, height + 1);
         }
+        else if (depth >= 3 && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
+            int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
+
+            lmr = std::min(depth - 1, std::max(lmr, 0));
+            tempRet = -pvSearch(b, depth - 1 - lmr, -alpha - 1, -alpha, true, height + 1);
+            if (tempRet > alpha) {
+                tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, height + 1);
+                if (tempRet > alpha && tempRet < beta) {
+                    tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, height + 1);
+                }
+            }
+        }
         else {
             tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, height + 1);
             if (tempRet > alpha && tempRet < beta) {
