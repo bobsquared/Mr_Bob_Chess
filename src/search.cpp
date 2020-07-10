@@ -307,7 +307,6 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
 
     int eval = hashed? hashedBoard.score : b.evaluate();
     evalStack[height] = eval;
-    // b.generate(moveList, depth, hashedBoard.move);
     while (moveList.get_next_move(move)) {
 
         int tempRet;
@@ -317,10 +316,8 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
             continue;
         }
 
-        numMoves++;
-
         if (totalTime > 3000) {
-            std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves << std::endl;
+            std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
         if (numMoves == 0) {
@@ -345,6 +342,8 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
             }
         }
         b.undo_move(move);
+
+        numMoves++;
 
         if (exit_thread_flag) {
             break;
