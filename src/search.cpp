@@ -70,7 +70,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
 
 
         numMoves++;
-        // if ((move & MOVE_FLAGS) != QUIET_MOVES_FLAG && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
+        // if (!inCheck && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
         //     b.undo_move(move);
         //     continue;
         // }
@@ -157,7 +157,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     bool improving = height >= 2? eval > evalStack[height - 2] : false;
     bool isCheck = b.InCheck();
 
-    if (!isPv && !isCheck && depth == 1 && eval - 220 >= beta && eval < 9000) {
+    if (!isPv && !isCheck && depth <= 3 && eval - 220 * depth >= beta && eval < 9000) {
         return eval;
     }
 
