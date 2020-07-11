@@ -1047,7 +1047,7 @@ std::string Bitboard::getPv() {
                     pv += "n";
                     break;
             }
-            
+
             make_move(hashedBoard.move);
         }
         else {
@@ -1136,15 +1136,15 @@ int Bitboard::seeCapture(MOVE capture) {
     bool isWhite = toMove;
 
     if ((capture & MOVE_FLAGS) == ENPASSANT_FLAG) {
-        gain[d] = pieceValues[0];
+        gain[d] = EGVAL(pieceValues[0]);
     }
     else {
-        gain[d] = pieceAt[to] == -1? 0 : pieceValues[pieceAt[to] / 2];
+        gain[d] = pieceAt[to] == -1? 0 : EGVAL(pieceValues[pieceAt[to] / 2]);
     }
 
     do {
         d++;
-        gain[d] = pieceValues[aPiece / 2] - gain[d - 1];
+        gain[d] = EGVAL(pieceValues[aPiece / 2]) - gain[d - 1];
         isWhite = !isWhite;
 
         if (std::max(-gain[d - 1], gain[d]) < 0) {
