@@ -292,6 +292,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     int pawnsEval = evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
     int mobilityEval = evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
     int imbalanceEval = evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
+    int knightsEval = evaluateKnights(pieces, false) - evaluateKnights(pieces, true);
 
     evalMidgame += MGVAL(material[0] - material[1]);
     evalMidgame += MGVAL(pieceSquareEval);
@@ -300,6 +301,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     evalMidgame += MGVAL(pawnsEval);
     evalMidgame += MGVAL(mobilityEval);
     evalMidgame += MGVAL(imbalanceEval);
+    evalMidgame += MGVAL(knightsEval);
 
     evalEndgame += EGVAL(material[0] - material[1]);
     evalEndgame += EGVAL(pieceSquareEval);
@@ -307,6 +309,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     evalEndgame += EGVAL(pawnsEval);
     evalEndgame += EGVAL(mobilityEval);
     evalEndgame += EGVAL(imbalanceEval);
+    evalEndgame += EGVAL(knightsEval);
 
     int phase = TOTALPHASE;
     phase -= (pieceCount[0] + pieceCount[1]) * PAWNPHASE;
@@ -383,7 +386,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "White imbalance: " << evaluateImbalance(pieceCount, false) << std::endl;
     std::cout << "White pawns: " << evaluatePawns(pieces, false) << std::endl;
     std::cout << "White passed pawns: " << evaluatePassedPawns(pieces, false) << std::endl;
-    std::cout << "White outposts: " << evaluateOutposts(pieces, false) << std::endl;
+    std::cout << "White outposts: " << evaluateKnights(pieces, false) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -394,7 +397,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "Black imbalance: " << evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "Black pawns: " << evaluatePawns(pieces, true) << std::endl;
     std::cout << "Black passed pawns: " << evaluatePassedPawns(pieces, true) << std::endl;
-    std::cout << "Black outposts: " << evaluateOutposts(pieces, true) << std::endl;
+    std::cout << "Black outposts: " << evaluateKnights(pieces, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -405,7 +408,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "All imbalance: " << evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "All pawns: " << evaluatePawns(pieces, false) - evaluatePawns(pieces, true) << std::endl;
     std::cout << "All passed pawns: " << evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true) << std::endl;
-    std::cout << "All outposts: " << evaluateOutposts(pieces, false) - evaluateOutposts(pieces, true) << std::endl;
+    std::cout << "All outposts: " << evaluateKnights(pieces, false) - evaluateKnights(pieces, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
 
     int phase = TOTALPHASE;
@@ -644,21 +647,22 @@ int Eval::evaluatePassedPawns(uint64_t *pieces, bool col) {
 
 
 
-// ELO LOSS FOR NOW????
-int Eval::evaluateOutposts(uint64_t *pieces, bool col) {
+int Eval::evaluateKnights(uint64_t *pieces, bool col) {
 
     int ret = 0;
     uint64_t piece = pieces[2 + col];
     uint64_t holes = pawnAttacksAll(pieces[col], col);
+    uint64_t defendedKnight = piece & holes;
 
-    while (holes) {
-        int bscan = bitScan(holes);
-        if ((outpostMask[col][bscan] & pieces[!col]) == 0 && (piece & (1ULL << bscan))) {
+    while (piece) {
+        int bscan = bitScan(piece);
+
+        if (defendedKnight & (1ULL << bscan) && (outpostMask[col][bscan] & pieces[!col]) == 0) {
             ret += outpostPotential[col][bscan];
         }
-        holes &= holes - 1;
+        piece &= piece - 1;
     }
 
-    return ret;
+    return S(ret, 0);
 
 }

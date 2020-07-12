@@ -45,7 +45,7 @@ private:
     int evaluateImbalance(int *pieceCount, bool col);
     int evaluatePawns(uint64_t *pieces, bool col);
     int evaluatePassedPawns(uint64_t *pieces, bool col);
-    int evaluateOutposts(uint64_t *pieces, bool col);
+    int evaluateKnights(uint64_t *pieces, bool col);
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];
     uint64_t kingZoneMask[2][64];
@@ -56,23 +56,23 @@ private:
     uint64_t isolatedPawnMask[64];
     uint64_t outpostMask[2][64];
 
-    const uint64_t outpostPotential[2][64] = {{ 0,  0,  0,  0,  0,  0,  0,  0,
-                                                0,  0,  0,  0,  0,  0,  0,  0,
-                                                0,  0,  0,  0,  0,  0,  0,  0,
-                                                0,  0,  3,  5,  5,  3,  0,  0,
-                                                0,  0,  5, 10, 10,  5,  0,  0,
-                                                0,  5,  8, 10, 10,  8,  5,  0,
-                                                0,  2,  2,  5,  5,  2,  2,  0,
-                                                0,  0,  0,  0,  0,  0,  0,  0},
+    const int outpostPotential[2][64] = {{ 0,  0,  0,  0,  0,  0,  0,  0,
+                                            0,  0,  0,  0,  0,  0,  0,  0,
+                                            0,  0,  0,  0,  0,  0,  0,  0,
+                                            0,  0,  5,  8,  8,  5,  0,  0,
+                                            0,  5,  7, 10, 10,  7,  5,  0,
+                                            0,  5,  8, 10, 10,  8,  5,  0,
+                                            0,  2,  2,  5,  5,  2,  2,  0,
+                                            0,  0,  0,  0,  0,  0,  0,  0},
 
-                                              { 0,  0,  0,  0,  0,  0,  0,  0,
-                                                0,  2,  2,  5,  5,  2,  2,  0,
-                                                0,  5,  8, 10, 10,  8,  5,  0,
-                                                0,  0,  5, 10, 10,  5,  0,  0,
-                                                0,  0,  3,  5,  5,  3,  0,  0,
-                                                0,  0,  0,  0,  0,  0,  0,  0,
-                                                0,  0,  0,  0,  0,  0,  0,  0,
-                                                0,  0,  0,  0,  0,  0,  0,  0}};
+                                          { 0,  0,  0,  0,  0,  0,  0,  0,
+                                            0,  2,  2,  5,  5,  2,  2,  0,
+                                            0,  5,  8, 10, 10,  8,  5,  0,
+                                            0,  5,  7, 10, 10,  7,  5,  0,
+                                            0,  0,  5,  8,  8,  5,  0,  0,
+                                            0,  0,  0,  0,  0,  0,  0,  0,
+                                            0,  0,  0,  0,  0,  0,  0,  0,
+                                            0,  0,  0,  0,  0,  0,  0,  0}};
 
     // Mobility
     const int knightMobilityBonus[9] =  {S(-38, -52), S(-25, -27), S(-8, -21), -S(-2, -8), S(7, 9), S(12, 13), S(18, 20), S(21, 21), S(24, 24)};
