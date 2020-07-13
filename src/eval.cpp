@@ -293,6 +293,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     int mobilityEval = evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
     int imbalanceEval = evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
     int knightsEval = evaluateKnights(pieces, false) - evaluateKnights(pieces, true);
+    int pawnShieldEval = evaluatePawnShield(pieces, false) - evaluatePawnShield(pieces, true);
 
     evalMidgame += MGVAL(material[0] - material[1]);
     evalMidgame += MGVAL(pieceSquareEval);
@@ -302,6 +303,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     evalMidgame += MGVAL(mobilityEval);
     evalMidgame += MGVAL(imbalanceEval);
     evalMidgame += MGVAL(knightsEval);
+    evalMidgame += MGVAL(pawnShieldEval);
 
     evalEndgame += EGVAL(material[0] - material[1]);
     evalEndgame += EGVAL(pieceSquareEval);
@@ -310,6 +312,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     evalEndgame += EGVAL(mobilityEval);
     evalEndgame += EGVAL(imbalanceEval);
     evalEndgame += EGVAL(knightsEval);
+    evalEndgame += EGVAL(pawnShieldEval);
 
     int phase = TOTALPHASE;
     phase -= (pieceCount[0] + pieceCount[1]) * PAWNPHASE;
@@ -666,3 +669,27 @@ int Eval::evaluateKnights(uint64_t *pieces, bool col) {
     return S(ret, 0);
 
 }
+
+
+
+int Eval::evaluatePawnShield(uint64_t *pieces, bool col) {
+
+    int ret = 0;
+    uint64_t piece = pieces[10 + col];
+    int bscan = bitScan(piece);
+    uint64_t shield = passedPawnMask[col][bscan] & rowMask[col? std::max(bscan - 8, 0) : std::min(bscan + 8, 63)];
+
+    if ((shield & pieces[col]) != shield) {
+        ret -= 15;
+    }
+
+    return S(ret, 0);
+
+}
+
+
+
+
+
+
+//
