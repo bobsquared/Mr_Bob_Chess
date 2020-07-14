@@ -294,6 +294,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     int imbalanceEval = evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
     int knightsEval = evaluateKnights(pieces, false) - evaluateKnights(pieces, true);
     int pawnShieldEval = evaluatePawnShield(pieces, false) - evaluatePawnShield(pieces, true);
+    int rooksEval = evaluateRooks(pieces, false) - evaluateRooks(pieces, true);
 
     evalMidgame += MGVAL(material[0] - material[1]);
     evalMidgame += MGVAL(pieceSquareEval);
@@ -303,6 +304,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     evalMidgame += MGVAL(mobilityEval);
     evalMidgame += MGVAL(imbalanceEval);
     evalMidgame += MGVAL(knightsEval);
+    evalMidgame += MGVAL(rooksEval);
     evalMidgame += MGVAL(pawnShieldEval);
 
     evalEndgame += EGVAL(material[0] - material[1]);
@@ -312,6 +314,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     evalEndgame += EGVAL(mobilityEval);
     evalEndgame += EGVAL(imbalanceEval);
     evalEndgame += EGVAL(knightsEval);
+    evalEndgame += EGVAL(rooksEval);
     evalEndgame += EGVAL(pawnShieldEval);
 
     int phase = TOTALPHASE;
@@ -667,6 +670,30 @@ int Eval::evaluateKnights(uint64_t *pieces, bool col) {
     }
 
     return S(ret, 0);
+
+}
+
+
+
+int Eval::evaluateRooks(uint64_t *pieces, bool col) {
+
+    int ret = 0;
+    uint64_t piece = pieces[6 + col];
+
+    while (piece) {
+        int bscan = bitScan(piece);
+
+        if ((columnMask[bscan] & pieces[col]) == 0) {
+            ret += S(18, 0);
+            if ((columnMask[bscan] & pieces[!col]) == 0) {
+                ret += S(12, 6);
+            }
+        }
+
+        piece &= piece - 1;
+    }
+
+    return ret;
 
 }
 

@@ -46,6 +46,7 @@ private:
     int evaluatePawns(uint64_t *pieces, bool col);
     int evaluatePassedPawns(uint64_t *pieces, bool col);
     int evaluateKnights(uint64_t *pieces, bool col);
+    int evaluateRooks(uint64_t *pieces, bool col);
     int evaluatePawnShield(uint64_t *pieces, bool col);
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];
