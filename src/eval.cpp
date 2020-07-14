@@ -677,11 +677,10 @@ int Eval::evaluatePawnShield(uint64_t *pieces, bool col) {
     int ret = 0;
     uint64_t piece = pieces[10 + col];
     int bscan = bitScan(piece);
-    uint64_t shield = passedPawnMask[col][bscan] & rowMask[col? std::max(bscan - 8, 0) : std::min(bscan + 8, 63)];
+    uint64_t shield = passedPawnMask[col][bscan] & (rowMask[col? std::max(bscan - 8, 0) : std::min(bscan + 8, 63)] | rowMask[col? std::max(bscan - 16, 0) : std::min(bscan + 16, 63)]);
 
-    if ((shield & pieces[col]) != shield) {
-        ret -= 15;
-    }
+    ret += count_population(shield & pieces[col]) * 16;
+
 
     if ((forwardMask[col][bscan] & pieces[col]) != 0) {
         ret += 32;
@@ -689,14 +688,6 @@ int Eval::evaluatePawnShield(uint64_t *pieces, bool col) {
             ret += 8;
         }
     }
-
-    // if (bscan - 1 >= 0 && (forwardMask[col][bscan - 1] & pieces[col] & passedPawnMask[col][bscan]) == 0) {
-    //     ret -= 12;
-    // }
-    //
-    // if (bscan + 1 <= 63 && (forwardMask[col][bscan + 1] & pieces[col] & passedPawnMask[col][bscan]) == 0) {
-    //     ret -= 12;
-    // }
 
     return S(ret, 0);
 
