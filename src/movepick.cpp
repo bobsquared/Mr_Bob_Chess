@@ -27,11 +27,12 @@ void MovePick::InitMvvLva() {
 
 // Set a score to all the moves in the movelist.
 // Higher score moves are picked first
-void MovePick::scoreMoves(MoveList &moveList, int *pieceAt, int depth, bool col, MOVE pvMove) {
+void MovePick::scoreMoves(MoveList &moveList, MoveInfoStack &moveHistory, int *pieceAt, int depth, bool col, MOVE pvMove) {
 
     MOVE move;
     int from;
     int to;
+    MOVE prevMove = moveHistory.move[moveHistory.count - 1].move;
 
     for (int i = 0; i < moveList.count; i++) {
         moveList.get_index_move(i, move);
@@ -48,7 +49,7 @@ void MovePick::scoreMoves(MoveList &moveList, int *pieceAt, int depth, bool col,
                 moveList.set_score_index(i, 1000000 + mvvlva[from][0]);
             }
             else {
-                int score = mvvlva[from][to] >= 1000? 1000000 : 700000;
+                int score = mvvlva[from][to] >= 1000? 1000000 : 750000;
                 moveList.set_score_index(i, score + mvvlva[from][to]);
             }
 
@@ -61,6 +62,9 @@ void MovePick::scoreMoves(MoveList &moveList, int *pieceAt, int depth, bool col,
         }
         else if (killers[col][depth][1] == move) {
             moveList.set_score_index(i, 800000);
+        }
+        else if (counterMove[col][get_move_from(prevMove)][get_move_to(prevMove)] == move) {
+            moveList.set_score_index(i, 700000);
         }
         else {
             moveList.set_score_index(i, history[col][get_move_from(move)][get_move_to(move)]);

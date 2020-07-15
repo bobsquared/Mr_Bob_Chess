@@ -411,7 +411,7 @@ void Bitboard::InitMaterial() {
 // Generate all pseudo-legal moves
 void Bitboard::generate(MoveList &moveList, int depth, MOVE pvMove) {
     moveGen->generate_all_moves(moveList, pieces, color, pawnAttacks, knightMoves, magics, kingMoves, occupied, enpassantSq, castleRights, toMove);
-    movePick->scoreMoves(moveList, pieceAt, depth, toMove, pvMove);
+    movePick->scoreMoves(moveList, moveHistory, pieceAt, depth, toMove, pvMove);
 }
 
 
@@ -419,7 +419,7 @@ void Bitboard::generate(MoveList &moveList, int depth, MOVE pvMove) {
 // Generate all pseudo-legal captures
 void Bitboard::generate_captures_promotions(MoveList &moveList, MOVE pvMove) {
     moveGen->generate_captures_promotions(moveList, pieces, color, pawnAttacks, knightMoves, magics, kingMoves, occupied, enpassantSq, castleRights, toMove);
-    movePick->scoreMoves(moveList, pieceAt, 0, toMove, pvMove);
+    movePick->scoreMoves(moveList, moveHistory, pieceAt, 0, toMove, pvMove);
 }
 
 
@@ -446,7 +446,7 @@ void Bitboard::make_move(MOVE move) {
 
     if (move == NULL_MOVE) {
         toMove = !toMove;
-        moveHistory.insert(MoveInfo(0, enpassantSq, halfMoves, castleRights, posKey));
+        moveHistory.insert(MoveInfo(0, enpassantSq, halfMoves, castleRights, posKey, move));
 
         if (enpassantSq) {
             zobrist->hashBoard_enpassant(posKey, enpassantSq);
@@ -669,7 +669,7 @@ void Bitboard::make_move(MOVE move) {
 
     toMove = !toMove;
     zobrist->hashBoard_turn(posKey);
-    moveHistory.insert(MoveInfo(toPiece, enSq, hmoves, crights, prevPosKey));
+    moveHistory.insert(MoveInfo(toPiece, enSq, hmoves, crights, prevPosKey, move));
 }
 
 
@@ -1183,6 +1183,7 @@ bool Bitboard::getSideToMove() {
 }
 
 
+
 // Insert killer moves into array
 void Bitboard::insertKiller(int depth, MOVE move) {
     if (killers[toMove][depth][0] == move) {
@@ -1190,6 +1191,14 @@ void Bitboard::insertKiller(int depth, MOVE move) {
     }
     killers[toMove][depth][1] = killers[toMove][depth][0];
     killers[toMove][depth][0] = move;
+}
+
+
+
+// Insert counter move into array
+void Bitboard::insertCounterMove(MOVE move) {
+    MOVE prevMove = moveHistory.move[moveHistory.count - 1].move;
+    counterMove[toMove][get_move_from(prevMove)][get_move_to(prevMove)] = move;
 }
 
 

@@ -30,6 +30,7 @@ void UCI::readyCommand() {
 void UCI::newGameCommand(Bitboard &b) {
     InitHistory();
     InitKillers();
+    InitCounterMoves();
     b.clearHashTable();
 }
 

@@ -6,6 +6,7 @@ uint64_t forwardMask[64];
 uint64_t backwardMask[64];
 int history[2][64][64];
 MOVE killers[2][1024][2];
+MOVE counterMove[2][64][64];
 int evalStack[1024];
 
 
@@ -98,6 +99,21 @@ void InitKillers() {
         for (int j = 0; j < 1024; j++) {
             for (int k = 0; k < 2; k++) {
                 killers[i][j][k] = 0;
+            }
+        }
+    }
+
+}
+
+
+
+// Initialize the counter moves
+void InitCounterMoves() {
+
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 64; j++) {
+            for (int k = 0; k < 64; k++) {
+                counterMove[i][j][k] = 0;
             }
         }
     }

@@ -233,6 +233,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
                 if (score >= beta) {
                     if (((move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0)){
                         b.insertKiller(height, move);
+                        b.insertCounterMove(move);
                         history[b.getSideToMove()][get_move_from(move)][get_move_to(move)] += depth * depth;
                     }
                     assert(move != 0);

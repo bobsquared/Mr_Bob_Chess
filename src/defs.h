@@ -107,6 +107,49 @@ struct ZobristVal {
 
 
 
+struct MoveInfo {
+    int captureType;
+    int enpassantSq;
+    int halfMoves;
+    uint8_t castleRights;
+    uint64_t posKey;
+    MOVE move;
+
+    bool operator==(const uint64_t& rhs) {
+        return posKey == rhs;
+    }
+
+    MoveInfo() :
+        captureType(-1), enpassantSq(0), halfMoves(0), castleRights(15), posKey(0), move(NO_MOVE) {}
+
+    MoveInfo(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey, MOVE move) :
+        captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), castleRights(castleRights), posKey(posKey), move(move) {}
+};
+
+
+struct MoveInfoStack {
+    MoveInfo move[1024];
+    int count;
+
+    MoveInfoStack() : count(0) {}
+
+    void insert(MoveInfo moveInfo) {
+        move[count] = moveInfo;
+        count++;
+    }
+
+    MoveInfo pop() {
+        count--;
+        return move[count];
+    }
+
+    void clear() {
+        count = 0;
+    }
+};
+
+
+
 // For Bitscanning
 const int MSB_TABLE[64] = {
     0, 47,  1, 56, 48, 27,  2, 60,
@@ -141,6 +184,7 @@ extern std::unordered_map<std::string, uint8_t> TO_NUM;
 extern int evalStack[1024];
 extern int history[2][64][64];
 extern MOVE killers[2][1024][2];
+extern MOVE counterMove[2][64][64];
 extern uint64_t columnMask[64];
 extern uint64_t rowMask[64];
 extern uint64_t forwardMask[64];
@@ -151,6 +195,7 @@ extern void InitHistory();
 extern void InitColumnsMask();
 extern void InitRowsMask();
 extern void InitKillers();
+extern void InitCounterMoves();
 extern uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag);
 extern uint64_t knightAttacks(uint64_t knights);
 extern int count_population(uint64_t bitboard);

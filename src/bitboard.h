@@ -53,6 +53,7 @@ public:
     void reset();
     bool getSideToMove();
     void insertKiller(int depth, MOVE move);
+    void insertCounterMove(MOVE move);
 
 
     uint64_t getPosKey();
@@ -71,45 +72,7 @@ public:
 
 private:
 
-    struct MoveInfo {
-        int captureType;
-        int enpassantSq;
-        int halfMoves;
-        uint8_t castleRights;
-        uint64_t posKey;
 
-        bool operator==(const uint64_t& rhs) {
-            return posKey == rhs;
-        }
-
-        MoveInfo() :
-            captureType(-1), enpassantSq(0), halfMoves(0), castleRights(15), posKey(0) {}
-
-        MoveInfo(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey) :
-            captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), castleRights(castleRights), posKey(posKey) {}
-    };
-
-
-    struct MoveInfoStack {
-        MoveInfo move[1024];
-        int count;
-
-        MoveInfoStack() : count(0) {}
-
-        void insert(MoveInfo moveInfo) {
-            move[count] = moveInfo;
-            count++;
-        }
-
-        MoveInfo pop() {
-            count--;
-            return move[count];
-        }
-
-        void clear() {
-            count = 0;
-        }
-    };
 
     // Material location
     uint64_t whitePawns;
