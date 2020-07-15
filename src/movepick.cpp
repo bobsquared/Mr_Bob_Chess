@@ -49,7 +49,7 @@ void MovePick::scoreMoves(MoveList &moveList, MoveInfoStack &moveHistory, int *p
                 moveList.set_score_index(i, 1000000 + mvvlva[from][0]);
             }
             else {
-                int score = mvvlva[from][to] >= 1000? 1000000 : 750000;
+                int score = mvvlva[from][to] >= 1000? 1000000 : 950000;
                 moveList.set_score_index(i, score + mvvlva[from][to]);
             }
 
