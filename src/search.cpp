@@ -62,6 +62,10 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
     while (moveList.get_next_move(move)) {
         // assert(CAPTURE_FLAG & move || PROMOTION_FLAG & move);
 
+        if (!inCheck && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
+            continue;
+        }
+
         b.make_move(move);
         if (b.InCheckOther()) {
             b.undo_move(move);
@@ -70,10 +74,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
 
 
         numMoves++;
-        // if (!inCheck && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
-        //     b.undo_move(move);
-        //     continue;
-        // }
+
 
         int score = -qsearch(b, depth - 1, -beta, -alpha);
         b.undo_move(move);

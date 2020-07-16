@@ -1125,6 +1125,7 @@ int Bitboard::seeCapture(MOVE capture) {
     int gain[32];
     int d = 0;
     uint64_t mayXray = pieces[0] | pieces[1] | pieces[4] | pieces[5] | pieces[6] | pieces[7] | pieces[8] | pieces[9];
+    const int pvals[6] = {100, 350, 350, 500, 900, 5000};
 
     int from = get_move_from(capture);
     int to = get_move_to(capture);
@@ -1135,16 +1136,20 @@ int Bitboard::seeCapture(MOVE capture) {
     int aPiece = pieceAt[from];
     bool isWhite = toMove;
 
+    if (to >= 56 || to < 8) {
+        return 0;
+    }
+
     if ((capture & MOVE_FLAGS) == ENPASSANT_FLAG) {
-        gain[d] = EGVAL(pieceValues[0]);
+        gain[d] = pvals[0];
     }
     else {
-        gain[d] = pieceAt[to] == -1? 0 : EGVAL(pieceValues[pieceAt[to] / 2]);
+        gain[d] = pieceAt[to] == -1? 0 : pvals[pieceAt[to] / 2];
     }
 
     do {
         d++;
-        gain[d] = EGVAL(pieceValues[aPiece / 2]) - gain[d - 1];
+        gain[d] = pvals[aPiece / 2] - gain[d - 1];
         isWhite = !isWhite;
 
         if (std::max(-gain[d - 1], gain[d]) < 0) {
