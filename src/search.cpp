@@ -178,9 +178,10 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     b.generate(moveList, height, hashedBoard.move);
     while (moveList.get_next_move(move)) {
         int score;
-
         int extension = 0;
         bool giveCheck = b.InCheck();
+
+
         if (giveCheck) {
             extension = 1;
         }
@@ -190,9 +191,19 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             continue;
         }
 
-        if (depth == 1 && !isPv && numMoves > 0 && !isCheck && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
-            numMoves++;
-            continue;
+        if (depth <= 3 && !isPv && numMoves > 0 && !isCheck && (move & PROMOTION_FLAG) == 0) {
+            if (depth == 1 && b.seeCapture(move) < 0) {
+                numMoves++;
+                continue;
+            }
+            else if (depth == 2 && b.seeCapture(move) < -350) {
+                numMoves++;
+                continue;
+            }
+            else if (depth == 3 && b.seeCapture(move) < -500) {
+                numMoves++;
+                continue;
+            }
         }
 
         b.make_move(move);
@@ -211,6 +222,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             lmr -= b.isKiller(height, move);
             lmr += !improving;
             lmr -= 2 * isPv;
+            // lmr += see;
 
             lmr = std::min(depth - 1, std::max(lmr, 0));
             score = -pvSearch(b, newDepth - 1 - lmr, -alpha - 1, -alpha, true, height + 1);
