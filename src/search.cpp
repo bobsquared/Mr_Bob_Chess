@@ -190,6 +190,11 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             continue;
         }
 
+        if (depth == 1 && !isPv && numMoves > 0 && !isCheck && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
+            numMoves++;
+            continue;
+        }
+
         b.make_move(move);
         if (b.InCheckOther()) {
             b.undo_move(move);
