@@ -287,35 +287,20 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
 
     int evalMidgame = ret;
     int evalEndgame = ret;
-    int pieceSquareEval = evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true);
-    int passedPawnsEval = evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
-    int pawnsEval = evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
-    int mobilityEval = evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
-    int imbalanceEval = evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
-    int knightsEval = evaluateKnights(pieces, false) - evaluateKnights(pieces, true);
-    int pawnShieldEval = evaluatePawnShield(pieces, false) - evaluatePawnShield(pieces, true);
-    int rooksEval = evaluateRooks(pieces, false) - evaluateRooks(pieces, true);
 
-    evalMidgame += MGVAL(material[0] - material[1]);
-    evalMidgame += MGVAL(pieceSquareEval);
+    int egmg = material[0] - material[1];
+    egmg += evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true);
+    egmg += evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
+    egmg += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
+    egmg += evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
+    egmg += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
+    egmg += evaluateKnights(pieces, false) - evaluateKnights(pieces, true);
+    egmg += evaluatePawnShield(pieces, false) - evaluatePawnShield(pieces, true);
+    egmg += evaluateRooks(pieces, false) - evaluateRooks(pieces, true);
+
     evalMidgame += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
-    evalMidgame += MGVAL(passedPawnsEval);
-    evalMidgame += MGVAL(pawnsEval);
-    evalMidgame += MGVAL(mobilityEval);
-    evalMidgame += MGVAL(imbalanceEval);
-    evalMidgame += MGVAL(knightsEval);
-    evalMidgame += MGVAL(rooksEval);
-    evalMidgame += MGVAL(pawnShieldEval);
-
-    evalEndgame += EGVAL(material[0] - material[1]);
-    evalEndgame += EGVAL(pieceSquareEval);
-    evalEndgame += EGVAL(passedPawnsEval);
-    evalEndgame += EGVAL(pawnsEval);
-    evalEndgame += EGVAL(mobilityEval);
-    evalEndgame += EGVAL(imbalanceEval);
-    evalEndgame += EGVAL(knightsEval);
-    evalEndgame += EGVAL(rooksEval);
-    evalEndgame += EGVAL(pawnShieldEval);
+    evalMidgame += MGVAL(egmg);
+    evalEndgame += EGVAL(egmg);
 
     int phase = TOTALPHASE;
     phase -= (pieceCount[0] + pieceCount[1]) * PAWNPHASE;
