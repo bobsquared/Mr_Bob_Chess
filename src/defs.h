@@ -187,8 +187,6 @@ extern MOVE killers[2][128][2];
 extern MOVE counterMove[2][64][64];
 extern uint64_t columnMask[64];
 extern uint64_t rowMask[64];
-extern uint64_t forwardMask[64];
-extern uint64_t backwardMask[64];
 
 extern int bitScan(const uint64_t bitboard);
 extern void InitHistory();
