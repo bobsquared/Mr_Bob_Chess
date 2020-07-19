@@ -18,7 +18,7 @@
 #define EGVAL(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 
 
-const int pieceValues[6] = {S(85, 100), S(305, 305), S(315, 315), S(475, 535), S(925, 985), S(2000, 2000)};
+const int pieceValues[6] = {S(85, 100), S(305, 305), S(305, 315), S(475, 535), S(925, 985), S(2000, 2000)};
 
 class Eval {
 
@@ -88,9 +88,11 @@ private:
     const int pieceAttackValue[5] = {0, 20, 25, 42, 75};
     const int pieceAttackWeight[8] = {0, 0, 50, 75, 88, 94, 97, 100};
 
-    // Knight and rook weights
-    const int knightWeight[9] = {S(-35, -37), S(-28, -26), S(-12, -10), S(-8, -3), S(-4, 0), S(0, 2), S(12, 14), S(17, 15), S(27, 26)};
-    const int rookWeight[9] = {S(32, 25), S(26, 20), S(15, 12), S(8, 2), S(4, 0), S(0, -12), S(-16, -28), S(-23, -34), S(-25, -35)};
+    // Queen, Bishop, Knight and rook weights
+    const int knightWeight[9] = {S(-30, -30), S(-24, -24), S(-18, -18), S(-12, -12), S(-6, -6), S(0, 0), S(6, 6) , S(12, 12), S(18, 18)};
+    const int rookWeight[9] = {S(60, 60), S(48, 48), S(36, 36), S(24, 24), S(12, 12), S(0, 0), S(-12, -12), S(-24, -24), S(-36, -36)};
+    const int bishopWeight[17] = {S(57, 57), S(56, 56), S(54, 54), S(52, 52), S(50, 50), S(46, 46), S(45, 45), S(43, 43), S(42, 35), S(40, 34), S(39, 33), S(37, 29), S(35, 27), S(33, 25), S(27, 23), S(26, 21), S(23, 19)};
+    const int queenWeight[7] = {S(0, 0), S(12, 12), S(15, 15), S(18, 18), S(22, 22), S(26, 26), S(30, 30)};
 
     // Passed Pawn weights
     const int passedPawnWeight[7] = {S(0, 0), S(6, 12), S(8, 15), S(9, 16), S(32, 38), S(87, 96), S(122, 125)};

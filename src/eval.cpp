@@ -578,21 +578,27 @@ int Eval::evaluateImbalance(int *pieceCount, bool col) {
 
     // Bishop pair
     if (pieceCount[4 + col] >= 2) {
-        ret += S(35, 35);
+        ret += bishopWeight[pieceCount[0] + pieceCount[1]];
     }
 
     // Knight pair
     if (pieceCount[2 + col] >= 2) {
-        ret -= S(19, 19);
+        ret -= S(14, 19);
+    }
+
+    // Rook pair
+    if (pieceCount[6 + col] >= 2) {
+        ret -= S(18, 18);
     }
 
     // Pawn count
     if (pieceCount[col] == 0) {
-        ret -= S(87, 87);
+        ret -= S(22, 35);
     }
 
-    ret += knightWeight[pieceCount[0 + col]] * pieceCount[2 + col];
-    ret += rookWeight[pieceCount[0 + col]] * pieceCount[6 + col];
+    ret += knightWeight[pieceCount[col]] * pieceCount[2 + col];
+    ret += rookWeight[pieceCount[col]] * pieceCount[6 + col];
+    ret += queenWeight[std::min(pieceCount[2 + col] + pieceCount[4 + col] + pieceCount[6 + col], 6)] * pieceCount[8 + col];
 
     return ret;
 }
