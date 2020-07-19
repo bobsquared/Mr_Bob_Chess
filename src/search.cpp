@@ -220,7 +220,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
 
             lmr -= b.isKiller(height, move);
-            lmr += !improving;
+            lmr += !improving && numMoves >= 6;
             lmr -= 2 * isPv;
             // lmr += see;
 
