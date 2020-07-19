@@ -5,9 +5,9 @@ uint64_t rowMask[64];
 uint64_t forwardMask[64];
 uint64_t backwardMask[64];
 int history[2][64][64];
-MOVE killers[2][1024][2];
+MOVE killers[2][128][2];
 MOVE counterMove[2][64][64];
-int evalStack[1024];
+int evalStack[128];
 
 
 // Algebra to number
@@ -96,7 +96,7 @@ void InitHistory() {
 void InitKillers() {
 
     for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 1024; j++) {
+        for (int j = 0; j < 128; j++) {
             for (int k = 0; k < 2; k++) {
                 killers[i][j][k] = 0;
             }
