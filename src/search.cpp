@@ -183,13 +183,14 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         int score;
         int extension = 0;
         bool giveCheck = b.InCheck();
+        bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
 
 
         if (giveCheck) {
             extension = 1;
         }
 
-        if (depth <= 3 && numMoves > 0 && !giveCheck && !isCheck && !isPv && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0 && eval + 215 * depth <= alpha && alpha < 9000) {
+        if (depth <= 3 && numMoves > 0 && !giveCheck && !isCheck && !isPv && isQuiet && eval + 215 * depth <= alpha && alpha < 9000) {
             numMoves++;
             continue;
         }
@@ -219,7 +220,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         if (numMoves == 0) {
             score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
         }
-        else if (depth >= 3 && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0 && !isCheck && !giveCheck && !extension) {
+        else if (depth >= 3 && isQuiet && !isCheck && !giveCheck && !extension) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
 
             lmr -= b.isKiller(height, move);
@@ -256,7 +257,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             if (score > alpha) {
                 alpha = score;
                 if (score >= beta) {
-                    if (((move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0)){
+                    if (isQuiet){
                         b.insertKiller(height, move);
                         b.insertCounterMove(move);
                     }
@@ -265,14 +266,14 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             }
         }
 
-        if (((move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0)) {
+        if (isQuiet) {
             quiets[quietsSearched] = move;
             quietsSearched++;
         }
 
     }
 
-    if (alpha >= beta && ((bestMove & CAPTURE_FLAG) == 0 && (bestMove & PROMOTION_FLAG) == 0)) {
+    if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
         int hist = history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;
         history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
 
