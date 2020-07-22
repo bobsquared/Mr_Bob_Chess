@@ -156,6 +156,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     int eval = hashed? hashedBoard.score : b.evaluate();
     evalStack[height] = eval;
     bool improving = height >= 2? eval > evalStack[height - 2] : false;
+    b.removeKiller(height + 1);
     bool isCheck = b.InCheck();
 
     if (!isPv && !isCheck && depth <= 3 && eval - 220 * depth >= beta && eval < 9000) {

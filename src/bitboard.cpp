@@ -1200,6 +1200,16 @@ void Bitboard::insertKiller(int depth, MOVE move) {
 
 
 
+// remove killer moves
+void Bitboard::removeKiller(int depth) {
+    killers[!toMove][depth][1] = NO_MOVE;
+    killers[!toMove][depth][0] = NO_MOVE;
+    killers[toMove][depth][1] = NO_MOVE;
+    killers[toMove][depth][0] = NO_MOVE;
+}
+
+
+
 // Insert counter move into array
 void Bitboard::insertCounterMove(MOVE move) {
     MOVE prevMove = moveHistory.move[moveHistory.count - 1].move;

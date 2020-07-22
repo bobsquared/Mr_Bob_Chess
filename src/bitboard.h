@@ -68,6 +68,7 @@ public:
     int seeCapture(MOVE capture);
     bool isRepetition();
     bool isKiller(int depth, MOVE move);
+    void removeKiller(int depth);
 
 
 private:
