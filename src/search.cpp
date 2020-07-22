@@ -132,7 +132,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     nodes++;
 
     MOVE move;
-    MOVE bestMove;
+    MOVE bestMove = NO_MOVE;
     MoveList moveList;
 
     int ret = -INFINITY_VAL;
@@ -176,6 +176,8 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
 
+    int quietsSearched = 0;
+    MOVE quiets[MAX_NUM_MOVES];
     b.generate(moveList, height, hashedBoard.move);
     while (moveList.get_next_move(move)) {
         int score;
@@ -246,38 +248,41 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             return 0;
         }
 
+        numMoves++;
+
         if (score > ret) {
             ret = score;
+            bestMove = move;
             if (score > alpha) {
+                alpha = score;
                 if (score >= beta) {
                     if (((move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0)){
                         b.insertKiller(height, move);
                         b.insertCounterMove(move);
-                        history[b.getSideToMove()][get_move_from(move)][get_move_to(move)] += depth * depth;
                     }
-                    assert(move != 0);
-                    b.saveTT(move, score, depth, 1, posKey);
-                    return ret;
-                }
-                alpha = score;
-            }
-            else {
-                history[b.getSideToMove()][get_move_from(move)][get_move_to(move)] -= depth;
-            }
-            bestMove = move;
-        }
-
-        if (std::abs(history[b.getSideToMove()][get_move_from(move)][get_move_to(move)]) > 600000) {
-            for (int i = 0; i < 64; i++) {
-                for (int j = 0; j < 64; j++) {
-                    history[b.getSideToMove()][i][j] /= 4;
+                    break;
                 }
             }
         }
 
+        if (((move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0)) {
+            quiets[quietsSearched] = move;
+            quietsSearched++;
+        }
 
-        numMoves++;
     }
+
+    if (alpha >= beta && ((bestMove & CAPTURE_FLAG) == 0 && (bestMove & PROMOTION_FLAG) == 0)) {
+        int hist = history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;
+        history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
+
+        for (int i = 0; i < quietsSearched; i++) {
+            int hist2 = history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
+            history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 30 * (-depth * depth) - hist2;
+        }
+    }
+
+
 
     if (numMoves == 0) {
         if (isCheck) {
@@ -293,7 +298,11 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
     assert(alpha >= prevAlpha);
-    if (prevAlpha >= ret) {
+    if (alpha >= beta) {
+        assert(move != 0);
+        b.saveTT(bestMove, ret, depth, 1, posKey);
+    }
+    else if (prevAlpha >= ret) {
         assert (bestMove != 0);
         b.saveTT(bestMove, ret, depth, 2, posKey);
     }
