@@ -257,10 +257,6 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             if (score > alpha) {
                 alpha = score;
                 if (score >= beta) {
-                    if (isQuiet){
-                        b.insertKiller(height, move);
-                        b.insertCounterMove(move);
-                    }
                     break;
                 }
             }
@@ -273,7 +269,11 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
     }
 
+
     if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
+        b.insertKiller(height, move);
+        b.insertCounterMove(move);
+
         int hist = history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;
         history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
 
