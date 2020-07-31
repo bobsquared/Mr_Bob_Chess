@@ -2,6 +2,7 @@
 
 std::regex fenNumbers(".*(\\d+)\\s+(\\d+)");
 extern Magics *magics;
+extern int pieceValues[6];
 
 
 
@@ -901,12 +902,12 @@ int Bitboard::evaluate_debug() {
 bool Bitboard::isDraw() {
 
     // 50 move rule
-    if (moveHistory.move[moveHistory.count - 1].halfMoves >= 100) {
+    if (moveHistory.count > 0 && moveHistory.move[moveHistory.count - 1].halfMoves >= 100) {
         return true;
     }
 
     // Repetition
-    if (std::count(moveHistory.move, moveHistory.move + moveHistory.count, posKey) >= 2) {
+    if (moveHistory.count >= 3 && std::count(moveHistory.move, moveHistory.move + moveHistory.count, posKey) >= 2) {
         return true;
     }
 

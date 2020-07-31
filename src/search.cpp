@@ -7,6 +7,7 @@ double totalTime;
 int seldepth;
 int height;
 std::atomic<bool> exit_thread_flag;
+extern int pieceValues[6];
 
 
 int lmrReduction[64][64];

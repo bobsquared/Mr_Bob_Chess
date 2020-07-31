@@ -8,6 +8,8 @@
 #include "search.h"
 #include "uci.h"
 
+extern int pieceValues[6];
+
 
 int main() {
 

@@ -18,7 +18,8 @@
 #define EGVAL(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 
 
-const int pieceValues[6] = {S(85, 100), S(305, 305), S(305, 315), S(475, 535), S(925, 985), S(2000, 2000)};
+// int pieceValues[6] = {S(85, 100), S(305, 305), S(305, 315), S(475, 535), S(925, 985), S(2000, 2000)};
+
 
 class Eval {
 

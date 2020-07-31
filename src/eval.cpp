@@ -2,6 +2,11 @@
 
 
 
+int pieceValues[6] = {S(85, 100), S(305, 305), S(305, 315), S(475, 535), S(925, 985), S(2000, 2000)};
+// int pieceValues[6] = {S(157, 173), S(423, 390), S(422, 401), S(622, 694), S(974, 1211), S(2000, 2000)};
+
+
+
 Eval::Eval() {
     InitPieceBoards();
     InitKingZoneMask();
@@ -326,7 +331,6 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
 
     phase = (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
     ret = ((evalMidgame * (256 - phase)) + (evalEndgame * phase)) / 256;
-
     return ret;
 }
 
