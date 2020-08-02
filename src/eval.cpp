@@ -41,13 +41,13 @@ void Eval::InitKingZoneMask() {
         tempBitBoard &= ~(1ULL << i);
 
         kingZoneMask[0][i] = tempBitBoard | (1ULL << i);
-        // kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
-        // kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
+        // kingZoneMask[0][i] |= kingZoneMask[0][i] << 8;
+        // kingZoneMask[0][i] |= kingZoneMask[0][i] >> 8;
         // kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
 
         kingZoneMask[1][i] = tempBitBoard | (1ULL << i);
-        // kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
-        // kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
+        // kingZoneMask[1][i] |= kingZoneMask[1][i] << 8;
+        // kingZoneMask[1][i] |= kingZoneMask[1][i] >> 8;
         // kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
     }
 
@@ -284,6 +284,14 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     assert(kingCount == pieceCount[11]);
     #endif
 
+    unsafeSquares[0] = 0;
+    unsafeSquares[1] = 0;
+
+    KSAttackersWeight[0] = 0;
+    KSAttackersWeight[1] = 0;
+
+    KSAttackersCount[1] = 0;
+    KSAttackersCount[0] = 0;
 
     int ret = 0;
     ret += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
@@ -501,51 +509,59 @@ int Eval::evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightM
     }
 
     int ret = 0;
-    int attackers = 0;
-    uint64_t unsafeSquares = kingZoneMask[col][bitScan(pieces[10 + !col])] & ~(pawnAttacksAll(pieces[!col], !col) | knightAttacks(pieces[2 + !col]) | pieces[col]);
+    uint64_t tempUnsafe = pawnAttacksAll(pieces[!col], !col) | knightAttacks(pieces[2 + !col]);
+    unsafeSquares[col] = tempUnsafe;
+    tempUnsafe |= pieces[col];
 
     uint64_t piece = pieces[2 + col];
     while (piece) {
-        int attacks = count_population(knightMoves[bitScan(piece)] & unsafeSquares);
+        int attacks = count_population(knightMoves[bitScan(piece)] & kingZoneMask[col][bitScan(pieces[10 + !col])] & ~tempUnsafe);
         if (attacks) {
-            ret += attacks * pieceAttackValue[1];
-            attackers++;
+            KSAttackersWeight[col] += attacks * pieceAttackValue[1];
+            (KSAttackersCount[col])++;
         }
         piece &= piece - 1;
     }
 
     piece = pieces[4 + col];
     while (piece) {
-        int attacks = count_population(magics->bishopAttacksMask(occupied ^ pieces[8 + col], bitScan(piece)) & unsafeSquares);
+        uint64_t squaresAttacked = magics->bishopAttacksMask(occupied ^ pieces[8 + col], bitScan(piece));
+        unsafeSquares[!col] |= squaresAttacked;
+        int attacks = count_population(squaresAttacked & kingZoneMask[col][bitScan(pieces[10 + !col])] & ~tempUnsafe);
         if (attacks) {
-            ret += attacks * pieceAttackValue[2];
-            attackers++;
+            KSAttackersWeight[col] += attacks * pieceAttackValue[2];
+            (KSAttackersCount[col])++;
         }
         piece &= piece - 1;
     }
 
     piece = pieces[6 + col];
     while (piece) {
-        int attacks = count_population(magics->rookAttacksMask(occupied ^ pieces[8 + col], bitScan(piece)) & unsafeSquares);
+        uint64_t squaresAttacked = magics->rookAttacksMask(occupied ^ pieces[8 + col], bitScan(piece));
+        unsafeSquares[!col] |= squaresAttacked;
+        int attacks = count_population(squaresAttacked & kingZoneMask[col][bitScan(pieces[10 + !col])] & ~tempUnsafe);
         if (attacks) {
-            ret += attacks * pieceAttackValue[3];
-            attackers++;
+            KSAttackersWeight[col] += attacks * pieceAttackValue[3];
+            (KSAttackersCount[col])++;
         }
         piece &= piece - 1;
     }
 
     piece = pieces[8 + col];
     while (piece) {
-        int attacks = count_population(magics->queenAttacksMask(occupied, bitScan(piece)) & unsafeSquares);
+        uint64_t squaresAttacked = magics->queenAttacksMask(occupied, bitScan(piece));
+        unsafeSquares[!col] |= squaresAttacked;
+        int attacks = count_population(squaresAttacked & kingZoneMask[col][bitScan(pieces[10 + !col])] & ~tempUnsafe);
         if (attacks) {
-            ret += attacks * pieceAttackValue[4];
-            attackers++;
+            KSAttackersWeight[col] += attacks * pieceAttackValue[4];
+            (KSAttackersCount[col])++;
         }
         piece &= piece - 1;
     }
 
-    attackers = std::min(attackers, 7);
-    ret = ret * pieceAttackWeight[attackers] / 100;
+
+    KSAttackersCount[col] = std::min(KSAttackersCount[col], 7);
+    ret = KSAttackersWeight[col] * pieceAttackWeight[KSAttackersCount[col]] / 100;
     return ret;
 }
 

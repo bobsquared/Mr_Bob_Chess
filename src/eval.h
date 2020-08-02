@@ -107,4 +107,9 @@ private:
     const int isolatedPawnValue = S(10, 16);
 
 
+    uint64_t unsafeSquares[2];
+    int KSAttackersCount[2];
+    int KSAttackersWeight[2];
+
+
 };
