@@ -1,6 +1,6 @@
 
 
-debug = yes
+debug = no
 debug_zobrist = no
 
 
