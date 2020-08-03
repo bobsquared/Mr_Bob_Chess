@@ -373,7 +373,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
 
 
 // Evaluate the position with debugging
-int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occupied) {
+int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occ) {
 
     #ifndef NDEBUG
     int debugMaterialCount = 0;
@@ -423,6 +423,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
 
     int evalMidgame = ret;
     int evalEndgame = ret;
+    occupied = occ;
 
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << "White piece square: " << evaluate_piece_square_values(pieces, false) << std::endl;
@@ -449,6 +450,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "All pawns: " << evaluatePawns(pieces, false) - evaluatePawns(pieces, true) << std::endl;
     std::cout << "All passed pawns: " << evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true) << std::endl;
     std::cout << "All outposts: " << evaluateKnights(pieces, knightMoves, false) - evaluateKnights(pieces, knightMoves, true) << std::endl;
+    std::cout << "All bishops: " << evaluateBishops(pieces, magics, false) - evaluateBishops(pieces, magics, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
 
     int phase = TOTALPHASE;
