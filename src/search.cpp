@@ -324,9 +324,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     nodes++;
     MOVE move;
     MOVE bestMove = 0;
-    // MoveList moveList;
     int numMoves = 0;
-    int prevAlpha = alpha;
     int ret = -INFINITY_VAL;
     int height = 0;
 
@@ -397,7 +395,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
         exit_thread_flag = true;
     }
 
-    assert(alpha >= prevAlpha);
+
     if (!exit_thread_flag) {
         assert (bestMove != 0);
         b.saveTT(bestMove, ret, depth, 0, posKey);
