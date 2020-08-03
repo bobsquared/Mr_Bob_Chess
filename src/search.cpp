@@ -397,8 +397,8 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
         exit_thread_flag = true;
     }
 
+    assert(alpha >= prevAlpha);
     if (!exit_thread_flag) {
-        assert(alpha >= prevAlpha);
         assert (bestMove != 0);
         b.saveTT(bestMove, ret, depth, 0, posKey);
     }
@@ -454,6 +454,7 @@ void search(Bitboard &b, int depth) {
 
             if (i > 1 && !exit_thread_flag) {
                 assert(hashed);
+                (void) hashed;
             }
 
             moveList.set_score_move(hashedBoard.move, 1400000 + (i * 100) + aspNum);
