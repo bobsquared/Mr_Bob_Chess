@@ -61,7 +61,6 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
 
     inCheck? b.generate(moveList, 0, NO_MOVE) : b.generate_captures_promotions(moveList, NO_MOVE);
     while (moveList.get_next_move(move)) {
-        // assert(CAPTURE_FLAG & move || PROMOTION_FLAG & move);
 
         if (!inCheck && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
             continue;
@@ -192,21 +191,17 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         }
 
         if (depth <= 3 && numMoves > 0 && !giveCheck && !isCheck && !isPv && isQuiet && eval + 215 * depth <= alpha && alpha < 9000) {
-            // numMoves++;
             continue;
         }
 
         if (depth <= 3 && !isPv && numMoves > 0 && !isCheck && (move & PROMOTION_FLAG) == 0) {
             if (depth == 1 && b.seeCapture(move) < 0) {
-                // numMoves++;
                 continue;
             }
             else if (depth == 2 && b.seeCapture(move) < -350) {
-                // numMoves++;
                 continue;
             }
             else if (depth == 3 && b.seeCapture(move) < -500) {
-                // numMoves++;
                 continue;
             }
         }
