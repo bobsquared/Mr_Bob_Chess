@@ -1,20 +1,10 @@
-# Chess-Program
-A Chess GUI made using Python 3 and pygame using FIDE rules.
-
+# Mr Bob - Chess Engine
 A Chess engine made using C++.
-
-**GUI:**
-
-The GUI runs the latest version of Mr Bob from the binary in the same folder. To run the GUI, pygame must be installed with python 3 or newer.
-Then run
-
-`python3 main.py`
-
 
 **Engine:**
 
 Universal Chess Interface (UCI)
-You can call the makefile in the engine folder to create the binary.
+You can call the makefile in the src folder to create the binary.
 You can then use the binary in any UCI GUI to use it.
 
 **Techniques Used in Engine:**
@@ -33,7 +23,7 @@ You can then use the binary in any UCI GUI to use it.
 
 *Pure speed improvements:*
 
-- Transposition table (default 2GB memory allocated).
+- Transposition table (default 256MB memory allocated).
 - Iterative deepening
 - Principal variation search.
 - Bitboards.
@@ -42,10 +32,3 @@ You can then use the binary in any UCI GUI to use it.
 *Accuracy:*
 
 - Quiescence search (Mitigates the horizon effect).
-
-**TODO:**
-
-- More pruning techniques such as futility pruning.
-- Effectively implement internal iterative deepening
-- Lazy evaluation.
-- Many more.
