@@ -63,6 +63,7 @@ public:
     void clearHashStats();
     void clearHashTable();
     int getHashFull();
+    void replaceHash(int hashSize);
 
     bool nullMoveable();
     int seeCapture(MOVE capture);

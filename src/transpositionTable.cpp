@@ -23,6 +23,25 @@ TranspositionTable::TranspositionTable() {
 
 
 
+// Initialize transposition table
+TranspositionTable::TranspositionTable(int hashSize) {
+
+    numHashes = (double) hashSize / (double) sizeof(ZobristVal) * 0xFFFFF;
+    hashTable = new ZobristVal [numHashes];
+    halfMove = 1;
+
+    clearHashTable();
+
+    ttHits = 0;
+    ttCalls = 0;
+
+    ttOverwrites = 0;
+    ttWrites = 0;
+
+}
+
+
+
 // Delete the hash table
 TranspositionTable::~TranspositionTable() {
     delete [] hashTable;

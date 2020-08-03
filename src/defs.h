@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <string>
 #include <iostream>
 #include <cstdint>
 #include <bitset>

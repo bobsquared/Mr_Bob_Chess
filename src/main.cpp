@@ -21,6 +21,7 @@ int main() {
     Bitboard pos = Bitboard();
     UCI uci = UCI();
 
+    std::regex setHash("setoption\\sname\\shash\\svalue\\s(\\d+)");
     std::regex r2("go\\swtime\\s(\\d+)\\sbtime\\s(\\d+)");
     std::thread thr;
 
@@ -33,8 +34,12 @@ int main() {
         std::smatch m;
         std::string command = "";
 
+
         // Await command
         std::getline(std::cin, command);
+
+        std::string lowerCommand = command;
+        std::transform(lowerCommand.begin(), lowerCommand.end(), lowerCommand.begin(), ::tolower);
         exit_thread_flag = false;
 
 
@@ -57,6 +62,12 @@ int main() {
         // Print engine info, with manditory uciok at the end
         if (command == "uci") {
             uci.uciCommand();
+            continue;
+        }
+
+        // set hash
+        if (std::regex_search(lowerCommand, m, setHash)) {
+            pos.replaceHash(std::stoi(m[1]));
             continue;
         }
 
