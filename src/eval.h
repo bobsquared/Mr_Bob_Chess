@@ -18,9 +18,6 @@
 #define EGVAL(s) ((int16_t)((uint16_t)((unsigned)((s)))))
 
 
-// int pieceValues[6] = {S(85, 100), S(305, 305), S(305, 315), S(475, 535), S(925, 985), S(2000, 2000)};
-
-
 class Eval {
 
 public:
@@ -41,13 +38,13 @@ private:
     uint64_t adjacentMask(uint64_t pawns);
     int evaluate_piece_square_values(uint64_t *pieces, bool col);
     int evaluateTrappedRook(uint64_t *pieces, bool col);
-    int evaluateMobility(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col);
-    int evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col);
     int evaluateImbalance(int *pieceCount, bool col);
     int evaluatePawns(uint64_t *pieces, bool col);
     int evaluatePassedPawns(uint64_t *pieces, bool col);
-    int evaluateKnights(uint64_t *pieces, bool col);
-    int evaluateRooks(uint64_t *pieces, bool col);
+    int evaluateKnights(uint64_t *pieces, uint64_t *knightMoves, bool col);
+    int evaluateBishops(uint64_t *pieces, Magics *magics, bool col);
+    int evaluateRooks(uint64_t *pieces, Magics *magics, bool col);
+    int evaluateQueens(uint64_t *pieces, Magics *magics, bool col);
     int evaluatePawnShield(uint64_t *pieces, bool col);
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];
@@ -107,9 +104,15 @@ private:
     const int isolatedPawnValue = S(10, 16);
 
 
+    uint64_t occupied;
     uint64_t unsafeSquares[2];
     int KSAttackersCount[2];
     int KSAttackersWeight[2];
+
+    uint64_t mobilityUnsafeSquares[2];
+    uint64_t minorUnsafe[2];
+    uint64_t queenUnsafe[2];
+    uint64_t tempUnsafe[2];
 
 
 };

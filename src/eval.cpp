@@ -238,7 +238,7 @@ uint64_t Eval::adjacentMask(uint64_t pawns) {
 
 
 // Evaluate the position
-int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occupied, bool col) {
+int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occ, bool col) {
 
     // Asserts for debugging mode
     #ifndef NDEBUG
@@ -284,6 +284,8 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     assert(kingCount == pieceCount[11]);
     #endif
 
+
+    // King safety
     unsafeSquares[0] = 0;
     unsafeSquares[1] = 0;
 
@@ -293,41 +295,67 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     KSAttackersCount[1] = 0;
     KSAttackersCount[0] = 0;
 
+    uint64_t pawnAttacksW = pawnAttacksAll(pieces[0], 0);
+    uint64_t pawnAttacksB = pawnAttacksAll(pieces[1], 1);
+
+    uint64_t knightAttacksW = knightAttacks(pieces[2]);
+    uint64_t knightAttacksB = knightAttacks(pieces[3]);
+
+    // Mobility
+    mobilityUnsafeSquares[0] = pawnAttacksB | pieces[0] | pieces[10];
+    mobilityUnsafeSquares[1] = pawnAttacksW | pieces[1] | pieces[11];
+
+    minorUnsafe[0] = mobilityUnsafeSquares[0] | pieces[8];
+    minorUnsafe[1] = mobilityUnsafeSquares[1] | pieces[9];
+
+    queenUnsafe[0] = mobilityUnsafeSquares[0] | knightAttacksB;
+    queenUnsafe[1] = mobilityUnsafeSquares[1] | knightAttacksW;
+
+    tempUnsafe[0] = ~(pawnAttacksB | knightAttacksB | pieces[0]) & kingZoneMask[0][bitScan(pieces[11])];
+    tempUnsafe[1] = ~(pawnAttacksW | knightAttacksW | pieces[1]) & kingZoneMask[1][bitScan(pieces[10])];
+    occupied = occ;
+
     int ret = 0;
     ret += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
     ret += col? -16 : 16;
-
 
     int evalMidgame = ret;
     int evalEndgame = ret;
     int pieceSquareEval = evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true);
     int passedPawnsEval = evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
     int pawnsEval = evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
-    int mobilityEval = evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true);
     int imbalanceEval = evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
-    int knightsEval = evaluateKnights(pieces, false) - evaluateKnights(pieces, true);
     int pawnShieldEval = evaluatePawnShield(pieces, false) - evaluatePawnShield(pieces, true);
-    int rooksEval = evaluateRooks(pieces, false) - evaluateRooks(pieces, true);
+    int knightsEval = evaluateKnights(pieces, knightMoves, false) - evaluateKnights(pieces, knightMoves, true);
+    int bishopsEval = evaluateBishops(pieces, magics, false) - evaluateBishops(pieces, magics, true);
+    int rooksEval = evaluateRooks(pieces, magics, false) - evaluateRooks(pieces, magics, true);
+    int queensEval = evaluateQueens(pieces, magics, false) - evaluateQueens(pieces, magics, true);
 
     evalMidgame += MGVAL(material[0] - material[1]);
     evalMidgame += MGVAL(pieceSquareEval);
-    evalMidgame += evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true);
     evalMidgame += MGVAL(passedPawnsEval);
     evalMidgame += MGVAL(pawnsEval);
-    evalMidgame += MGVAL(mobilityEval);
     evalMidgame += MGVAL(imbalanceEval);
     evalMidgame += MGVAL(knightsEval);
+    evalMidgame += MGVAL(bishopsEval);
     evalMidgame += MGVAL(rooksEval);
+    evalMidgame += MGVAL(queensEval);
     evalMidgame += MGVAL(pawnShieldEval);
+
+    KSAttackersCount[0] = std::min(KSAttackersCount[0], 7);
+    KSAttackersCount[1] = std::min(KSAttackersCount[1], 7);
+    evalMidgame += pieces[8] > 0? KSAttackersWeight[0] * pieceAttackWeight[KSAttackersCount[0]] / 100 : 0;
+    evalMidgame -= pieces[9] > 0? KSAttackersWeight[1] * pieceAttackWeight[KSAttackersCount[1]] / 100 : 0;
 
     evalEndgame += EGVAL(material[0] - material[1]);
     evalEndgame += EGVAL(pieceSquareEval);
     evalEndgame += EGVAL(passedPawnsEval);
     evalEndgame += EGVAL(pawnsEval);
-    evalEndgame += EGVAL(mobilityEval);
     evalEndgame += EGVAL(imbalanceEval);
     evalEndgame += EGVAL(knightsEval);
+    evalEndgame += EGVAL(bishopsEval);
     evalEndgame += EGVAL(rooksEval);
+    evalEndgame += EGVAL(queensEval);
     evalEndgame += EGVAL(pawnShieldEval);
 
     int phase = TOTALPHASE;
@@ -399,34 +427,28 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << "White piece square: " << evaluate_piece_square_values(pieces, false) << std::endl;
     std::cout << "White trapped rook: " << evaluateTrappedRook(pieces, false) << std::endl;
-    std::cout << "White mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, false) << std::endl;
-    std::cout << "White safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) << std::endl;
     std::cout << "White imbalance: " << evaluateImbalance(pieceCount, false) << std::endl;
     std::cout << "White pawns: " << evaluatePawns(pieces, false) << std::endl;
     std::cout << "White passed pawns: " << evaluatePassedPawns(pieces, false) << std::endl;
-    std::cout << "White outposts: " << evaluateKnights(pieces, false) << std::endl;
+    std::cout << "White outposts: " << evaluateKnights(pieces, knightMoves, false) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << "Black piece square: " << evaluate_piece_square_values(pieces, true) << std::endl;
     std::cout << "Black trapped rook: " << evaluateTrappedRook(pieces, true) << std::endl;
-    std::cout << "Black mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, true) << std::endl;
-    std::cout << "Black safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "Black imbalance: " << evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "Black pawns: " << evaluatePawns(pieces, true) << std::endl;
     std::cout << "Black passed pawns: " << evaluatePassedPawns(pieces, true) << std::endl;
-    std::cout << "Black outposts: " << evaluateKnights(pieces, true) << std::endl;
+    std::cout << "Black outposts: " << evaluateKnights(pieces, knightMoves, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << "All trapped rook: " << evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true) << std::endl;
     std::cout << "All piece square: " << evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true) << std::endl;
-    std::cout << "All mobility: " << evaluateMobility(pieces, magics, knightMoves, occupied, false) - evaluateMobility(pieces, magics, knightMoves, occupied, true) << std::endl;
-    std::cout << "All safety: " << evaluateKingSafety(pieces, magics, knightMoves, occupied, false) - evaluateKingSafety(pieces, magics, knightMoves, occupied, true) << std::endl;
     std::cout << "All imbalance: " << evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "All pawns: " << evaluatePawns(pieces, false) - evaluatePawns(pieces, true) << std::endl;
     std::cout << "All passed pawns: " << evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true) << std::endl;
-    std::cout << "All outposts: " << evaluateKnights(pieces, false) - evaluateKnights(pieces, true) << std::endl;
+    std::cout << "All outposts: " << evaluateKnights(pieces, knightMoves, false) - evaluateKnights(pieces, knightMoves, true) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
 
     int phase = TOTALPHASE;
@@ -460,111 +482,6 @@ int Eval::evaluate_piece_square_values(uint64_t *pieces, bool col) {
 
     return ret;
 }
-
-
-
-// Evaluate mobility
-int Eval::evaluateMobility(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col) {
-
-    int ret = 0;
-    uint64_t unsafeSquares = pawnAttacksAll(pieces[!col], !col) | pieces[col] | pieces[10 + col];
-    uint64_t minorUnsafe = unsafeSquares | pieces[8 + col];
-    uint64_t queenUnsafe = unsafeSquares | knightAttacks(pieces[2 + !col]);
-
-
-    uint64_t piece = pieces[2 + col];
-    while (piece) {
-        ret += knightMobilityBonus[count_population(knightMoves[bitScan(piece)] & ~minorUnsafe)];
-        piece &= piece - 1;
-    }
-
-    piece = pieces[4 + col];
-    while (piece) {
-        ret += bishopMobilityBonus[count_population(magics->bishopAttacksMask(occupied ^ pieces[8 + col], bitScan(piece)) & ~minorUnsafe)];
-        piece &= piece - 1;
-    }
-
-    piece = pieces[6 + col];
-    while (piece) {
-        ret += rookMobilityBonus[count_population(magics->rookAttacksMask(occupied ^ pieces[8 + col], bitScan(piece)) & ~unsafeSquares)];
-        piece &= piece - 1;
-    }
-
-    piece = pieces[8 + col];
-    while (piece) {
-        ret += queenMobilityBonus[count_population(magics->queenAttacksMask(occupied, bitScan(piece)) & ~queenUnsafe)];
-        piece &= piece - 1;
-    }
-
-    return ret;
-}
-
-
-
-// Evaluate mobility
-int Eval::evaluateKingSafety(uint64_t *pieces, Magics *magics, uint64_t *knightMoves, uint64_t occupied, bool col) {
-
-    if (pieces[8 + col] == 0) {
-        return 0;
-    }
-
-    int ret = 0;
-    uint64_t tempUnsafe = pawnAttacksAll(pieces[!col], !col) | knightAttacks(pieces[2 + !col]);
-    unsafeSquares[col] = tempUnsafe;
-    tempUnsafe |= pieces[col];
-
-    uint64_t piece = pieces[2 + col];
-    while (piece) {
-        int attacks = count_population(knightMoves[bitScan(piece)] & kingZoneMask[col][bitScan(pieces[10 + !col])] & ~tempUnsafe);
-        if (attacks) {
-            KSAttackersWeight[col] += attacks * pieceAttackValue[1];
-            (KSAttackersCount[col])++;
-        }
-        piece &= piece - 1;
-    }
-
-    piece = pieces[4 + col];
-    while (piece) {
-        uint64_t squaresAttacked = magics->bishopAttacksMask(occupied ^ pieces[8 + col], bitScan(piece));
-        unsafeSquares[!col] |= squaresAttacked;
-        int attacks = count_population(squaresAttacked & kingZoneMask[col][bitScan(pieces[10 + !col])] & ~tempUnsafe);
-        if (attacks) {
-            KSAttackersWeight[col] += attacks * pieceAttackValue[2];
-            (KSAttackersCount[col])++;
-        }
-        piece &= piece - 1;
-    }
-
-    piece = pieces[6 + col];
-    while (piece) {
-        uint64_t squaresAttacked = magics->rookAttacksMask(occupied ^ pieces[8 + col], bitScan(piece));
-        unsafeSquares[!col] |= squaresAttacked;
-        int attacks = count_population(squaresAttacked & kingZoneMask[col][bitScan(pieces[10 + !col])] & ~tempUnsafe);
-        if (attacks) {
-            KSAttackersWeight[col] += attacks * pieceAttackValue[3];
-            (KSAttackersCount[col])++;
-        }
-        piece &= piece - 1;
-    }
-
-    piece = pieces[8 + col];
-    while (piece) {
-        uint64_t squaresAttacked = magics->queenAttacksMask(occupied, bitScan(piece));
-        unsafeSquares[!col] |= squaresAttacked;
-        int attacks = count_population(squaresAttacked & kingZoneMask[col][bitScan(pieces[10 + !col])] & ~tempUnsafe);
-        if (attacks) {
-            KSAttackersWeight[col] += attacks * pieceAttackValue[4];
-            (KSAttackersCount[col])++;
-        }
-        piece &= piece - 1;
-    }
-
-
-    KSAttackersCount[col] = std::min(KSAttackersCount[col], 7);
-    ret = KSAttackersWeight[col] * pieceAttackWeight[KSAttackersCount[col]] / 100;
-    return ret;
-}
-
 
 
 // Evaluate trapped rook
@@ -679,7 +596,7 @@ int Eval::evaluatePassedPawns(uint64_t *pieces, bool col) {
 
 
 
-int Eval::evaluateKnights(uint64_t *pieces, bool col) {
+int Eval::evaluateKnights(uint64_t *pieces, uint64_t *knightMoves, bool col) {
 
     int ret = 0;
     uint64_t piece = pieces[2 + col];
@@ -689,26 +606,81 @@ int Eval::evaluateKnights(uint64_t *pieces, bool col) {
     while (piece) {
         int bscan = bitScan(piece);
 
-        if (defendedKnight & (1ULL << bscan) && (outpostMask[col][bscan] & pieces[!col]) == 0) {
-            ret += outpostPotential[col][bscan];
+        // Mobility
+        ret += knightMobilityBonus[count_population(knightMoves[bscan] & ~minorUnsafe[col])];
+
+        // King safety
+        unsafeSquares[!col] |= knightMoves[bscan];
+        int attacks = count_population(knightMoves[bscan] & tempUnsafe[col]);
+        if (attacks) {
+            KSAttackersWeight[col] += attacks * pieceAttackValue[1];
+            (KSAttackersCount[col])++;
         }
+
+        // Outposts
+        if (defendedKnight & (1ULL << bscan) && (outpostMask[col][bscan] & pieces[!col]) == 0) {
+            ret += S(outpostPotential[col][bscan], 0);
+        }
+
         piece &= piece - 1;
     }
 
-    return S(ret, 0);
+    return ret;
 
 }
 
 
 
-int Eval::evaluateRooks(uint64_t *pieces, bool col) {
+int Eval::evaluateBishops(uint64_t *pieces, Magics *magics, bool col) {
+
+    int ret = 0;
+    uint64_t piece = pieces[4 + col];
+
+    while (piece) {
+        int bscan = bitScan(piece);
+        uint64_t bishopAttacks = magics->bishopAttacksMask(occupied ^ pieces[8 + col], bscan);
+
+        // Mobility
+        ret += bishopMobilityBonus[count_population(bishopAttacks & ~minorUnsafe[col])];
+
+        // King safety
+        unsafeSquares[!col] |= bishopAttacks;
+        int attacks = count_population(bishopAttacks & tempUnsafe[col]);
+        if (attacks) {
+            KSAttackersWeight[col] += attacks * pieceAttackValue[2];
+            (KSAttackersCount[col])++;
+        }
+
+        piece &= piece - 1;
+    }
+
+    return ret;
+
+}
+
+
+
+int Eval::evaluateRooks(uint64_t *pieces, Magics *magics, bool col) {
 
     int ret = 0;
     uint64_t piece = pieces[6 + col];
 
     while (piece) {
         int bscan = bitScan(piece);
+        uint64_t rookAttacks = magics->rookAttacksMask(occupied ^ pieces[8 + col], bscan);
 
+        // Mobility
+        ret += rookMobilityBonus[count_population(rookAttacks & ~mobilityUnsafeSquares[col])];
+
+        // King safety
+        unsafeSquares[!col] |= rookAttacks;
+        int attacks = count_population(rookAttacks & tempUnsafe[col]);
+        if (attacks) {
+            KSAttackersWeight[col] += attacks * pieceAttackValue[3];
+            (KSAttackersCount[col])++;
+        }
+
+        // Rook on open file
         if ((columnMask[bscan] & pieces[col]) == 0) {
             ret += S(18, 0);
             if ((columnMask[bscan] & pieces[!col]) == 0) {
@@ -720,6 +692,35 @@ int Eval::evaluateRooks(uint64_t *pieces, bool col) {
     }
 
     return ret;
+
+}
+
+
+
+int Eval::evaluateQueens(uint64_t *pieces, Magics *magics, bool col) {
+
+    int ret = 0;
+    uint64_t piece = pieces[8 + col];
+
+    while (piece) {
+        int bscan = bitScan(piece);
+        uint64_t queenAttacks = magics->queenAttacksMask(occupied, bscan);
+
+        // Mobility
+        ret += queenMobilityBonus[count_population(queenAttacks & ~queenUnsafe[col])];
+
+        // King safety
+        unsafeSquares[!col] |= queenAttacks;
+        int attacks = count_population(queenAttacks & tempUnsafe[col]);
+        if (attacks) {
+            KSAttackersWeight[col] += attacks * pieceAttackValue[4];
+            (KSAttackersCount[col])++;
+        }
+
+        piece &= piece - 1;
+    }
+
+    return S(ret, 0);
 
 }
 
