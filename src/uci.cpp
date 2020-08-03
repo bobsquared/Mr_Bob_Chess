@@ -16,7 +16,7 @@ void UCI::uciCommand() {
     std::cout << "id author " << AUTHOR << std::endl;
     std::cout << std::endl;
 
-    std::cout << "option name Hash type spin default 16 min 1 max 2054" << std::endl;
+    std::cout << "option name Hash type spin default 256 min 1 max 2054" << std::endl;
     std::cout << "uciok" << std::endl;
 }
 
