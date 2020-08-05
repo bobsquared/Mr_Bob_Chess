@@ -410,7 +410,7 @@ void Bitboard::InitMaterial() {
 
 
 // Generate all pseudo-legal moves unsorted
-void Bitboard::generate_unsorted(MoveList &moveList, int depth, MOVE pvMove) {
+void Bitboard::generate_unsorted(MoveList &moveList) {
     moveGen->generate_all_moves(moveList, pieces, color, pawnAttacks, knightMoves, magics, kingMoves, occupied, enpassantSq, castleRights, toMove);
 }
 

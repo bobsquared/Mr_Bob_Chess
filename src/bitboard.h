@@ -40,7 +40,7 @@ public:
 
     void generate(MoveList &moveList, int depth, MOVE pvMove);
     void generate_captures_promotions(MoveList &moveList, MOVE pvMove);
-    void generate_unsorted(MoveList &moveList, int depth, MOVE pvMove);
+    void generate_unsorted(MoveList &moveList);
 
     bool pickMove(MOVE &move);
     void make_move(MOVE move);

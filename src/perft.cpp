@@ -91,7 +91,7 @@ uint64_t PerftCall(Bitboard & b, int depth) {
         return 1;
     }
 
-    b.generate_unsorted(moveList, depth, NO_MOVE);
+    b.generate_unsorted(moveList);
     while (moveList.get_next_move(move)) {
 
         // if (b.isLegal(move)) {
