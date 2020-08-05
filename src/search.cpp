@@ -66,13 +66,11 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
             continue;
         }
 
-        b.make_move(move);
-        if (b.InCheckOther()) {
-            b.undo_move(move);
+        if (!b.isLegal(move)) {
             continue;
         }
 
-
+        b.make_move(move);
         numMoves++;
 
 
@@ -206,12 +204,11 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             }
         }
 
-        b.make_move(move);
-        if (b.InCheckOther()) {
-            b.undo_move(move);
+        if (!b.isLegal(move)) {
             continue;
         }
 
+        b.make_move(move);
         int newDepth = depth + extension;
         if (numMoves == 0) {
             score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
@@ -334,12 +331,12 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     while (moveList.get_next_move(move)) {
 
         int tempRet;
-        b.make_move(move);
-        if (b.InCheckOther()) {
-            b.undo_move(move);
+
+        if (!b.isLegal(move)) {
             continue;
         }
 
+        b.make_move(move);
         if (totalTime > 3000) {
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
