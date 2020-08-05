@@ -831,7 +831,7 @@ void Bitboard::undo_move(MOVE move) {
 
 
 /************************************************************************************************
-**  Checks section
+**  Checks and legal moves section
 **  Used for determining whether a player is in check.
 *************************************************************************************************/
 
@@ -872,6 +872,58 @@ bool Bitboard::InCheck() {
 
     return ret != 0;
 
+}
+
+
+
+// Determines if a move is legal
+bool Bitboard::isLegal(MOVE move) {
+
+    // Special cases
+    if ((MOVE_FLAGS & move) == ENPASSANT_FLAG) {
+        make_move(move);
+        bool legal = InCheckOther();
+        undo_move(move);
+        return !legal;
+    }
+
+    // Move to and from square, and if its a capture
+    int from = get_move_from(move);
+    int to = get_move_to(move);
+    int kingSide = toMove? 11 : 10;
+    uint64_t tofrom = (1ULL << to) | (1ULL << from);
+
+
+    bool attacked = false;
+    bool kingMove = false;
+
+    // If the moving piece is a king
+    if (pieceAt[from] / 2 == 5) {
+        kingMove = true;
+        pieces[kingSide] ^= tofrom;
+    }
+
+    // If it is a capture
+    if (move & CAPTURE_FLAG) {
+        int captured = pieceAt[to];
+        occupied ^= 1ULL << from;
+        pieces[captured] ^= 1ULL << to;
+        attacked = InCheck();
+        pieces[captured] ^= 1ULL << to;
+        occupied ^= 1ULL << from;
+    }
+    else {
+        occupied ^= tofrom;
+        attacked = InCheck();
+        occupied ^= tofrom;
+    }
+
+    // If the moving piece is a king
+    if (kingMove) {
+        pieces[kingSide] ^= tofrom;
+    }
+
+    return !attacked;
 }
 
 
@@ -1552,58 +1604,7 @@ void Bitboard::setPosFen(std::string fen) {
 
 
 
-bool Bitboard::isLegal(MOVE move) {
 
-    // Special cases
-    if ((MOVE_FLAGS & move) == ENPASSANT_FLAG) {
-        make_move(move);
-        bool legal = InCheckOther();
-        undo_move(move);
-
-        return !legal;
-    }
-
-
-    // Move to and from square, and if its a capture
-    int from = get_move_from(move);
-    int to = get_move_to(move);
-    int kingSide = toMove? 11 : 10;
-    uint64_t tofrom = (1ULL << to) | (1ULL << from);
-
-
-    bool attacked = false;
-    bool kingMove = false;
-
-    // If the moving piece is a king
-    if (pieceAt[from] / 2 == 5) {
-        kingMove = true;
-        pieces[kingSide] ^= tofrom;
-    }
-
-    // If it is a capture
-    if (move & CAPTURE_FLAG) {
-        int captured = pieceAt[to];
-        occupied ^= 1ULL << from;
-        pieces[captured] ^= 1ULL << to;
-        attacked = InCheck();
-        pieces[captured] ^= 1ULL << to;
-        occupied ^= 1ULL << from;
-    }
-    else {
-        occupied ^= tofrom;
-        attacked = InCheck();
-        occupied ^= tofrom;
-    }
-
-
-    // If the moving piece is a king
-    if (kingMove) {
-        pieces[kingSide] ^= tofrom;
-    }
-
-
-    return !attacked;
-}
 
 
 
