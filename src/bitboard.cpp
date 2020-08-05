@@ -409,6 +409,12 @@ void Bitboard::InitMaterial() {
 *************************************************************************************************/
 
 
+// Generate all pseudo-legal moves unsorted
+void Bitboard::generate_unsorted(MoveList &moveList, int depth, MOVE pvMove) {
+    moveGen->generate_all_moves(moveList, pieces, color, pawnAttacks, knightMoves, magics, kingMoves, occupied, enpassantSq, castleRights, toMove);
+}
+
+
 // Generate all pseudo-legal moves
 void Bitboard::generate(MoveList &moveList, int depth, MOVE pvMove) {
     moveGen->generate_all_moves(moveList, pieces, color, pawnAttacks, knightMoves, magics, kingMoves, occupied, enpassantSq, castleRights, toMove);
@@ -839,9 +845,8 @@ bool Bitboard::InCheckOther() {
 
     ret = pieces[toMove] & pawnAttacksAll(pieces[10 + !toMove], !toMove);
     ret |= pieces[2 + toMove] & knightMoves[index];
-    ret |= pieces[4 + toMove] & magics->bishopAttacksMask(occupied, index);
-    ret |= pieces[6 + toMove] & magics->rookAttacksMask(occupied, index);
-    ret |= pieces[8 + toMove] & magics->queenAttacksMask(occupied, index);
+    ret |= (pieces[4 + toMove] | pieces[8 + toMove]) & magics->bishopAttacksMask(occupied, index);
+    ret |= (pieces[6 + toMove] | pieces[8 + toMove]) & magics->rookAttacksMask(occupied, index);
     ret |= pieces[10 + toMove] & kingMoves[index];
     ret &= color[toMove];
 
@@ -860,9 +865,8 @@ bool Bitboard::InCheck() {
 
     ret = pieces[!toMove] & pawnAttacksAll(pieces[10 + toMove], toMove);
     ret |= pieces[2 + !toMove] & knightMoves[index];
-    ret |= pieces[4 + !toMove] & magics->bishopAttacksMask(occupied, index);
-    ret |= pieces[6 + !toMove] & magics->rookAttacksMask(occupied, index);
-    ret |= pieces[8 + !toMove] & magics->queenAttacksMask(occupied, index);
+    ret |= (pieces[4 + !toMove] | pieces[8 + !toMove]) & magics->bishopAttacksMask(occupied, index);
+    ret |= (pieces[6 + !toMove] | pieces[8 + !toMove]) & magics->rookAttacksMask(occupied, index);
     ret |= pieces[10 + !toMove] & kingMoves[index];
     ret &= color[!toMove];
 
@@ -1098,9 +1102,8 @@ uint64_t Bitboard::isAttackedSee(int index) {
     ret |= pieces[0] & pawnAttacks[index][1];
     ret |= pieces[1] & pawnAttacks[index][0];
     ret |= (pieces[2] | pieces[3]) & knightMoves[index];
-    ret |= (pieces[4] | pieces[5]) & magics->bishopAttacksMask(occupied, index);
-    ret |= (pieces[6] | pieces[7]) & magics->rookAttacksMask(occupied, index);
-    ret |= (pieces[8] | pieces[9]) & magics->queenAttacksMask(occupied, index);
+    ret |= (pieces[4] | pieces[5] | pieces[8] | pieces[9]) & magics->bishopAttacksMask(occupied, index);
+    ret |= (pieces[6] | pieces[7] | pieces[8] | pieces[9]) & magics->rookAttacksMask(occupied, index);
     ret |= (pieces[10] | pieces[11]) & kingMoves[index];
 
     return ret;
@@ -1549,15 +1552,58 @@ void Bitboard::setPosFen(std::string fen) {
 
 
 
+bool Bitboard::isLegal(MOVE move) {
+
+    // Special cases
+    if ((MOVE_FLAGS & move) == ENPASSANT_FLAG) {
+        make_move(move);
+        bool legal = InCheckOther();
+        undo_move(move);
+
+        return !legal;
+    }
 
 
+    // Move to and from square, and if its a capture
+    int from = get_move_from(move);
+    int to = get_move_to(move);
+    int kingSide = toMove? 11 : 10;
+    uint64_t tofrom = (1ULL << to) | (1ULL << from);
 
 
+    bool attacked = false;
+    bool kingMove = false;
+
+    // If the moving piece is a king
+    if (pieceAt[from] / 2 == 5) {
+        kingMove = true;
+        pieces[kingSide] ^= tofrom;
+    }
+
+    // If it is a capture
+    if (move & CAPTURE_FLAG) {
+        int captured = pieceAt[to];
+        occupied ^= 1ULL << from;
+        pieces[captured] ^= 1ULL << to;
+        attacked = InCheck();
+        pieces[captured] ^= 1ULL << to;
+        occupied ^= 1ULL << from;
+    }
+    else {
+        occupied ^= tofrom;
+        attacked = InCheck();
+        occupied ^= tofrom;
+    }
 
 
+    // If the moving piece is a king
+    if (kingMove) {
+        pieces[kingSide] ^= tofrom;
+    }
 
 
-
+    return !attacked;
+}
 
 
 

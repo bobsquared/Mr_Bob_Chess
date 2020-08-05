@@ -91,15 +91,17 @@ uint64_t PerftCall(Bitboard & b, int depth) {
         return 1;
     }
 
-    b.generate(moveList, depth, NO_MOVE);
+    b.generate_unsorted(moveList, depth, NO_MOVE);
     while (moveList.get_next_move(move)) {
 
-        b.make_move(move);
+        // if (b.isLegal(move)) {
+            b.make_move(move);
 
-        if (!b.InCheckOther()) {
-            nodes += PerftCall(b, depth - 1);
-        }
-        b.undo_move(move);
+            if (!b.InCheckOther()) {
+                nodes += PerftCall(b, depth - 1);
+            }
+            b.undo_move(move);
+        // }
     }
 
     return nodes;
