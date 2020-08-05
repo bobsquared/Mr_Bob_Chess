@@ -690,6 +690,11 @@ int Eval::evaluateRooks(uint64_t *pieces, Magics *magics, bool col) {
             }
         }
 
+        // Rook on enemy queen file
+        if ((columnMask[bscan] & pieces[8 + !col]) == 0) {
+            ret += S(5, 3);
+        }
+
         piece &= piece - 1;
     }
 
