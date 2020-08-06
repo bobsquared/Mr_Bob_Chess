@@ -197,6 +197,10 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             continue;
         }
 
+        if (depth == 1 && quietsSearched > (improving? 7 : 5) && !giveCheck && !isCheck && !isPv && isQuiet) {
+            continue;
+        }
+
         if (depth <= 3 && !isPv && numMoves > 0 && !isCheck && (move & PROMOTION_FLAG) == 0) {
             if (depth == 1 && b.seeCapture(move) < 0) {
                 continue;
