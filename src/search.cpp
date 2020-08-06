@@ -157,6 +157,11 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     b.removeKiller(height + 1);
     bool isCheck = b.InCheck();
 
+    // Razoring
+    if (!isPv && !isCheck && depth <= 1 && eval <= alpha - 350) {
+        return qsearch(b, -1, alpha, beta);
+    }
+
     if (!isPv && !isCheck && depth <= 3 && eval - 220 * depth >= beta && eval < 9000) {
         return eval;
     }
