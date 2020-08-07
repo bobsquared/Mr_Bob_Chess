@@ -193,23 +193,27 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             extension = 1;
         }
 
-        if (depth <= 3 && numMoves > 0 && !giveCheck && !isCheck && !isPv && isQuiet && eval + 215 * depth <= alpha && alpha < 9000) {
-            continue;
-        }
+        if (!isPv && !isCheck) {
+            if (isQuiet && !giveCheck) {
+                if (depth <= 3 && numMoves > 0 && eval + 215 * depth <= alpha && alpha < 9000) {
+                    continue;
+                }
 
-        if (depth == 1 && quietsSearched > (improving? 7 : 5) && !giveCheck && !isCheck && !isPv && isQuiet) {
-            continue;
-        }
+                if (depth == 1 && quietsSearched > (improving? 7 : 5)) {
+                    continue;
+                }
+            }
 
-        if (depth <= 3 && !isPv && numMoves > 0 && !isCheck && (move & PROMOTION_FLAG) == 0) {
-            if (depth == 1 && b.seeCapture(move) < 0) {
-                continue;
-            }
-            else if (depth == 2 && b.seeCapture(move) < -350) {
-                continue;
-            }
-            else if (depth == 3 && b.seeCapture(move) < -500) {
-                continue;
+            if (depth <= 3 && numMoves > 0 && (move & PROMOTION_FLAG) == 0) {
+                if (depth == 1 && b.seeCapture(move) < 0) {
+                    continue;
+                }
+                else if (depth == 2 && b.seeCapture(move) < -350) {
+                    continue;
+                }
+                else if (depth == 3 && b.seeCapture(move) < -500) {
+                    continue;
+                }
             }
         }
 
