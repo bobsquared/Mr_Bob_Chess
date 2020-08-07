@@ -65,7 +65,7 @@ void TranspositionTable::saveTT(MOVE move, int score, int depth, uint8_t flag, u
 
 // Probe the transposition table
 // Currently using: Always Replace
-bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta) {
+bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, int alpha, int beta) {
 
     ttCalls++;
     bool ret = false;
