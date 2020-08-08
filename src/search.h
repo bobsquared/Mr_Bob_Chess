@@ -24,4 +24,4 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta);
 extern BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha, int beta);
 extern void search(Bitboard &b, int depth);
 extern void InitLateMoveArray();
-extern int qsearch(Bitboard &b, int depth, int alpha, int beta);
+extern int qsearch(Bitboard &b, int depth, int alpha, int beta, int height);

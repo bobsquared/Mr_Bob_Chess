@@ -21,7 +21,7 @@ void InitLateMoveArray() {
 
 
 
-int qsearch(Bitboard &b, int depth, int alpha, int beta) {
+int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
@@ -38,7 +38,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
     }
 
     bool inCheck = b.InCheck();
-    int stand_pat = inCheck? -9999 + depth : 0;
+    int stand_pat = inCheck? -MATE_VALUE + height : 0;
     if (!inCheck) {
         stand_pat = std::max(alpha, b.evaluate());
         if (stand_pat >= beta) {
@@ -74,7 +74,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta) {
         numMoves++;
 
 
-        int score = -qsearch(b, depth - 1, -beta, -alpha);
+        int score = -qsearch(b, depth - 1, -beta, -alpha, height + 1);
         b.undo_move(move);
         if (score > ret) {
             ret = score;
@@ -124,7 +124,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
     if (depth <= 0) {
-        return qsearch(b, depth - 1, alpha, beta);
+        return qsearch(b, depth - 1, alpha, beta, height);
     }
 
     nodes++;
@@ -159,7 +159,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
     // Razoring
     if (!isPv && !isCheck && depth <= 1 && eval <= alpha - 350) {
-        return qsearch(b, -1, alpha, beta);
+        return qsearch(b, -1, alpha, beta, height);
     }
 
     if (!isPv && !isCheck && depth <= 3 && eval - 220 * depth >= beta && eval < 9000) {
@@ -175,6 +175,21 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
         if (nullRet >= beta && nullRet < 9000) {
             return nullRet;
+        }
+    }
+
+    int mateDistance = MATE_VALUE - height;
+    if (mateDistance < beta) {
+        beta = mateDistance;
+        if (alpha >= mateDistance) {
+            return mateDistance;
+        }
+    }
+    mateDistance = -MATE_VALUE + height;
+    if (mateDistance > alpha) {
+        alpha = mateDistance;
+        if (beta <= mateDistance) {
+            return mateDistance;
         }
     }
 
@@ -293,7 +308,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
     if (numMoves == 0) {
         if (isCheck) {
-            return -9999 - depth;
+            return -MATE_VALUE + height;
         }
         else {
             return 0;
@@ -428,6 +443,7 @@ void search(Bitboard &b, int depth) {
     int beta;
     int tempAlpha;
     int tempBeta;
+    int score = 0;
 
     b.clearHashStats();
 
@@ -531,7 +547,17 @@ void search(Bitboard &b, int depth) {
                 break;
         }
 
-        std::cout << "info depth " << i << " seldepth " << std::abs(seldepth) - 1 + i << " score cp " << hashedBoard.score <<
+        std::string cpScore = " score cp ";
+        score = hashedBoard.score;
+        if (std::abs(hashedBoard.score) >= MATE_VALUE - 500) {
+            score = (MATE_VALUE - std::abs(hashedBoard.score) + 1) / 2;
+            if (hashedBoard.score < 0) {
+                score = -score;
+            }
+            cpScore = " score mate ";
+        }
+
+        std::cout << "info depth " << i << " seldepth " << std::abs(seldepth) - 1 + i << cpScore << score <<
             " nodes " << nodes << " nps " << nps << " hashfull " << b.getHashFull() << " time " << (int) totalTime << " pv" << b.getPv() << std::endl;
 
     }
