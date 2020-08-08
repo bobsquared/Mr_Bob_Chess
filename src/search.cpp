@@ -433,6 +433,7 @@ void search(Bitboard &b, int depth) {
     MoveList moveList;
     std::string algMove;
     uint64_t nps;
+    uint64_t nodesTotal = 0;
     totalTime = 0;
 
     ZobristVal hashedBoard;
@@ -507,14 +508,15 @@ void search(Bitboard &b, int depth) {
             break;
         }
 
-        auto diff = std::chrono::duration_cast<std::chrono::nanoseconds> (t2 - t1).count();
-        totalTime += ((double) diff / 1000000.0);
+        nodesTotal += nodes;
+        auto diff = std::chrono::duration_cast<std::chrono::milliseconds> (t2 - t1).count();
+        totalTime += (double) diff;
 
         if ((double) diff == 0) {
             nps = 0;
         }
         else {
-            nps = (uint64_t) ((double) nodes * 1000000000.0) / ((double) diff);
+            nps = (uint64_t) ((double) nodesTotal * 1000.0) / ((double) totalTime);
         }
 
         bestMove = hashedBoard.move;
@@ -558,7 +560,7 @@ void search(Bitboard &b, int depth) {
         }
 
         std::cout << "info depth " << i << " seldepth " << std::abs(seldepth) - 1 + i << cpScore << score <<
-            " nodes " << nodes << " nps " << nps << " hashfull " << b.getHashFull() << " time " << (int) totalTime << " pv" << b.getPv() << std::endl;
+            " nodes " << nodesTotal << " nps " << nps << " hashfull " << b.getHashFull() << " time " << (int) totalTime << " pv" << b.getPv() << std::endl;
 
     }
 
