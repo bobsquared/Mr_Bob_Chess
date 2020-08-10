@@ -162,7 +162,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         return qsearch(b, -1, alpha, beta, height);
     }
 
-    if (!isPv && !isCheck && depth <= 3 && eval - 220 * depth >= beta && eval < 9000) {
+    if (!isPv && !isCheck && depth <= 6 && eval - 220 * depth >= beta && eval < 9000) {
         return eval;
     }
 
@@ -210,7 +210,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
         if (!isPv && !isCheck) {
             if (isQuiet && !giveCheck) {
-                if (depth <= 3 && numMoves > 0 && eval + 215 * depth <= alpha && alpha < 9000) {
+                if (depth <= 6 && numMoves > 0 && eval + 215 * depth <= alpha && alpha < 9000) {
                     continue;
                 }
 
