@@ -217,6 +217,9 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
                 if (depth == 1 && quietsSearched > (improving? 7 : 5)) {
                     continue;
                 }
+                else if (depth == 2 && quietsSearched > (improving? 10 : 8)) {
+                    continue;
+                }
             }
 
             if (depth <= 3 && numMoves > 0 && (move & PROMOTION_FLAG) == 0) {
