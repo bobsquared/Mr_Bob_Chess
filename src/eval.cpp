@@ -588,6 +588,9 @@ int Eval::evaluatePassedPawns(uint64_t *pieces, bool col) {
         int bscan = bitScan(piece);
         if ((passedPawnMask[col][bscan] & pieces[!col]) == 0 && (forwardMask[col][bscan] & pieces[col]) == 0) {
             ret += col? passedPawnWeight[(7 - (bscan / 8))] : passedPawnWeight[(bscan / 8)];
+            if (columnMask[bscan] & pieces[6 + col]) {
+                ret += S(6, 12);
+            }
         }
         piece &= piece - 1;
     }
