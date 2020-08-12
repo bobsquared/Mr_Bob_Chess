@@ -218,17 +218,16 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     while (moveList.get_next_move(move)) {
         int score;
         int extension = 0;
-        bool giveCheck = b.InCheck();
         bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
 
         // Check extension
-        if (giveCheck) {
+        if (isCheck) {
             extension = 1;
         }
 
 
         if (!isPv && !isCheck) {
-            if (isQuiet && !giveCheck) {
+            if (isQuiet) {
 
                 // Futility pruning
                 if (depth <= 6 && numMoves > 0 && eval + 215 * depth <= alpha && alpha < 9000) {
@@ -275,7 +274,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
         }
         // Late move reductions
-        else if (depth >= 3 && isQuiet && !isCheck && !giveCheck && !extension) {
+        else if (depth >= 3 && isQuiet && !isCheck) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)]; // Base reduction
 
             lmr -= b.isKiller(height, move); // Don't reduce as much for killer moves
