@@ -27,12 +27,15 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     b.debugZobristHash();
     #endif
 
-    nodes++;
-    seldepth = std::min(depth, seldepth);
+    nodes++; // update nodes searched
+    seldepth = std::min(depth, seldepth); // update seldepth
+
+    // stop the search
     if (exit_thread_flag) {
         return 0;
     }
 
+    // determine if it is a draw
     if (b.isDraw()) {
         return 0;
     }
@@ -41,6 +44,8 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     int stand_pat = inCheck? -MATE_VALUE + height : 0;
     if (!inCheck) {
         stand_pat = std::max(alpha, b.evaluate());
+
+        // standing pat
         if (stand_pat >= beta) {
             return stand_pat;
         }
@@ -49,6 +54,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
             alpha = stand_pat;
         }
 
+        // delta pruning
         if (stand_pat < alpha - MGVAL(pieceValues[4])) {
             return stand_pat;
         }
@@ -56,28 +62,29 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
 
     MOVE move;
     MoveList moveList;
-    int ret = -INFINITY_VAL;
     int numMoves = 0;
 
     inCheck? b.generate(moveList, 0, NO_MOVE) : b.generate_captures_promotions(moveList, NO_MOVE);
     while (moveList.get_next_move(move)) {
 
+        // Prune negative SEE
         if (!inCheck && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
             continue;
         }
 
+        // Check legality
         if (!b.isLegal(move)) {
             continue;
         }
 
-        b.make_move(move);
+        // Search more captures
         numMoves++;
-
-
+        b.make_move(move);
         int score = -qsearch(b, depth - 1, -beta, -alpha, height + 1);
         b.undo_move(move);
-        if (score > ret) {
-            ret = score;
+
+        if (score > stand_pat) {
+            stand_pat = score;
             if (score > alpha) {
                 alpha = score;
                 if (score >= beta) {
@@ -88,8 +95,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
 
     }
 
-
-    return numMoves == 0? stand_pat : ret;
+    return stand_pat;
 
 }
 
@@ -103,32 +109,37 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     b.debugZobristHash();
     #endif
 
+    // Stop the search
     if (exit_thread_flag) {
         return 0;
     }
 
+    // Determine if the position is a textbook draw
     if (b.isDraw()) {
         return 0;
     }
 
+    // Check for 3folds
     if (alpha < 0 && b.isRepetition()) {
         if (beta <= 0) {
             return 0;
         }
     }
 
+    // Check if there are any potential wins that don't require help mate.
     if (beta > 0 && b.noPotentialWin()) {
         if (alpha >= 0) {
             return 0;
         }
     }
 
+    // Dive into Quiesence search
     if (depth <= 0) {
         return qsearch(b, depth - 1, alpha, beta, height);
     }
 
-    nodes++;
 
+    nodes++; // Increment number of nodes
     MOVE move;
     MOVE bestMove = NO_MOVE;
     MoveList moveList;
@@ -139,8 +150,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     bool isPv = alpha == beta - 1? false : true;
 
 
-    // Transposition table for duplicate detection:
-    // Get the hash key
+    // Probe Transpostion Table:
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
@@ -154,19 +164,23 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     int eval = hashed? hashedBoard.score : b.evaluate();
     evalStack[height] = eval;
     bool improving = height >= 2? eval > evalStack[height - 2] : false;
-    b.removeKiller(height + 1);
     bool isCheck = b.InCheck();
+    b.removeKiller(height + 1);
+
 
     // Razoring
     if (!isPv && !isCheck && depth <= 1 && eval <= alpha - 350) {
         return qsearch(b, -1, alpha, beta, height);
     }
 
+
+    // Reverse futility pruning
     if (!isPv && !isCheck && depth <= 6 && eval - 220 * depth >= beta && eval < 9000) {
         return eval;
     }
 
 
+    // Null move pruning
     if (!isPv && canNullMove && !isCheck && eval >= beta && depth >= 2 && b.nullMoveable()) {
         int R = 3 + depth / 8;
         b.make_move(NULL_MOVE);
@@ -178,6 +192,8 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         }
     }
 
+
+    // Mate distance pruning
     int mateDistance = MATE_VALUE - height;
     if (mateDistance < beta) {
         beta = mateDistance;
@@ -185,6 +201,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             return mateDistance;
         }
     }
+
     mateDistance = -MATE_VALUE + height;
     if (mateDistance > alpha) {
         alpha = mateDistance;
@@ -194,26 +211,31 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
 
+    // Search
     int quietsSearched = 0;
     MOVE quiets[MAX_NUM_MOVES];
-    b.generate(moveList, height, hashedBoard.move);
+    b.generate(moveList, height, hashedBoard.move); // Generate moves
     while (moveList.get_next_move(move)) {
         int score;
         int extension = 0;
         bool giveCheck = b.InCheck();
         bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
 
-
+        // Check extension
         if (giveCheck) {
             extension = 1;
         }
 
+
         if (!isPv && !isCheck) {
             if (isQuiet && !giveCheck) {
+
+                // Futility pruning
                 if (depth <= 6 && numMoves > 0 && eval + 215 * depth <= alpha && alpha < 9000) {
                     continue;
                 }
 
+                // Late move pruning
                 if (depth == 1 && quietsSearched > (improving? 7 : 5)) {
                     continue;
                 }
@@ -225,6 +247,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
                 }
             }
 
+            // SEE pruning
             if (depth <= 3 && numMoves > 0 && (move & PROMOTION_FLAG) == 0) {
                 if (depth == 1 && b.seeCapture(move) < 0) {
                     continue;
@@ -238,22 +261,26 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             }
         }
 
+        // Skip the move it is not legal
         if (!b.isLegal(move)) {
             continue;
         }
 
-        b.make_move(move);
-        int newDepth = depth + extension;
+        int newDepth = depth + extension; // Extend
+
+        b.make_move(move); // Make move
+
+        // First move search at full depth and full window
         if (numMoves == 0) {
             score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
         }
+        // Late move reductions
         else if (depth >= 3 && isQuiet && !isCheck && !giveCheck && !extension) {
-            int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
+            int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)]; // Base reduction
 
-            lmr -= b.isKiller(height, move);
-            lmr += !improving && numMoves >= 6;
-            lmr -= 2 * isPv;
-            // lmr += see;
+            lmr -= b.isKiller(height, move); // Don't reduce as much for killer moves
+            lmr += !improving && numMoves >= 6; // Reduce if evaluation is improving
+            lmr -= 2 * isPv; // Don't reduce as much for PV nodes
 
             lmr = std::min(depth - 1, std::max(lmr, 0));
             score = -pvSearch(b, newDepth - 1 - lmr, -alpha - 1, -alpha, true, height + 1);
@@ -264,14 +291,17 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
                 }
             }
         }
+        // Null window search
         else {
             score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true, height + 1);
             if (score > alpha && score < beta) {
                 score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
             }
         }
-        b.undo_move(move);
 
+        b.undo_move(move); // Undo move
+
+        // Stop the search
         if (exit_thread_flag) {
             return 0;
         }
@@ -297,6 +327,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
 
+    // Update Histories
     if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
         b.insertKiller(height, move);
         b.insertCounterMove(move);
@@ -311,7 +342,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
 
-
+    // Check for checkmates and stalemates
     if (numMoves == 0) {
         if (isCheck) {
             return -MATE_VALUE + height;
@@ -321,10 +352,12 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         }
     }
 
+    // Stop the search
     if (exit_thread_flag) {
         return 0;
     }
 
+    // Update Transposition tables
     assert(alpha >= prevAlpha);
     if (alpha >= beta) {
         assert(move != 0);
@@ -354,30 +387,39 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     int ret = -INFINITY_VAL;
     int height = 0;
 
-    // Transposition table for duplicate detection:
+    // Probe transposition table:
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
     bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta);
 
-    int eval = hashed? hashedBoard.score : b.evaluate();
-    evalStack[height] = eval;
+
+    // Initialize evaluation stack
+    evalStack[height] = hashed? hashedBoard.score : b.evaluate();
+
+
     while (moveList.get_next_move(move)) {
 
         int tempRet;
 
+        // Check for legality
         if (!b.isLegal(move)) {
             continue;
         }
 
-        b.make_move(move);
+        // UCI information
         if (totalTime > 3000) {
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
+
+        b.make_move(move); // Make the move
+
+        // First move search at full depth and full window
         if (numMoves == 0) {
             tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, height + 1);
         }
+        // Late move reductions
         else if (depth >= 3 && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
 
@@ -390,16 +432,19 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
                 }
             }
         }
+        // Null window search
         else {
             tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, height + 1);
             if (tempRet > alpha && tempRet < beta) {
                 tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, height + 1);
             }
         }
-        b.undo_move(move);
+
+        b.undo_move(move); // Undo move
 
         numMoves++;
 
+        // Stop the search
         if (exit_thread_flag) {
             break;
         }
@@ -408,20 +453,21 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
             ret = tempRet;
             bestMove = move;
             if (tempRet > alpha) {
+                alpha = tempRet;
                 if (tempRet >= beta) {
                     break;
                 }
-                alpha = tempRet;
             }
         }
 
     }
 
+    // Stop the search
     if (numMoves == 0) {
         exit_thread_flag = true;
     }
 
-
+    // Update transposition table
     if (!exit_thread_flag) {
         assert (bestMove != 0);
         b.saveTT(bestMove, ret, depth, 0, posKey);
