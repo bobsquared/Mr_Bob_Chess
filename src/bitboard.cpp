@@ -1022,16 +1022,16 @@ uint64_t Bitboard::getPosKey() {
 
 
 // Probe the transposition table for duplicate positions
-bool Bitboard::probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta) {
-    return tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta);
+bool Bitboard::probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta, int ply) {
+    return tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
 }
 
 
 
 // Save the current searched position into the transposition table
-void Bitboard::saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key) {
+void Bitboard::saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply) {
     assert (move != 0);
-    tt->saveTT(move, score, depth, flag, key);
+    tt->saveTT(move, score, depth, flag, key, ply);
 }
 
 

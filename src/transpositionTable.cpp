@@ -51,11 +51,20 @@ TranspositionTable::~TranspositionTable() {
 
 // Save the position into the transposition table
 // Currently using: Always Replace
-void TranspositionTable::saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key) {
+void TranspositionTable::saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply) {
     uint64_t posKey = key % numHashes;
 
     if (hashTable[posKey].posKey == 0) {
         ttWrites++;
+    }
+
+    if (std::abs(score) > 9500) {
+        if (score > 9500) {
+            score += ply;
+        }
+        else if (score < -9500) {
+            score -= ply;
+        }
     }
 
     hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, halfMove);
@@ -65,7 +74,7 @@ void TranspositionTable::saveTT(MOVE move, int score, int depth, uint8_t flag, u
 
 // Probe the transposition table
 // Currently using: Always Replace
-bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, int alpha, int beta) {
+bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, int alpha, int beta, int ply) {
 
     ttCalls++;
     bool ret = false;
@@ -75,6 +84,15 @@ bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int dept
         ttHits++;
         // Store the hash table value
         hashedBoard = hashTable[key % numHashes];
+
+        if (std::abs(hashedBoard.score) > 9500) {
+            if (hashedBoard.score > 9500) {
+                hashedBoard.score -= ply;
+            }
+        	else if (hashedBoard.score < -9500) {
+                hashedBoard.score += ply;
+            }
+        }
 
         // Ensure hashedBoard depth >= current depth
         if (hashedBoard.depth >= depth) {

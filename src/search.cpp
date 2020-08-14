@@ -154,7 +154,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta);
+    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, height);
 
     if (ttRet) {
         return hashedBoard.score;
@@ -360,15 +360,15 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     assert(alpha >= prevAlpha);
     if (alpha >= beta) {
         assert(move != 0);
-        b.saveTT(bestMove, ret, depth, 1, posKey);
+        b.saveTT(bestMove, ret, depth, 1, posKey, height);
     }
     else if (prevAlpha >= ret) {
         assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, 2, posKey);
+        b.saveTT(bestMove, ret, depth, 2, posKey, height);
     }
     else {
         assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, 0, posKey);
+        b.saveTT(bestMove, ret, depth, 0, posKey, height);
     }
 
     return ret;
@@ -390,7 +390,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta);
+    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, height);
 
 
     // Initialize evaluation stack
@@ -469,7 +469,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     // Update transposition table
     if (!exit_thread_flag) {
         assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, 0, posKey);
+        b.saveTT(bestMove, ret, depth, 0, posKey, height);
     }
 
     return BestMoveInfo(bestMove, ret);
@@ -521,7 +521,7 @@ void search(Bitboard &b, int depth) {
         while (true) {
 
             pvSearchRoot(b, i, moveList, alpha, beta);
-            bool hashed = b.probeTT(posKey, hashedBoard, i, ttRet, tempAlpha, tempBeta);
+            bool hashed = b.probeTT(posKey, hashedBoard, i, ttRet, tempAlpha, tempBeta, 0);
 
             if (i > 1 && !exit_thread_flag) {
                 assert(hashed);
