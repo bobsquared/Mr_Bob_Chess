@@ -559,6 +559,10 @@ int Eval::evaluatePawns(uint64_t *pieces, bool col) {
         if ((isolatedPawnMask[bscan] & pieces[col]) == 0) {
             ret -= isolatedPawnValue;
         }
+
+        if ((passedPawnMask[col][bscan] & pieces[10 + !col])) {
+            ret -= S(3 * manhattanArray[bscan][bitScan(pieces[10 + !col])], 0);
+        }
         piece &= piece - 1;
     }
 
