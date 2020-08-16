@@ -65,10 +65,10 @@ void MovePick::scoreMoves(MoveList &moveList, MoveInfoStack &moveHistory, int *p
                 moveList.set_score_index(i, 0);
             }
         }
-        else if (killers[col][depth][0] == move) {
+        else if (killers[depth][0] == move) {
             moveList.set_score_index(i, 900000);
         }
-        else if (killers[col][depth][1] == move) {
+        else if (killers[depth][1] == move) {
             moveList.set_score_index(i, 800000);
         }
         else if (counterMove[col][get_move_from(prevMove)][get_move_to(prevMove)] == move) {

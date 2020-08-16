@@ -3,7 +3,7 @@
 uint64_t columnMask[64];
 uint64_t rowMask[64];
 int history[2][64][64];
-MOVE killers[2][128][2];
+MOVE killers[128][2];
 MOVE counterMove[2][64][64];
 int evalStack[128];
 
@@ -93,11 +93,9 @@ void InitHistory() {
 // Initialize the history
 void InitKillers() {
 
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 128; j++) {
-            for (int k = 0; k < 2; k++) {
-                killers[i][j][k] = 0;
-            }
+    for (int i = 0; i < 128; i++) {
+        for (int j = 0; j < 2; j++) {
+            killers[i][j] = 0;
         }
     }
 
