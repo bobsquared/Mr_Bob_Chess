@@ -22,7 +22,8 @@ int main() {
     UCI uci = UCI();
 
     std::regex setHash("setoption\\sname\\shash\\svalue\\s(\\d+)");
-    std::regex r2("go\\swtime\\s(\\d+)\\sbtime\\s(\\d+)");
+    std::regex wtime(".*wtime\\s(\\d+).*");
+    std::regex btime(".*btime\\s(\\d+).*");
     std::thread thr;
 
     // Initial print
@@ -81,15 +82,23 @@ int main() {
             continue;
         }
 
+        // Search (virtually) forever.
+        if (command == "go infinite" && !thr.joinable()) {
+            thr = std::thread(search, std::ref(pos), 255);
+            continue;
+        }
+
         // go command with time for each side
-        if (std::regex_search(command, m, r2)) {
+        if (command.substr(0, 3) == "go ") {
 
             unsigned int time = 0;
-            if (!pos.getSideToMove()) {
+            if (pos.getSideToMove()) {
+                std::regex_search(command, m, btime);
                 time = std::stoi(m[1]);
             }
             else {
-                time = std::stoi(m[2]);
+                std::regex_search(command, m, wtime);
+                time = std::stoi(m[1]);
             }
 
             thr = std::thread(search, std::ref(pos), 99);
@@ -99,12 +108,6 @@ int main() {
                 thr.join();
                 exit_thread_flag = false;
             }
-            continue;
-        }
-
-        // Search (virtually) forever.
-        if (command == "go infinite" && !thr.joinable()) {
-            thr = std::thread(search, std::ref(pos), 255);
             continue;
         }
 

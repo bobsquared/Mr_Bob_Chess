@@ -4,7 +4,7 @@ debug = no
 debug_zobrist = no
 
 
-CXXFLAGS := -Wall -Wextra -march=native -std=c++11 -static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+CXXFLAGS := -Wall -Wextra -std=c++11 -static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
 
 ifeq ($(debug), no)
 CXXFLAGS += -DNDEBUG
