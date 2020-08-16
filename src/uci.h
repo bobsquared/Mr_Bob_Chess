@@ -14,7 +14,7 @@ public:
 private:
 
     const std::string NAME = "Mr Bob";
-    const std::string VERSION = "v0.7.1";
+    const std::string VERSION = "v0.8.0";
     const std::string AUTHOR = "Vincent Yu";
 
 };

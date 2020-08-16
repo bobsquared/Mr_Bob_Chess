@@ -2,7 +2,7 @@
 
 
 
-int pieceValues[6] = {S(85, 100), S(305, 305), S(305, 315), S(475, 535), S(925, 985), S(2000, 2000)};
+int pieceValues[6] = {S(85, 100), S(305, 305), S(305, 305), S(475, 535), S(925, 985), S(2000, 2000)};
 // int pieceValues[6] = {S(157, 173), S(423, 390), S(422, 401), S(622, 694), S(974, 1211), S(2000, 2000)};
 
 
@@ -588,6 +588,9 @@ int Eval::evaluatePassedPawns(uint64_t *pieces, bool col) {
         int bscan = bitScan(piece);
         if ((passedPawnMask[col][bscan] & pieces[!col]) == 0 && (forwardMask[col][bscan] & pieces[col]) == 0) {
             ret += col? passedPawnWeight[(7 - (bscan / 8))] : passedPawnWeight[(bscan / 8)];
+            if (columnMask[bscan] & pieces[6 + col]) {
+                ret += S(6, 12);
+            }
         }
         piece &= piece - 1;
     }
@@ -690,6 +693,11 @@ int Eval::evaluateRooks(uint64_t *pieces, Magics *magics, bool col) {
             }
         }
 
+        // Rook on enemy queen file
+        if ((columnMask[bscan] & pieces[8 + !col]) == 0) {
+            ret += S(5, 3);
+        }
+
         piece &= piece - 1;
     }
 
@@ -735,7 +743,7 @@ int Eval::evaluatePawnShield(uint64_t *pieces, bool col) {
     int bscan = bitScan(piece);
     uint64_t shield = passedPawnMask[col][bscan] & (rowMask[col? std::max(bscan - 8, 0) : std::min(bscan + 8, 63)] | rowMask[col? std::max(bscan - 16, 0) : std::min(bscan + 16, 63)]);
 
-    ret += count_population(shield & pieces[col]) * 16;
+    ret += count_population(shield & pieces[col]) * 24;
 
 
     if ((forwardMask[col][bscan] & pieces[col]) != 0) {

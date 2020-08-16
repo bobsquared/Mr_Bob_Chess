@@ -40,6 +40,7 @@ public:
 
     void generate(MoveList &moveList, int depth, MOVE pvMove);
     void generate_captures_promotions(MoveList &moveList, MOVE pvMove);
+    void generate_unsorted(MoveList &moveList);
 
     bool pickMove(MOVE &move);
     void make_move(MOVE move);
@@ -57,8 +58,8 @@ public:
 
 
     uint64_t getPosKey();
-    bool probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta);
-    void saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key);
+    bool probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta, int ply);
+    void saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply);
     void debugZobristHash();
     void clearHashStats();
     void clearHashTable();
@@ -70,6 +71,7 @@ public:
     bool isRepetition();
     bool isKiller(int depth, MOVE move);
     void removeKiller(int depth);
+    bool isLegal(MOVE move);
 
 
 private:

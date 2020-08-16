@@ -18,6 +18,7 @@ typedef uint16_t MOVE;
 #define NULL_MOVE ((1ULL << 16) - 1)
 #define NO_MOVE 0
 #define INFINITY_VAL 99999
+#define MATE_VALUE 10000
 
 
 // All information about a move

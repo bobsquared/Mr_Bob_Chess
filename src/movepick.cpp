@@ -55,7 +55,15 @@ void MovePick::scoreMoves(MoveList &moveList, MoveInfoStack &moveHistory, int *p
 
         }
         else if (move & PROMOTION_FLAG) {
-            moveList.set_score_index(i, 1000000);
+            if ((move & QUEEN_PROMOTION_FLAG) == QUEEN_PROMOTION_FLAG) {
+                moveList.set_score_index(i, 1000000);
+            }
+            else if ((move & QUEEN_PROMOTION_FLAG) == KNIGHT_PROMOTION_FLAG) {
+                moveList.set_score_index(i, 650000);
+            }
+            else {
+                moveList.set_score_index(i, 0);
+            }
         }
         else if (killers[col][depth][0] == move) {
             moveList.set_score_index(i, 900000);
