@@ -8,6 +8,8 @@
 #include "search.h"
 #include "uci.h"
 
+
+MovePick *movePick = new MovePick();
 extern int pieceValues[6];
 
 
@@ -189,5 +191,6 @@ int main() {
 
     }
 
+    delete movePick;
     return 0;
 }

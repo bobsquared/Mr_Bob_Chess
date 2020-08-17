@@ -1,13 +1,14 @@
 #pragma once
 #include "defs.h"
 #include "movegen.h"
+#include "bitboard.h"
 
 
 class MovePick {
 
 public:
     MovePick();
-    void scoreMoves(MoveList &moveList, MoveInfoStack &moveHistory, int *pieceAt, int depth, bool toMove, MOVE pvMove);
+    void scoreMoves(MoveList &moveList, Bitboard &b, int depth, MOVE pvMove);
 
 private:
 

@@ -7,7 +7,6 @@
 #include "defs.h"
 #include "magic_bitboards.h"
 #include "eval.h"
-#include "movepick.h"
 #include "zobrist_hashing.h"
 #include "transpositionTable.h"
 
@@ -27,6 +26,10 @@ class Bitboard {
 
 public:
 
+    MoveInfoStack moveHistory;
+    int pieceAt[64];
+    bool toMove;
+
     Bitboard();
     ~Bitboard();
 
@@ -38,8 +41,8 @@ public:
     bool InCheck();
     bool InCheckOther();
 
-    void generate(MoveList &moveList, int depth, MOVE pvMove);
-    void generate_captures_promotions(MoveList &moveList, MOVE pvMove);
+    void generate(MoveList &moveList);
+    void generate_captures_promotions(MoveList &moveList);
     void generate_unsorted(MoveList &moveList);
 
     bool pickMove(MOVE &move);
@@ -105,15 +108,14 @@ private:
     // Position info
     uint64_t pieces[12];
     uint64_t color[2];
-    int pieceAt[64];
     int material[2];
     int pieceCount[12];
     uint8_t rookCastleFlagMask[64];
     uint64_t occupied;
-    bool toMove;
+
 
     // Move info
-    MoveInfoStack moveHistory;
+
     uint64_t posKey;
     int enpassantSq;
     int fullMoves;
@@ -124,7 +126,6 @@ private:
     MoveGen *moveGen;
     Magics *magics;
     Eval *eval;
-    MovePick *movePick;
     Zobrist *zobrist;
     TranspositionTable *tt;
 

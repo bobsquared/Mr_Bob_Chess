@@ -1,5 +1,6 @@
 #include <string>
 #include "bitboard.h"
+#include "movepick.h"
 
 class UCI {
 

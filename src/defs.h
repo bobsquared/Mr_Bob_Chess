@@ -21,6 +21,8 @@ typedef uint16_t MOVE;
 #define MATE_VALUE 10000
 
 
+
+
 // All information about a move
 struct Move {
     MOVE move;

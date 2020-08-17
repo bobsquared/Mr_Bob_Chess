@@ -22,7 +22,6 @@ Bitboard::Bitboard() {
     moveGen = new MoveGen();
     magics = new Magics(rookMoves, bishopMoves);
     eval = new Eval();
-    movePick = new MovePick();
     zobrist = new Zobrist();
     tt = new TranspositionTable();
 
@@ -36,7 +35,6 @@ Bitboard::~Bitboard() {
     delete moveGen;
     delete magics;
     delete eval;
-    delete movePick;
     delete zobrist;
     delete tt;
 }
@@ -416,17 +414,15 @@ void Bitboard::generate_unsorted(MoveList &moveList) {
 
 
 // Generate all pseudo-legal moves
-void Bitboard::generate(MoveList &moveList, int depth, MOVE pvMove) {
+void Bitboard::generate(MoveList &moveList) {
     moveGen->generate_all_moves(moveList, pieces, color, pawnAttacks, knightMoves, magics, kingMoves, occupied, enpassantSq, castleRights, toMove);
-    movePick->scoreMoves(moveList, moveHistory, pieceAt, depth, toMove, pvMove);
 }
 
 
 
 // Generate all pseudo-legal captures
-void Bitboard::generate_captures_promotions(MoveList &moveList, MOVE pvMove) {
+void Bitboard::generate_captures_promotions(MoveList &moveList) {
     moveGen->generate_captures_promotions(moveList, pieces, color, pawnAttacks, knightMoves, magics, kingMoves, occupied, enpassantSq, castleRights, toMove);
-    movePick->scoreMoves(moveList, moveHistory, pieceAt, 0, toMove, pvMove);
 }
 
 

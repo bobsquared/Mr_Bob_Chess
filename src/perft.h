@@ -4,6 +4,7 @@
 #include <chrono>
 #include <string>
 #include "bitboard.h"
+#include "movepick.h"
 
 
 extern void SeeTest(Bitboard &x, std::string fen, int from, int to, int result, MOVE flags=0);

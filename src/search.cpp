@@ -7,7 +7,9 @@ double totalTime;
 int seldepth;
 int height;
 std::atomic<bool> exit_thread_flag;
+
 extern int pieceValues[6];
+extern MovePick *movePick;
 
 
 int lmrReduction[64][64];
@@ -64,7 +66,8 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     MoveList moveList;
     int numMoves = 0;
 
-    inCheck? b.generate(moveList, 0, NO_MOVE) : b.generate_captures_promotions(moveList, NO_MOVE);
+    inCheck? b.generate(moveList) : b.generate_captures_promotions(moveList);
+    movePick->scoreMoves(moveList, b, 0, NO_MOVE);
     while (moveList.get_next_move(move)) {
 
         // Prune negative SEE
@@ -214,7 +217,8 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     // Search
     int quietsSearched = 0;
     MOVE quiets[MAX_NUM_MOVES];
-    b.generate(moveList, height, hashedBoard.move); // Generate moves
+    b.generate(moveList); // Generate moves
+    movePick->scoreMoves(moveList, b, height, hashedBoard.move);
     while (moveList.get_next_move(move)) {
         int score;
         int extension = 0;
@@ -499,7 +503,8 @@ void search(Bitboard &b, int depth) {
 
     b.clearHashStats();
 
-    b.generate(moveList, 0, NO_MOVE);
+    b.generate(moveList);
+    movePick->scoreMoves(moveList, b, 0, NO_MOVE);
     for (int i = 1; i <= depth; i++) {
 
         int delta = ASPIRATION_DELTA;

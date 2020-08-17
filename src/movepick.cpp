@@ -27,12 +27,12 @@ void MovePick::InitMvvLva() {
 
 // Set a score to all the moves in the movelist.
 // Higher score moves are picked first
-void MovePick::scoreMoves(MoveList &moveList, MoveInfoStack &moveHistory, int *pieceAt, int depth, bool col, MOVE pvMove) {
+void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, int depth, MOVE pvMove) {
 
     MOVE move;
     int from;
     int to;
-    MOVE prevMove = moveHistory.move[moveHistory.count - 1].move;
+    MOVE prevMove = b.moveHistory.move[b.moveHistory.count - 1].move;
 
     for (int i = 0; i < moveList.count; i++) {
         moveList.get_index_move(i, move);
@@ -42,8 +42,8 @@ void MovePick::scoreMoves(MoveList &moveList, MoveInfoStack &moveHistory, int *p
         }
         else if (move & CAPTURE_FLAG) {
 
-            from = pieceAt[get_move_from(move)] / 2;
-            to = pieceAt[get_move_to(move)] / 2;
+            from = b.pieceAt[get_move_from(move)] / 2;
+            to = b.pieceAt[get_move_to(move)] / 2;
 
             if ((move & MOVE_FLAGS) == ENPASSANT_FLAG) {
                 moveList.set_score_index(i, 1000000 + mvvlva[from][0]);
@@ -71,11 +71,11 @@ void MovePick::scoreMoves(MoveList &moveList, MoveInfoStack &moveHistory, int *p
         else if (killers[depth][1] == move) {
             moveList.set_score_index(i, 800000);
         }
-        else if (counterMove[col][get_move_from(prevMove)][get_move_to(prevMove)] == move) {
+        else if (counterMove[b.toMove][get_move_from(prevMove)][get_move_to(prevMove)] == move) {
             moveList.set_score_index(i, 700000);
         }
         else {
-            moveList.set_score_index(i, history[col][get_move_from(move)][get_move_to(move)]);
+            moveList.set_score_index(i, history[b.toMove][get_move_from(move)][get_move_to(move)]);
         }
     }
 

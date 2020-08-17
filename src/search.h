@@ -3,6 +3,7 @@
 #include <chrono>
 #include "defs.h"
 #include "bitboard.h"
+#include "movepick.h"
 #include <cmath>
 
 

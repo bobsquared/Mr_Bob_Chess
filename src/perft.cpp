@@ -1,6 +1,6 @@
 #include "perft.h"
 
-
+extern MovePick *movePick;
 
 // Static exchange evaluation test
 void SeeTest(Bitboard &x, std::string fen, int from, int to, int result, MOVE flags) {
@@ -10,7 +10,7 @@ void SeeTest(Bitboard &x, std::string fen, int from, int to, int result, MOVE fl
     std::string resultPass;
 
     x.setPosFen(fen);
-    x.generate(moveList, 0, NO_MOVE);
+    x.generate(moveList);
     while (moveList.get_next_move(move)) {
         if (get_move_from(move) == from && get_move_to(move) == to) {
             if (flags && (move & MOVE_FLAGS) != flags) {
@@ -94,14 +94,11 @@ uint64_t PerftCall(Bitboard & b, int depth) {
     b.generate_unsorted(moveList);
     while (moveList.get_next_move(move)) {
 
-        // if (b.isLegal(move)) {
+        if (b.isLegal(move)) {
             b.make_move(move);
-
-            if (!b.InCheckOther()) {
-                nodes += PerftCall(b, depth - 1);
-            }
+            nodes += PerftCall(b, depth - 1);
             b.undo_move(move);
-        // }
+        }
     }
 
     return nodes;
