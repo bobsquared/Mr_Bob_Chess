@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <regex>
 #include <thread>
+#include "movegen.h"
 #include "defs.h"
 #include "perft.h"
 #include "bitboard.h"
@@ -10,6 +11,7 @@
 
 
 MovePick *movePick = new MovePick();
+MoveGen *moveGen = new MoveGen();
 extern int pieceValues[6];
 
 
@@ -192,5 +194,6 @@ int main() {
     }
 
     delete movePick;
+    delete moveGen;
     return 0;
 }

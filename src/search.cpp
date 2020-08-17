@@ -10,6 +10,7 @@ std::atomic<bool> exit_thread_flag;
 
 extern int pieceValues[6];
 extern MovePick *movePick;
+extern MoveGen *moveGen;
 
 
 int lmrReduction[64][64];
@@ -66,7 +67,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     MoveList moveList;
     int numMoves = 0;
 
-    inCheck? b.generate(moveList) : b.generate_captures_promotions(moveList);
+    inCheck? moveGen->generate_all_moves(moveList, b) : moveGen->generate_captures_promotions(moveList, b);
     movePick->scoreMoves(moveList, b, 0, NO_MOVE);
     while (moveList.get_next_move(move)) {
 
@@ -217,7 +218,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     // Search
     int quietsSearched = 0;
     MOVE quiets[MAX_NUM_MOVES];
-    b.generate(moveList); // Generate moves
+    moveGen->generate_all_moves(moveList, b); // Generate moves
     movePick->scoreMoves(moveList, b, height, hashedBoard.move);
     while (moveList.get_next_move(move)) {
         int score;
@@ -503,7 +504,7 @@ void search(Bitboard &b, int depth) {
 
     b.clearHashStats();
 
-    b.generate(moveList);
+    moveGen->generate_all_moves(moveList, b);
     movePick->scoreMoves(moveList, b, 0, NO_MOVE);
     for (int i = 1; i <= depth; i++) {
 

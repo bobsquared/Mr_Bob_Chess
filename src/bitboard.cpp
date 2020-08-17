@@ -19,7 +19,6 @@ Bitboard::Bitboard() {
     InitQueenMoves();
     InitKingMoves();
 
-    moveGen = new MoveGen();
     magics = new Magics(rookMoves, bishopMoves);
     eval = new Eval();
     zobrist = new Zobrist();
@@ -32,7 +31,6 @@ Bitboard::Bitboard() {
 
 
 Bitboard::~Bitboard() {
-    delete moveGen;
     delete magics;
     delete eval;
     delete zobrist;
@@ -399,31 +397,6 @@ void Bitboard::InitMaterial() {
     material[1] += count_population(pieces[11]) * pieceValues[5];
 }
 
-
-
-/************************************************************************************************
-**  Move Generation section
-**  Generates all pseudo or legal moves from current position.
-*************************************************************************************************/
-
-
-// Generate all pseudo-legal moves unsorted
-void Bitboard::generate_unsorted(MoveList &moveList) {
-    moveGen->generate_all_moves(moveList, pieces, color, pawnAttacks, knightMoves, magics, kingMoves, occupied, enpassantSq, castleRights, toMove);
-}
-
-
-// Generate all pseudo-legal moves
-void Bitboard::generate(MoveList &moveList) {
-    moveGen->generate_all_moves(moveList, pieces, color, pawnAttacks, knightMoves, magics, kingMoves, occupied, enpassantSq, castleRights, toMove);
-}
-
-
-
-// Generate all pseudo-legal captures
-void Bitboard::generate_captures_promotions(MoveList &moveList) {
-    moveGen->generate_captures_promotions(moveList, pieces, color, pawnAttacks, knightMoves, magics, kingMoves, occupied, enpassantSq, castleRights, toMove);
-}
 
 
 /************************************************************************************************

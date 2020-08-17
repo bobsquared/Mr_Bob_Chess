@@ -4,6 +4,7 @@
 #include "defs.h"
 #include "bitboard.h"
 #include "movepick.h"
+#include "movegen.h"
 #include <cmath>
 
 

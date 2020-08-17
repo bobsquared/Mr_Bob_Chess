@@ -43,17 +43,17 @@ void MoveGen::create_all_promotions_captures(MoveList &moveList, int from, int t
 
 
 
-void MoveGen::generate_pawn_moves(MoveList &moveList, uint64_t *pieces, uint64_t *color, uint64_t pawnAttacks[][2], uint64_t occupied, int enSq, bool col, bool capPro) {
+void MoveGen::generate_pawn_moves(MoveList &moveList, Bitboard &b, bool capPro) {
 
-    uint64_t bb = pieces[0 + col];
-    uint64_t enpassantSq = enSq? 1ULL << enSq : 0;
+    uint64_t bb = b.pieces[0 + b.toMove];
+    uint64_t enpassantSq = b.enpassantSq? 1ULL << b.enpassantSq : 0;
 
     int nPush = 8;
     int dPush = 16;
     uint64_t promotionRank = rowMask[48];
     uint64_t startRank = rowMask[8];
 
-    if (col) {
+    if (b.toMove) {
         nPush = -8;
         dPush = -16;
         promotionRank = rowMask[8];
@@ -70,7 +70,7 @@ void MoveGen::generate_pawn_moves(MoveList &moveList, uint64_t *pieces, uint64_t
 
 
         // Captures
-        uint64_t captures = color[!col] & pawnAttacks[locIndex][col];
+        uint64_t captures = b.color[!b.toMove] & b.pawnAttacks[locIndex][b.toMove];
         while (captures) {
 
             if (!isPromotion) {
@@ -84,14 +84,14 @@ void MoveGen::generate_pawn_moves(MoveList &moveList, uint64_t *pieces, uint64_t
 
 
         // Enpassants
-        captures = enpassantSq & pawnAttacks[locIndex][col];
+        captures = enpassantSq & b.pawnAttacks[locIndex][b.toMove];
         if (captures) {
             create_move(moveList, locIndex, bitScan(captures), ENPASSANT_FLAG);
         }
 
 
         // Pawn pushes and normal promotions
-        if (!((col? (loc >> 8) : (loc << 8)) & occupied)) {
+        if (!((b.toMove? (loc >> 8) : (loc << 8)) & b.occupied)) {
 
             if (isPromotion) {
                 create_all_promotions(moveList, locIndex, locIndex + nPush);
@@ -100,7 +100,7 @@ void MoveGen::generate_pawn_moves(MoveList &moveList, uint64_t *pieces, uint64_t
                 create_move(moveList, locIndex, locIndex + nPush, QUIET_MOVES_FLAG);
 
                 // Consider double pawn pushes
-                if (canDoubleMove && !((col? (loc >> 16) : (loc << 16)) & occupied)) {
+                if (canDoubleMove && !((b.toMove? (loc >> 16) : (loc << 16)) & b.occupied)) {
                     create_move(moveList, locIndex, locIndex + dPush, DOUBLE_PAWN_PUSH_FLAG);
                 }
             }
@@ -114,14 +114,14 @@ void MoveGen::generate_pawn_moves(MoveList &moveList, uint64_t *pieces, uint64_t
 
 
 
-void MoveGen::generate_knight_moves(MoveList &moveList, uint64_t *pieces, uint64_t *color, uint64_t *knightMoves, uint64_t occupied, bool col, bool capPro) {
+void MoveGen::generate_knight_moves(MoveList &moveList, Bitboard &b, bool capPro) {
 
-    uint64_t bb = pieces[2 + col];
+    uint64_t bb = b.pieces[2 + b.toMove];
     while (bb) {
 
         int locIndex = bitScan(bb);
 
-        uint64_t captures = color[!col] & knightMoves[locIndex];
+        uint64_t captures = b.color[!b.toMove] & b.knightMoves[locIndex];
         while (captures) {
             create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
             captures &= captures - 1;
@@ -129,7 +129,7 @@ void MoveGen::generate_knight_moves(MoveList &moveList, uint64_t *pieces, uint64
 
 
         if (!capPro) {
-            uint64_t nonCaptures = (~occupied) & knightMoves[locIndex];
+            uint64_t nonCaptures = (~b.occupied) & b.knightMoves[locIndex];
             while (nonCaptures) {
                 create_move(moveList, locIndex, bitScan(nonCaptures), QUIET_MOVES_FLAG);
                 nonCaptures &= nonCaptures - 1;
@@ -144,22 +144,22 @@ void MoveGen::generate_knight_moves(MoveList &moveList, uint64_t *pieces, uint64
 
 
 
-void MoveGen::generate_bishop_moves(MoveList &moveList, uint64_t *pieces, uint64_t *color, Magics *magics, uint64_t occupied, bool col, bool capPro) {
+void MoveGen::generate_bishop_moves(MoveList &moveList, Bitboard &b, bool capPro) {
 
-    uint64_t bb = pieces[4 + col];
+    uint64_t bb = b.pieces[4 + b.toMove];
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t bishopAtt = magics->bishopAttacksMask(occupied, locIndex);
+        uint64_t bishopAtt = b.magics->bishopAttacksMask(b.occupied, locIndex);
 
-        uint64_t captures = color[!col] & bishopAtt;
+        uint64_t captures = b.color[!b.toMove] & bishopAtt;
         while (captures) {
             create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
             captures &= captures - 1;
         }
 
         if (!capPro) {
-            uint64_t nonCaptures = (~occupied) & bishopAtt;
+            uint64_t nonCaptures = (~b.occupied) & bishopAtt;
             while (nonCaptures) {
                 create_move(moveList, locIndex, bitScan(nonCaptures), QUIET_MOVES_FLAG);
                 nonCaptures &= nonCaptures - 1;
@@ -173,15 +173,15 @@ void MoveGen::generate_bishop_moves(MoveList &moveList, uint64_t *pieces, uint64
 
 
 
-void MoveGen::generate_rook_moves(MoveList &moveList, uint64_t *pieces, uint64_t *color, Magics *magics, uint64_t occupied, bool col, bool capPro) {
+void MoveGen::generate_rook_moves(MoveList &moveList, Bitboard &b, bool capPro) {
 
-    uint64_t bb = pieces[6 + col];
+    uint64_t bb = b.pieces[6 + b.toMove];
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t rookAtt = magics->rookAttacksMask(occupied, locIndex);
+        uint64_t rookAtt = b.magics->rookAttacksMask(b.occupied, locIndex);
 
-        uint64_t captures = color[!col] & rookAtt;
+        uint64_t captures = b.color[!b.toMove] & rookAtt;
         while (captures) {
             create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
             captures &= captures - 1;
@@ -189,7 +189,7 @@ void MoveGen::generate_rook_moves(MoveList &moveList, uint64_t *pieces, uint64_t
 
 
         if (!capPro) {
-            uint64_t nonCaptures = (~occupied) & rookAtt;
+            uint64_t nonCaptures = (~b.occupied) & rookAtt;
             while (nonCaptures) {
                 create_move(moveList, locIndex, bitScan(nonCaptures), QUIET_MOVES_FLAG);
                 nonCaptures &= nonCaptures - 1;
@@ -203,15 +203,15 @@ void MoveGen::generate_rook_moves(MoveList &moveList, uint64_t *pieces, uint64_t
 
 
 
-void MoveGen::generate_queen_moves(MoveList &moveList, uint64_t *pieces, uint64_t *color, Magics *magics, uint64_t occupied, bool col, bool capPro) {
+void MoveGen::generate_queen_moves(MoveList &moveList, Bitboard &b, bool capPro) {
 
-    uint64_t bb = pieces[8 + col];
+    uint64_t bb = b.pieces[8 + b.toMove];
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t queenAtt = magics->queenAttacksMask(occupied, locIndex);
+        uint64_t queenAtt = b.magics->queenAttacksMask(b.occupied, locIndex);
 
-        uint64_t captures = color[!col] & queenAtt;
+        uint64_t captures = b.color[!b.toMove] & queenAtt;
         while (captures) {
             create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
             captures &= captures - 1;
@@ -219,7 +219,7 @@ void MoveGen::generate_queen_moves(MoveList &moveList, uint64_t *pieces, uint64_
 
 
         if (!capPro) {
-            uint64_t nonCaptures = (~occupied) & queenAtt;
+            uint64_t nonCaptures = (~b.occupied) & queenAtt;
             while (nonCaptures) {
                 create_move(moveList, locIndex, bitScan(nonCaptures), QUIET_MOVES_FLAG);
                 nonCaptures &= nonCaptures - 1;
@@ -233,46 +233,46 @@ void MoveGen::generate_queen_moves(MoveList &moveList, uint64_t *pieces, uint64_
 
 
 
-void MoveGen::generate_king_moves(MoveList &moveList, uint64_t *pieces, uint64_t *color, uint64_t *kingMoves, Magics *magics, uint64_t occupied, uint8_t castleRights, bool col, bool capPro) {
+void MoveGen::generate_king_moves(MoveList &moveList, Bitboard &b, bool capPro) {
 
-    uint64_t bb = pieces[10 + col];
+    uint64_t bb = b.pieces[10 + b.toMove];
     int locIndex = bitScan(bb);
 
     assert(bb != 0);
     assert(1ULL << locIndex == bb);
 
-    uint64_t captures = color[!col] & kingMoves[locIndex];
+    uint64_t captures = b.color[!b.toMove] & b.kingMoves[locIndex];
     while (captures) {
         create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
         captures &= captures - 1;
     }
 
     if (!capPro) {
-        uint64_t nonCaptures = (~occupied) & kingMoves[locIndex];
+        uint64_t nonCaptures = (~b.occupied) & b.kingMoves[locIndex];
         while (nonCaptures) {
             create_move(moveList, locIndex, bitScan(nonCaptures), QUIET_MOVES_FLAG);
             nonCaptures &= nonCaptures - 1;
         }
 
-        if (can_castle_king(pieces, magics, kingMoves, castleRights, occupied, col)) {
-            create_move(moveList, locIndex, col? 62 : 6, KING_CASTLE_FLAG);
+        if (can_castle_king(b)) {
+            create_move(moveList, locIndex, b.toMove? 62 : 6, KING_CASTLE_FLAG);
         }
 
-        if (can_castle_queen(pieces, magics, kingMoves, castleRights, occupied, col)) {
-            create_move(moveList, locIndex, col? 58 : 2, QUEEN_CASTLE_FLAG);
+        if (can_castle_queen(b)) {
+            create_move(moveList, locIndex, b.toMove? 58 : 2, QUEEN_CASTLE_FLAG);
         }
     }
 }
 
 
 
-bool MoveGen::can_castle_king(uint64_t *pieces, Magics *magics, uint64_t *kingMoves, uint8_t castleRights, uint64_t occupied, bool col) {
+bool MoveGen::can_castle_king(Bitboard &b) {
 
     uint8_t crightsMask;
     uint64_t occupiedMask;
     uint64_t attackedMask;
 
-    if (col) {
+    if (b.toMove) {
         crightsMask = KING_CASTLE_RIGHTS_BLACK;
         occupiedMask = KING_CASTLE_OCCUPIED_BLACK_MASK;
         attackedMask = KING_CASTLE_BLACK_MASK;
@@ -283,15 +283,15 @@ bool MoveGen::can_castle_king(uint64_t *pieces, Magics *magics, uint64_t *kingMo
         attackedMask = KING_CASTLE_WHITE_MASK;
     }
 
-    if ((castleRights & crightsMask) == 0) {
+    if ((b.castleRights & crightsMask) == 0) {
         return false;
     }
 
-    if (occupied & occupiedMask) {
+    if (b.occupied & occupiedMask) {
         return false;
     }
 
-    if (isAttackedCastleMask(pieces, magics, kingMoves, attackedMask, occupied, col)) {
+    if (isAttackedCastleMask(b, attackedMask)) {
         return false;
     }
 
@@ -301,13 +301,13 @@ bool MoveGen::can_castle_king(uint64_t *pieces, Magics *magics, uint64_t *kingMo
 
 
 // Determine if player can castle queenside
-bool MoveGen::can_castle_queen(uint64_t *pieces, Magics *magics, uint64_t *kingMoves, uint8_t castleRights, uint64_t occupied, bool col) {
+bool MoveGen::can_castle_queen(Bitboard &b) {
 
     uint8_t crightsMask;
     uint64_t occupiedMask;
     uint64_t attackedMask;
 
-    if (col) {
+    if (b.toMove) {
         crightsMask = QUEEN_CASTLE_RIGHTS_BLACK;
         occupiedMask = QUEEN_CASTLE_OCCUPIED_BLACK_MASK;
         attackedMask = QUEEN_CASTLE_BLACK_MASK;
@@ -318,15 +318,15 @@ bool MoveGen::can_castle_queen(uint64_t *pieces, Magics *magics, uint64_t *kingM
         attackedMask = QUEEN_CASTLE_WHITE_MASK;
     }
 
-    if ((castleRights & crightsMask) == 0) {
+    if ((b.castleRights & crightsMask) == 0) {
         return false;
     }
 
-    if (occupied & occupiedMask) {
+    if (b.occupied & occupiedMask) {
         return false;
     }
 
-    if (isAttackedCastleMask(pieces, magics, kingMoves, attackedMask, occupied, col)) {
+    if (isAttackedCastleMask(b, attackedMask)) {
         return false;
     }
 
@@ -336,37 +336,37 @@ bool MoveGen::can_castle_queen(uint64_t *pieces, Magics *magics, uint64_t *kingM
 
 
 // Determine if player can castle kingside
-bool MoveGen::isAttackedCastleMask(uint64_t *pieces, Magics *magics, uint64_t *kingMoves, uint64_t bitboard, uint64_t occupied, bool col) {
+bool MoveGen::isAttackedCastleMask(Bitboard &b, uint64_t bitboard) {
 
     uint64_t ret = 0;
 
-    ret = kingMoves[bitScan(pieces[10 + !col])];
-    ret |= knightAttacks(pieces[2 + !col]);
-    ret |= pawnAttacksAll(pieces[!col], !col);
+    ret = b.kingMoves[bitScan(b.pieces[10 + !b.toMove])];
+    ret |= knightAttacks(b.pieces[2 + !b.toMove]);
+    ret |= pawnAttacksAll(b.pieces[!b.toMove], !b.toMove);
 
     if (ret & bitboard) {
         return true;
     }
 
-    uint64_t piece = pieces[4 + !col];
+    uint64_t piece = b.pieces[4 + !b.toMove];
     while (piece) {
-        if (magics->bishopAttacksMask(occupied, bitScan(piece)) & bitboard) {
+        if (b.magics->bishopAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
             return true;
         }
         piece &= piece - 1;
     }
 
-    piece = pieces[6 + !col];
+    piece = b.pieces[6 + !b.toMove];
     while (piece) {
-        if (magics->rookAttacksMask(occupied, bitScan(piece)) & bitboard) {
+        if (b.magics->rookAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
             return true;
         }
         piece &= piece - 1;
     }
 
-    piece = pieces[8 + !col];
+    piece = b.pieces[8 + !b.toMove];
     while (piece) {
-        if (magics->queenAttacksMask(occupied, bitScan(piece)) & bitboard) {
+        if (b.magics->queenAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
             return true;
         }
         piece &= piece - 1;
@@ -379,25 +379,25 @@ bool MoveGen::isAttackedCastleMask(uint64_t *pieces, Magics *magics, uint64_t *k
 
 
 // Generate all pseudo-legal moves
-void MoveGen::generate_all_moves(MoveList &moveList, uint64_t *pieces, uint64_t *color, uint64_t pawnAttacks[][2], uint64_t *knightMoves, Magics *magics, uint64_t *kingMoves, uint64_t occupied, int enpassantSq, uint8_t castleRights, bool col) {
-    generate_pawn_moves(moveList, pieces, color, pawnAttacks, occupied, enpassantSq, col, false);
-    generate_knight_moves(moveList, pieces, color, knightMoves, occupied, col, false);
-    generate_bishop_moves(moveList, pieces, color, magics, occupied, col, false);
-    generate_rook_moves(moveList, pieces, color, magics, occupied, col, false);
-    generate_queen_moves(moveList, pieces, color, magics, occupied, col, false);
-    generate_king_moves(moveList, pieces, color, kingMoves, magics, occupied, castleRights, col, false);
+void MoveGen::generate_all_moves(MoveList &moveList, Bitboard &b) {
+    generate_pawn_moves(moveList, b, false);
+    generate_knight_moves(moveList, b, false);
+    generate_bishop_moves(moveList, b, false);
+    generate_rook_moves(moveList, b, false);
+    generate_queen_moves(moveList, b, false);
+    generate_king_moves(moveList, b, false);
 }
 
 
 
 // Generate all pseudo-legal captures
-void MoveGen::generate_captures_promotions(MoveList &moveList, uint64_t *pieces, uint64_t *color, uint64_t pawnAttacks[][2], uint64_t *knightMoves, Magics *magics, uint64_t *kingMoves, uint64_t occupied, int enpassantSq, uint8_t castleRights, bool col) {
+void MoveGen::generate_captures_promotions(MoveList &moveList, Bitboard &b) {
 
-    generate_pawn_moves(moveList, pieces, color, pawnAttacks, occupied, enpassantSq, col, true);
-    generate_knight_moves(moveList, pieces, color, knightMoves, occupied, col, true);
-    generate_bishop_moves(moveList, pieces, color, magics, occupied, col, true);
-    generate_rook_moves(moveList, pieces, color, magics, occupied, col, true);
-    generate_queen_moves(moveList, pieces, color, magics, occupied, col, true);
-    generate_king_moves(moveList, pieces, color, kingMoves, magics, occupied, castleRights, col, true);
+    generate_pawn_moves(moveList, b, true);
+    generate_knight_moves(moveList, b, true);
+    generate_bishop_moves(moveList, b, true);
+    generate_rook_moves(moveList, b, true);
+    generate_queen_moves(moveList, b, true);
+    generate_king_moves(moveList, b, true);
 
 }

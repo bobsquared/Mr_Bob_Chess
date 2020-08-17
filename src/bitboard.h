@@ -3,7 +3,6 @@
 #include <bitset>
 #include <string>
 #include <regex>
-#include "movegen.h"
 #include "defs.h"
 #include "magic_bitboards.h"
 #include "eval.h"
@@ -26,9 +25,18 @@ class Bitboard {
 
 public:
 
-    MoveInfoStack moveHistory;
     int pieceAt[64];
+    uint64_t pieces[12];
+    uint64_t kingMoves[64];
+    uint64_t knightMoves[64];
+    uint64_t pawnAttacks[64][2];
+    uint64_t color[2];
+    MoveInfoStack moveHistory;
+    int enpassantSq;
+    uint64_t occupied;
     bool toMove;
+    uint8_t castleRights;
+    Magics *magics;
 
     Bitboard();
     ~Bitboard();
@@ -40,10 +48,6 @@ public:
 
     bool InCheck();
     bool InCheckOther();
-
-    void generate(MoveList &moveList);
-    void generate_captures_promotions(MoveList &moveList);
-    void generate_unsorted(MoveList &moveList);
 
     bool pickMove(MOVE &move);
     void make_move(MOVE move);
@@ -98,33 +102,26 @@ private:
     // Piece movement
     uint64_t blackPawnMoves[64];
     uint64_t whitePawnMoves[64];
-    uint64_t pawnAttacks[64][2];
-    uint64_t knightMoves[64];
+
     uint64_t bishopMoves[64];
     uint64_t rookMoves[64];
     uint64_t queenMoves[64];
-    uint64_t kingMoves[64];
+
 
     // Position info
-    uint64_t pieces[12];
-    uint64_t color[2];
     int material[2];
     int pieceCount[12];
     uint8_t rookCastleFlagMask[64];
-    uint64_t occupied;
+
 
 
     // Move info
-
     uint64_t posKey;
-    int enpassantSq;
     int fullMoves;
     int halfMoves;
-    uint8_t castleRights;
+
 
     // Additional objects
-    MoveGen *moveGen;
-    Magics *magics;
     Eval *eval;
     Zobrist *zobrist;
     TranspositionTable *tt;
