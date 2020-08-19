@@ -187,9 +187,9 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     // Null move pruning
     if (!isPv && canNullMove && !isCheck && eval >= beta && depth >= 2 && b.nullMoveable()) {
         int R = 3 + depth / 8;
-        b.make_move(NULL_MOVE);
+        b.make_null_move();
         int nullRet = -pvSearch(b, depth - R - 1, -beta, -beta + 1, false, height + 1);
-        b.undo_move(NULL_MOVE);
+        b.undo_null_move();
 
         if (nullRet >= beta && nullRet < 9000) {
             return nullRet;

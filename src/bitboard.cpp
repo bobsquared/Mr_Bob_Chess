@@ -416,21 +416,33 @@ void Bitboard::move_quiet(int from, int to, int piece, uint64_t i1i2) {
 
 
 
+// Make null move.
+void Bitboard::make_null_move() {
+    toMove = !toMove;
+    moveHistory.insert(MoveInfo(0, enpassantSq, halfMoves, castleRights, posKey, NULL_MOVE));
+    zobrist->hashBoard_enpassant(posKey, enpassantSq);
+    enpassantSq = 0;
+    zobrist->hashBoard_turn(posKey);
+    return;
+}
+
+
+// Undo null move
+void Bitboard::undo_null_move() {
+    toMove = !toMove;
+    MoveInfo moveInfo = moveHistory.pop();
+    halfMoves = moveInfo.halfMoves;
+    castleRights = moveInfo.castleRights;
+    enpassantSq = moveInfo.enpassantSq;
+    posKey = moveInfo.posKey;
+    return;
+}
+
+
+
 // Make a move or null move.
 // This involves any legal moves in the game of chess.
 void Bitboard::make_move(MOVE move) {
-
-    if (move == NULL_MOVE) {
-        toMove = !toMove;
-        moveHistory.insert(MoveInfo(0, enpassantSq, halfMoves, castleRights, posKey, move));
-
-        if (enpassantSq) {
-            zobrist->hashBoard_enpassant(posKey, enpassantSq);
-            enpassantSq = 0;
-        }
-        zobrist->hashBoard_turn(posKey);
-        return;
-    }
 
     int from = get_move_from(move);
     int to = get_move_to(move);
@@ -446,22 +458,17 @@ void Bitboard::make_move(MOVE move) {
     int hmoves = halfMoves;
     int enSq = enpassantSq;
     uint64_t prevPosKey = posKey;
+    int moveFlags = move & MOVE_FLAGS;
 
     halfMoves++;
+    fullMoves += toMove;
 
-    if (enpassantSq) {
-        zobrist->hashBoard_enpassant(posKey, enpassantSq);
-        enpassantSq = 0;
-    }
+    zobrist->hashBoard_enpassant(posKey, enpassantSq);
+    enpassantSq = 0;
 
     // Update half moves
     if (fromPiece == toMove) {
         halfMoves = 0;
-    }
-
-    // Update full moves
-    if (toMove) {
-        fullMoves++;
     }
 
     // Update castling rights
@@ -484,18 +491,18 @@ void Bitboard::make_move(MOVE move) {
     assert(from != 0 || to != 0);
 
     // Make quiet moves
-    if ((move & MOVE_FLAGS) == QUIET_MOVES_FLAG) {
+    if (moveFlags == QUIET_MOVES_FLAG) {
         assert(toPiece == -1);
         move_quiet(from, to, fromPiece, i1i2);
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
     }
     // Make enpassant move
-    else if ((move & MOVE_FLAGS) == ENPASSANT_FLAG) {
+    else if (moveFlags == ENPASSANT_FLAG) {
         assert(toPiece == -1);
         assert(fromPiece == toMove);
         move_quiet(from, to, fromPiece, i1i2);
 
-        uint64_t toCap = toMove? (to + 8) : (to - 8);
+        uint64_t toCap = to + (toMove * 2 - 1) * 8;
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
         zobrist->hashBoard_square(posKey, toCap, !toMove);
         color[!toMove] ^= 1ULL << toCap;
@@ -522,61 +529,31 @@ void Bitboard::make_move(MOVE move) {
         material[!toMove] -= pieceValues[toPiece / 2];
         pieceCount[toPiece]--;
 
-        switch (move & MOVE_FLAGS) {
-            case CAPTURES_NORMAL_FLAG:
-                pieceAt[to] = fromPiece;
-                pieces[fromPiece] ^= i1i2;
-                zobrist->hashBoard_capture(posKey, from, to, fromPiece, toPiece);
-                break;
-            case QUEEN_PROMOTION_CAPTURE_FLAG:
-                assert(fromPiece == toMove);
-                pieces[fromPiece] ^= i1;
-                pieces[8 + toMove] ^= i2;
-                pieceAt[to] = 8 + toMove;
-                material[toMove] += pieceValues[4] - pieceValues[0];
-                pieceCount[toMove]--;
-                pieceCount[8 + toMove]++;
-                zobrist->hashBoard_capture_promotion(posKey, from, to, fromPiece, toPiece, 8 + toMove);
-                break;
-            case ROOK_PROMOTION_CAPTURE_FLAG:
-                assert(fromPiece == toMove);
-                pieces[fromPiece] ^= i1;
-                pieces[6 + toMove] ^= i2;
-                pieceAt[to] = 6 + toMove;
-                material[toMove] += pieceValues[3] - pieceValues[0];
-                pieceCount[toMove]--;
-                pieceCount[6 + toMove]++;
-                zobrist->hashBoard_capture_promotion(posKey, from, to, fromPiece, toPiece, 6 + toMove);
-                break;
-            case BISHOP_PROMOTION_CAPTURE_FLAG:
-                assert(fromPiece == toMove);
-                pieces[fromPiece] ^= i1;
-                pieces[4 + toMove] ^= i2;
-                pieceAt[to] = 4 + toMove;
-                material[toMove] += pieceValues[2] - pieceValues[0];
-                pieceCount[toMove]--;
-                pieceCount[4 + toMove]++;
-                zobrist->hashBoard_capture_promotion(posKey, from, to, fromPiece, toPiece, 4 + toMove);
-                break;
-            case KNIGHT_PROMOTION_CAPTURE_FLAG:
-                assert(fromPiece == toMove);
-                pieces[fromPiece] ^= i1;
-                pieces[2 + toMove] ^= i2;
-                pieceAt[to] = 2 + toMove;
-                material[toMove] += pieceValues[1] - pieceValues[0];
-                pieceCount[toMove]--;
-                pieceCount[2 + toMove]++;
-                zobrist->hashBoard_capture_promotion(posKey, from, to, fromPiece, toPiece, 2 + toMove);
-                break;
+        if (move & PROMOTION_FLAG) {
+            assert(fromPiece == toMove);
+            int pieceVal = (moveFlags - 11);
+            int promotePiece = pieceVal * 2 + toMove;
+            pieces[fromPiece] ^= i1;
+            pieces[promotePiece] ^= i2;
+            pieceAt[to] = promotePiece;
+            material[toMove] += pieceValues[pieceVal] - pieceValues[0];
+            pieceCount[toMove]--;
+            pieceCount[promotePiece]++;
+            zobrist->hashBoard_capture_promotion(posKey, from, to, fromPiece, toPiece, promotePiece);
+        }
+        else {
+            pieceAt[to] = fromPiece;
+            pieces[fromPiece] ^= i1i2;
+            zobrist->hashBoard_capture(posKey, from, to, fromPiece, toPiece);
         }
 
         halfMoves = 0;
     }
     // Make a double pawn push
-    else if ((move & MOVE_FLAGS) == DOUBLE_PAWN_PUSH_FLAG) {
+    else if (moveFlags == DOUBLE_PAWN_PUSH_FLAG) {
         assert(toPiece == -1);
         move_quiet(from, to, fromPiece, i1i2);
-        enpassantSq = toMove? to + 8 : to - 8;
+        enpassantSq = to + (toMove * 2 - 1) * 8;
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
         zobrist->hashBoard_enpassant(posKey, enpassantSq);
     }
@@ -589,43 +566,17 @@ void Bitboard::make_move(MOVE move) {
         pieces[fromPiece] ^= i1;
         occupied ^= i1i2;
 
-        switch (move & MOVE_FLAGS) {
-            case QUEEN_PROMOTION_FLAG:
-                pieces[8 + toMove] ^= i2;
-                pieceAt[to] = 8 + toMove;
-                material[toMove] += pieceValues[4] - pieceValues[0];
-                pieceCount[toMove]--;
-                pieceCount[8 + toMove]++;
-                zobrist->hashBoard_promotion(posKey, from, to, fromPiece, 8 + toMove);
-                break;
-            case ROOK_PROMOTION_FLAG:
-                pieces[6 + toMove] ^= i2;
-                pieceAt[to] = 6 + toMove;
-                material[toMove] += pieceValues[3] - pieceValues[0];
-                pieceCount[toMove]--;
-                pieceCount[6 + toMove]++;
-                zobrist->hashBoard_promotion(posKey, from, to, fromPiece, 6 + toMove);
-                break;
-            case BISHOP_PROMOTION_FLAG:
-                pieces[4 + toMove] ^= i2;
-                pieceAt[to] = 4 + toMove;
-                material[toMove] += pieceValues[2] - pieceValues[0];
-                pieceCount[toMove]--;
-                pieceCount[4 + toMove]++;
-                zobrist->hashBoard_promotion(posKey, from, to, fromPiece, 4 + toMove);
-                break;
-            case KNIGHT_PROMOTION_FLAG:
-                pieces[2 + toMove] ^= i2;
-                pieceAt[to] = 2 + toMove;
-                material[toMove] += pieceValues[1] - pieceValues[0];
-                pieceCount[toMove]--;
-                pieceCount[2 + toMove]++;
-                zobrist->hashBoard_promotion(posKey, from, to, fromPiece, 2 + toMove);
-                break;
-        }
+        int pieceVal = (moveFlags - 7);
+        int promotePiece = pieceVal * 2 + toMove;
+        pieces[promotePiece] ^= i2;
+        pieceAt[to] = promotePiece;
+        material[toMove] += pieceValues[pieceVal] - pieceValues[0];
+        pieceCount[toMove]--;
+        pieceCount[promotePiece]++;
+        zobrist->hashBoard_promotion(posKey, from, to, fromPiece, promotePiece);
     }
     // Castle kingside
-    else if ((move & MOVE_FLAGS) == KING_CASTLE_FLAG) {
+    else if (moveFlags == KING_CASTLE_FLAG) {
         assert(toPiece == -1);
         assert(fromPiece == 10 + toMove);
         move_quiet(from, to, fromPiece, i1i2);
@@ -634,7 +585,7 @@ void Bitboard::make_move(MOVE move) {
         zobrist->hashBoard_quiet(posKey, to + 1, to - 1, 6 + toMove);
     }
     // Castle queenside
-    else if ((move & MOVE_FLAGS) == QUEEN_CASTLE_FLAG) {
+    else if (moveFlags == QUEEN_CASTLE_FLAG) {
         assert(toPiece == -1);
         assert(fromPiece == 10 + toMove);
         move_quiet(from, to, fromPiece, i1i2);
@@ -653,16 +604,6 @@ void Bitboard::make_move(MOVE move) {
 // This involves any legal moves in the game of chess.
 void Bitboard::undo_move(MOVE move) {
 
-    if (move == NULL_MOVE) {
-        toMove = !toMove;
-        MoveInfo moveInfo = moveHistory.pop();
-        halfMoves = moveInfo.halfMoves;
-        castleRights = moveInfo.castleRights;
-        enpassantSq = moveInfo.enpassantSq;
-        posKey = moveInfo.posKey;
-        return;
-    }
-
     toMove = !toMove;
     zobrist->hashBoard_turn(posKey);
     int from = get_move_from(move);
@@ -672,6 +613,7 @@ void Bitboard::undo_move(MOVE move) {
     uint64_t i1 = 1ULL << from;
     uint64_t i2 = 1ULL << to;
     uint64_t i1i2 = i1 | i2;
+    int moveFlags = move & MOVE_FLAGS;
 
     MoveInfo moveInfo = moveHistory.pop();
     halfMoves = moveInfo.halfMoves;
@@ -679,18 +621,16 @@ void Bitboard::undo_move(MOVE move) {
     enpassantSq = moveInfo.enpassantSq;
     posKey = moveInfo.posKey;
 
-    if (toMove) {
-        fullMoves--;
-    }
+    fullMoves -= toMove;
 
-    if ((move & MOVE_FLAGS) == QUIET_MOVES_FLAG) {
+    if (moveFlags == QUIET_MOVES_FLAG) {
         move_quiet(to, from, toPiece, i1i2);
     }
-    else if ((move & MOVE_FLAGS) == ENPASSANT_FLAG) {
+    else if (moveFlags == ENPASSANT_FLAG) {
         assert(toPiece == toMove);
         move_quiet(to, from, toPiece, i1i2);
 
-        uint64_t toCap = toMove? (to + 8) : (to - 8);
+        uint64_t toCap = to + (toMove * 2 - 1) * 8;
         color[!toMove] ^= 1ULL << toCap;
         pieces[!toMove] ^= 1ULL << toCap;
         occupied ^= 1ULL << toCap;
@@ -708,47 +648,23 @@ void Bitboard::undo_move(MOVE move) {
         material[!toMove] += pieceValues[moveInfo.captureType / 2];
         pieceCount[moveInfo.captureType]++;
 
-        switch (move & MOVE_FLAGS) {
-            case CAPTURES_NORMAL_FLAG:
-                pieces[toPiece] ^= i1i2;
-                pieceAt[from] = toPiece;
-                break;
-            case QUEEN_PROMOTION_CAPTURE_FLAG:
-                pieceAt[from] = 0 + toMove;
-                pieces[0 + toMove] ^= i1;
-                pieces[8 + toMove] ^= i2;
-                material[toMove] -= pieceValues[4] - pieceValues[0];
-                pieceCount[toMove]++;
-                pieceCount[8 + toMove]--;
-                break;
-            case ROOK_PROMOTION_CAPTURE_FLAG:
-                pieceAt[from] = 0 + toMove;
-                pieces[0 + toMove] ^= i1;
-                pieces[6 + toMove] ^= i2;
-                material[toMove] -= pieceValues[3] - pieceValues[0];
-                pieceCount[toMove]++;
-                pieceCount[6 + toMove]--;
-                break;
-            case BISHOP_PROMOTION_CAPTURE_FLAG:
-                pieceAt[from] = 0 + toMove;
-                pieces[0 + toMove] ^= i1;
-                pieces[4 + toMove] ^= i2;
-                material[toMove] -= pieceValues[2] - pieceValues[0];
-                pieceCount[toMove]++;
-                pieceCount[4 + toMove]--;
-                break;
-            case KNIGHT_PROMOTION_CAPTURE_FLAG:
-                pieceAt[from] = 0 + toMove;
-                pieces[0 + toMove] ^= i1;
-                pieces[2 + toMove] ^= i2;
-                material[toMove] -= pieceValues[1] - pieceValues[0];
-                pieceCount[toMove]++;
-                pieceCount[2 + toMove]--;
-                break;
+        if (move & PROMOTION_FLAG) {
+            int pieceVal = (moveFlags - 11);
+            int promotePiece = pieceVal * 2 + toMove;
+            pieceAt[from] = toMove;
+            pieces[toMove] ^= i1;
+            pieces[promotePiece] ^= i2;
+            material[toMove] -= pieceValues[pieceVal] - pieceValues[0];
+            pieceCount[toMove]++;
+            pieceCount[promotePiece]--;
+        }
+        else {
+            pieces[toPiece] ^= i1i2;
+            pieceAt[from] = toPiece;
         }
 
     }
-    else if ((move & MOVE_FLAGS) == DOUBLE_PAWN_PUSH_FLAG) {
+    else if (moveFlags == DOUBLE_PAWN_PUSH_FLAG) {
         assert(toPiece == toMove);
         move_quiet(to, from, toPiece, i1i2);
     }
@@ -759,39 +675,20 @@ void Bitboard::undo_move(MOVE move) {
         pieces[0 + toMove] ^= i1;
         occupied ^= i1i2;
 
-        switch (move & MOVE_FLAGS) {
-            case QUEEN_PROMOTION_FLAG:
-                pieces[8 + toMove] ^= i2;
-                material[toMove] -= pieceValues[4] - pieceValues[0];
-                pieceCount[toMove]++;
-                pieceCount[8 + toMove]--;
-                break;
-            case ROOK_PROMOTION_FLAG:
-                pieces[6 + toMove] ^= i2;
-                material[toMove] -= pieceValues[3] - pieceValues[0];
-                pieceCount[toMove]++;
-                pieceCount[6 + toMove]--;
-                break;
-            case BISHOP_PROMOTION_FLAG:
-                pieces[4 + toMove] ^= i2;
-                material[toMove] -= pieceValues[2] - pieceValues[0];
-                pieceCount[toMove]++;
-                pieceCount[4 + toMove]--;
-                break;
-            case KNIGHT_PROMOTION_FLAG:
-                pieces[2 + toMove] ^= i2;
-                material[toMove] -= pieceValues[1] - pieceValues[0];
-                pieceCount[toMove]++;
-                pieceCount[2 + toMove]--;
-                break;
-        }
+        int pieceVal = (moveFlags - 7);
+        int promotePiece = pieceVal * 2 + toMove;
+        pieces[promotePiece] ^= i2;
+        material[toMove] -= pieceValues[pieceVal] - pieceValues[0];
+        pieceCount[toMove]++;
+        pieceCount[promotePiece]--;
+
     }
-    else if ((move & MOVE_FLAGS) == KING_CASTLE_FLAG) {
+    else if (moveFlags == KING_CASTLE_FLAG) {
         assert(toPiece == 10 + toMove);
         move_quiet(to, from, toPiece, i1i2);
         move_quiet(to - 1, to + 1, 6 + toMove, 1ULL << (to - 1) | 1ULL << (to + 1));
     }
-    else if ((move & MOVE_FLAGS) == QUEEN_CASTLE_FLAG) {
+    else if (moveFlags == QUEEN_CASTLE_FLAG) {
         assert(toPiece == 10 + toMove);
         move_quiet(to, from, toPiece, i1i2);
         move_quiet(to + 1, to - 2, 6 + toMove, 1ULL << (to - 2) | 1ULL << (to + 1));

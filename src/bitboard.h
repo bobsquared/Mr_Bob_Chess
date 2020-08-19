@@ -52,6 +52,8 @@ public:
     bool pickMove(MOVE &move);
     void make_move(MOVE move);
     void undo_move(MOVE move);
+    void make_null_move();
+    void undo_null_move();
 
     int evaluate();
     int evaluate_debug();
