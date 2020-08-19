@@ -756,7 +756,7 @@ bool Bitboard::isLegal(MOVE move) {
     // Move to and from square, and if its a capture
     int from = get_move_from(move);
     int to = get_move_to(move);
-    int kingSide = toMove? 11 : 10;
+    int kingSide = 10 + toMove;
     uint64_t tofrom = (1ULL << to) | (1ULL << from);
 
 
@@ -801,7 +801,7 @@ bool Bitboard::isLegal(MOVE move) {
 
 // Returns the heuristic evaluation for the current position.
 int Bitboard::evaluate() {
-    return toMove? -eval->evaluate(material, pieces, magics, knightMoves, pieceCount, occupied, toMove) : eval->evaluate(material, pieces, magics, knightMoves, pieceCount, occupied, toMove);
+    return -(toMove * 2 - 1) * eval->evaluate(material, pieces, magics, knightMoves, pieceCount, occupied, toMove);
 }
 
 
@@ -1147,7 +1147,7 @@ void Bitboard::insertCounterMove(MOVE move) {
 
 // Checks to see if a move (opposite side) is a killer move
 bool Bitboard::isKiller(int depth, MOVE move) {
-    return killers[depth][0] == move || killers[depth][1] == move? true : false;
+    return killers[depth][0] == move || killers[depth][1] == move;
 }
 
 
