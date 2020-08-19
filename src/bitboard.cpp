@@ -9,14 +9,15 @@ extern int pieceValues[6];
 
 Bitboard::Bitboard() {
 
-    InitWhitePawnMoves();
-    InitBlackPawnMoves();
+    whitePawns = (1ULL << 8) | (1ULL << 9) | (1ULL << 10) | (1ULL << 11) | (1ULL << 12) | (1ULL << 13) | (1ULL << 14) | (1ULL << 15);
+    blackPawns = (1ULL << 48) | (1ULL << 49) | (1ULL << 50) | (1ULL << 51) | (1ULL << 52) | (1ULL << 53) | (1ULL << 54) | (1ULL << 55);
+    whiteQueens = 1ULL << 3;
+    blackQueens = 1ULL << 59;
     InitBlackPawnAttacks();
     InitWhitePawnAttacks();
     InitKnightMoves();
     InitBishopMoves();
     InitRookMoves();
-    InitQueenMoves();
     InitKingMoves();
 
     magics = new Magics(rookMoves, bishopMoves);
@@ -76,44 +77,6 @@ void Bitboard::reset() {
     InitPieceCount();
     moveHistory.clear();
     posKey = zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove);
-}
-
-
-
-// Initialize all black pawn moves
-void Bitboard::InitBlackPawnMoves() {
-    for (int i = 0; i < 64; i++) {
-        uint64_t tempBitBoard = 1ULL << i;
-        tempBitBoard |= tempBitBoard >> 8;
-
-        if (i < 56 && i > 47) {
-            tempBitBoard |= tempBitBoard >> 8;
-        }
-        tempBitBoard ^= 1ULL << i;
-        blackPawnMoves[i] = tempBitBoard;
-    }
-
-    blackPawns = (1ULL << 48) | (1ULL << 49) | (1ULL << 50) | (1ULL << 51) | (1ULL << 52) | (1ULL << 53) | (1ULL << 54) | (1ULL << 55);
-
-}
-
-
-
-// Initialize all white pawn moves
-void Bitboard::InitWhitePawnMoves() {
-    for (int i = 0; i < 64; i++) {
-        uint64_t tempBitBoard = 1ULL << i;
-        tempBitBoard |= tempBitBoard << 8;
-
-        if (i < 16 && i > 7) {
-            tempBitBoard |= tempBitBoard << 8;
-        }
-        tempBitBoard ^= 1ULL << i;
-        whitePawnMoves[i] = tempBitBoard;
-    }
-
-    whitePawns = (1ULL << 8) | (1ULL << 9) | (1ULL << 10) | (1ULL << 11) | (1ULL << 12) | (1ULL << 13) | (1ULL << 14) | (1ULL << 15);
-
 }
 
 
@@ -277,20 +240,6 @@ void Bitboard::InitRookMoves() {
 
     whiteRooks = 1 | (1ULL << 7);
     blackRooks = (1ULL << 56) | (1ULL << 63);
-}
-
-
-
-// Initialize all queen moves
-void Bitboard::InitQueenMoves() {
-
-    for (int i = 0; i < 64; i++) {
-        queenMoves[i] = rookMoves[i] | bishopMoves[i];
-    }
-
-    whiteQueens = 1ULL << 3;
-    blackQueens = 1ULL << 59;
-
 }
 
 

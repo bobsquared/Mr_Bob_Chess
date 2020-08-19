@@ -85,8 +85,6 @@ public:
 
 private:
 
-
-
     // Material location
     uint64_t whitePawns;
     uint64_t blackPawns;
@@ -102,26 +100,18 @@ private:
     uint64_t blackKings;
 
     // Piece movement
-    uint64_t blackPawnMoves[64];
-    uint64_t whitePawnMoves[64];
-
     uint64_t bishopMoves[64];
     uint64_t rookMoves[64];
-    uint64_t queenMoves[64];
-
 
     // Position info
     int material[2];
     int pieceCount[12];
     uint8_t rookCastleFlagMask[64];
 
-
-
     // Move info
     uint64_t posKey;
     int fullMoves;
     int halfMoves;
-
 
     // Additional objects
     Eval *eval;
@@ -129,14 +119,11 @@ private:
     TranspositionTable *tt;
 
     // Initialization functions
-    void InitWhitePawnMoves();
-    void InitBlackPawnMoves();
     void InitBlackPawnAttacks();
     void InitWhitePawnAttacks();
     void InitKnightMoves();
     void InitBishopMoves();
     void InitRookMoves();
-    void InitQueenMoves();
     void InitKingMoves();
     void InitPieceAt();
     void InitRookCastleFlags(uint64_t whiteRooks, uint64_t blackRooks);
