@@ -86,12 +86,7 @@ private:
     const int pieceAttackValue[5] = {0, 20, 25, 42, 75};
     const int pieceAttackWeight[8] = {0, 0, 50, 75, 88, 94, 97, 100};
 
-    // Passed Pawn weights
-    const int passedPawnWeight[7] = {S(0, 0), S(6, 12), S(8, 15), S(9, 16), S(32, 38), S(87, 96), S(122, 125)};
-
-    // Doubled pawns and isolated pawns
-    const int doublePawnValue = S(18, 12);
-    const int isolatedPawnValue = S(10, 16);
+    
 
 
     uint64_t occupied;

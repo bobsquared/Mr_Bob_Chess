@@ -15,6 +15,14 @@ int queenWeight[7] = {S(0, 0), S(12, 12), S(15, 15), S(18, 18), S(22, 22), S(26,
 int supportedPawnWeight[7] = {S(11, 0), S(0, 0), S(23, 24), S(18, 11), S(30, 2), S(47, 42), S(78, 81)};
 int adjacentPawnWeight[7]  = {S(0, 0), S(9, 7), S(7, 9), S(13, 7), S(21, 31), S(83, 132), S(109, 391)};
 
+// Passed Pawn weights
+int passedPawnWeight[7] = {S(11, 0), S(11, 2), S(22, 2), S(-7, 23), S(12, 54), S(19, 133), S(22, 193)};
+
+// Doubled pawns and isolated pawns
+int doublePawnValue = S(18, 12);
+// int doublePawnValue = S(24, 17);
+int isolatedPawnValue = S(10, 16);
+
 
 
 Eval::Eval() {
