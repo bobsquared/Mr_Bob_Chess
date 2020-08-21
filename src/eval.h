@@ -86,18 +86,8 @@ private:
     const int pieceAttackValue[5] = {0, 20, 25, 42, 75};
     const int pieceAttackWeight[8] = {0, 0, 50, 75, 88, 94, 97, 100};
 
-    // Queen, Bishop, Knight and rook weights
-    const int knightWeight[9] = {S(-30, -30), S(-24, -24), S(-18, -18), S(-12, -12), S(-6, -6), S(0, 0), S(6, 6) , S(12, 12), S(18, 18)};
-    const int rookWeight[9] = {S(60, 60), S(48, 48), S(36, 36), S(24, 24), S(12, 12), S(0, 0), S(-12, -12), S(-24, -24), S(-36, -36)};
-    const int bishopWeight[17] = {S(57, 57), S(56, 56), S(54, 54), S(52, 52), S(50, 50), S(46, 46), S(45, 45), S(43, 43), S(42, 42), S(40, 40), S(39, 39), S(37, 37), S(35, 35), S(33, 33), S(27, 27), S(26, 26), S(23, 23)};
-    const int queenWeight[7] = {S(0, 0), S(12, 12), S(15, 15), S(18, 18), S(22, 22), S(26, 26), S(30, 30)};
-
     // Passed Pawn weights
     const int passedPawnWeight[7] = {S(0, 0), S(6, 12), S(8, 15), S(9, 16), S(32, 38), S(87, 96), S(122, 125)};
-
-    // Supported and adjacent pawn weights
-    const int supportedPawnWeight[7] = {S(0, 0), S(0, 0), S(12, 17), S(15, 19), S(20, 25), S(32, 40), S(53, 62)};
-    const int adjacentPawnWeight[7]  = {S(0, 0), S(3, 12), S(7, 21), S(9, 22), S(13, 25), S(18, 32), S(20, 34)};
 
     // Doubled pawns and isolated pawns
     const int doublePawnValue = S(18, 12);
