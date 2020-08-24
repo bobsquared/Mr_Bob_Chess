@@ -16,7 +16,7 @@ public:
     TranspositionTable();
     TranspositionTable(int hashSize);
 
-    void saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply);
+    void saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply, uint16_t);
     bool probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, int alpha, int beta, int ply);
     int getHashFull();
     void clearHashStats();
