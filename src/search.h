@@ -5,6 +5,7 @@
 #include "bitboard.h"
 #include "movepick.h"
 #include "movegen.h"
+#include "timeman.h"
 #include <cmath>
 
 
@@ -24,6 +25,6 @@ extern std::atomic<bool> exit_thread_flag;
 
 int pvSearch(Bitboard &b, int depth, int alpha, int beta);
 extern BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha, int beta);
-extern void search(Bitboard &b, int depth);
+extern void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo);
 extern void InitLateMoveArray();
 extern int qsearch(Bitboard &b, int depth, int alpha, int beta, int height);

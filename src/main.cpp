@@ -2,12 +2,14 @@
 #include <cstdint>
 #include <regex>
 #include <thread>
+#include <climits>
 #include "movegen.h"
 #include "defs.h"
 #include "perft.h"
 #include "bitboard.h"
 #include "search.h"
 #include "uci.h"
+
 
 
 MovePick *movePick = new MovePick();
@@ -28,6 +30,11 @@ int main() {
     std::regex setHash("setoption\\sname\\shash\\svalue\\s(\\d+)");
     std::regex wtime(".*wtime\\s(\\d+).*");
     std::regex btime(".*btime\\s(\\d+).*");
+
+    std::regex winc(".*winc\\s(\\d+).*");
+    std::regex binc(".*binc\\s(\\d+).*");
+
+    std::regex movesToGo(".*movestogo\\s(\\d+).*");
     std::thread thr;
 
     // Initial print
@@ -78,40 +85,51 @@ int main() {
 
         // Stop searching
         if (command == "stop") {
-            if (thr.joinable()) {
-                exit_thread_flag = true;
-                thr.join();
-                exit_thread_flag = false;
-            }
+            exit_thread_flag = true;
             continue;
         }
 
         // Search (virtually) forever.
-        if (command == "go infinite" && !thr.joinable()) {
-            thr = std::thread(search, std::ref(pos), 255);
+        if (command == "go infinite") {
+            exit_thread_flag = false;
+            thr = std::thread(search, std::ref(pos), 255, INT_MAX, INT_MAX, 0, 0, 0);
+            thr.detach();
             continue;
         }
 
         // go command with time for each side
         if (command.substr(0, 3) == "go ") {
+            exit_thread_flag = false;
+            int whitetime = 0;
+            int blacktime = 0;
+            int whiteInc = 0;
+            int blackInc = 0;
+            int movestogo = 0;
 
-            unsigned int time = 0;
-            if (pos.getSideToMove()) {
-                std::regex_search(command, m, btime);
-                time = std::stoi(m[1]);
-            }
-            else {
-                std::regex_search(command, m, wtime);
-                time = std::stoi(m[1]);
+            if (std::regex_search(command, m, btime)) {
+                blacktime = std::stoi(m[1]);
             }
 
-            thr = std::thread(search, std::ref(pos), 99);
-            std::this_thread::sleep_for(std::chrono::milliseconds(time / 24));
-            if (thr.joinable()) {
-                exit_thread_flag = true;
-                thr.join();
-                exit_thread_flag = false;
+            if (std::regex_search(command, m, wtime)) {
+                whitetime = std::stoi(m[1]);
             }
+
+            if (std::regex_search(command, m, binc)) {
+                blackInc = std::stoi(m[1]);
+            }
+
+            if (std::regex_search(command, m, winc)) {
+                whiteInc = std::stoi(m[1]);
+            }
+
+            if (std::regex_search(command, m, movesToGo)) {
+                movestogo = std::stoi(m[1]);
+            }
+
+
+
+            thr = std::thread(search, std::ref(pos), 99, whitetime, blacktime, whiteInc, blackInc, movestogo);
+            thr.detach();
             continue;
         }
 

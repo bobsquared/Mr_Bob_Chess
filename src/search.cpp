@@ -3,10 +3,11 @@
 
 
 uint64_t nodes;
-double totalTime;
+int totalTime;
 int seldepth;
 int height;
 std::atomic<bool> exit_thread_flag;
+TimeManager tm;
 
 extern int pieceValues[6];
 extern MovePick *movePick;
@@ -34,7 +35,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     seldepth = std::min(depth, seldepth); // update seldepth
 
     // stop the search
-    if (exit_thread_flag) {
+    if (exit_thread_flag || tm.outOfTime()) {
         return 0;
     }
 
@@ -114,7 +115,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     #endif
 
     // Stop the search
-    if (exit_thread_flag) {
+    if (exit_thread_flag || tm.outOfTime()) {
         return 0;
     }
 
@@ -306,7 +307,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         b.undo_move(move); // Undo move
 
         // Stop the search
-        if (exit_thread_flag) {
+        if (exit_thread_flag || tm.outOfTime()) {
             return 0;
         }
 
@@ -357,7 +358,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
     // Stop the search
-    if (exit_thread_flag) {
+    if (exit_thread_flag || tm.outOfTime()) {
         return 0;
     }
 
@@ -449,7 +450,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
         numMoves++;
 
         // Stop the search
-        if (exit_thread_flag) {
+        if (exit_thread_flag || tm.outOfTime()) {
             break;
         }
 
@@ -472,7 +473,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     }
 
     // Update transposition table
-    if (!exit_thread_flag) {
+    if (!exit_thread_flag && !tm.outOfTime()) {
         assert (bestMove != 0);
         b.saveTT(bestMove, ret, depth, 0, posKey, height);
     }
@@ -483,7 +484,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
 
 
 
-void search(Bitboard &b, int depth) {
+void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo) {
 
     MOVE bestMove;
     MoveList moveList;
@@ -503,9 +504,10 @@ void search(Bitboard &b, int depth) {
     int score = 0;
 
     b.clearHashStats();
-
     moveGen->generate_all_moves(moveList, b);
     movePick->scoreMoves(moveList, b, 0, NO_MOVE);
+
+    tm = TimeManager(b.getSideToMove(), wtime, btime, winc, binc, movesToGo, moveList.count);
     for (int i = 1; i <= depth; i++) {
 
         int delta = ASPIRATION_DELTA;
@@ -523,20 +525,20 @@ void search(Bitboard &b, int depth) {
             beta = INFINITY_VAL;
         }
 
-        auto t1 = std::chrono::high_resolution_clock::now();
+
         while (true) {
 
             pvSearchRoot(b, i, moveList, alpha, beta);
             bool hashed = b.probeTT(posKey, hashedBoard, i, ttRet, tempAlpha, tempBeta, 0);
 
-            if (i > 1 && !exit_thread_flag) {
+            if (i > 1 && !exit_thread_flag && !tm.outOfTime()) {
                 assert(hashed);
                 (void) hashed;
             }
 
             moveList.set_score_move(hashedBoard.move, 1400000 + (i * 100) + aspNum);
 
-            if (exit_thread_flag) {
+            if (exit_thread_flag || tm.outOfTime()) {
                 break;
             }
 
@@ -559,17 +561,15 @@ void search(Bitboard &b, int depth) {
             delta += delta / 3 + 3;
 
         }
-        auto t2 = std::chrono::high_resolution_clock::now();
 
-        if (exit_thread_flag) {
+        if (exit_thread_flag || tm.outOfTime()) {
             break;
         }
 
         nodesTotal += nodes;
-        auto diff = std::chrono::duration_cast<std::chrono::milliseconds> (t2 - t1).count();
-        totalTime += (double) diff;
+        totalTime = tm.getTimePassed();
 
-        if ((double) diff == 0) {
+        if (totalTime == 0) {
             nps = 0;
         }
         else {
@@ -617,7 +617,7 @@ void search(Bitboard &b, int depth) {
         }
 
         std::cout << "info depth " << i << " seldepth " << std::abs(seldepth) - 1 + i << cpScore << score <<
-            " nodes " << nodesTotal << " nps " << nps << " hashfull " << b.getHashFull() << " time " << (int) totalTime << " pv" << b.getPv() << std::endl;
+            " nodes " << nodesTotal << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
 
     }
 
