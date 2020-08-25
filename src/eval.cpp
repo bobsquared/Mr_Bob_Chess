@@ -342,47 +342,28 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     occupied = occ;
 
     int ret = 0;
-    ret += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
-    ret += col? -16 : 16;
+    ret += col? S(-16, -16) : S(16, 16);
+    ret += material[0] - material[1];
+    ret += evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true);
+    ret += evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
+    ret += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
+    ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
+    ret += evaluatePawnShield(pieces, false) - evaluatePawnShield(pieces, true);
+    ret += evaluateKnights(pieces, knightMoves, false) - evaluateKnights(pieces, knightMoves, true);
+    ret += evaluateBishops(pieces, magics, false) - evaluateBishops(pieces, magics, true);
+    ret += evaluateRooks(pieces, magics, false) - evaluateRooks(pieces, magics, true);
+    ret += evaluateQueens(pieces, magics, false) - evaluateQueens(pieces, magics, true);
 
-    int evalMidgame = ret;
-    int evalEndgame = ret;
-    int pieceSquareEval = evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true);
-    int passedPawnsEval = evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
-    int pawnsEval = evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
-    int imbalanceEval = evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
-    int pawnShieldEval = evaluatePawnShield(pieces, false) - evaluatePawnShield(pieces, true);
-    int knightsEval = evaluateKnights(pieces, knightMoves, false) - evaluateKnights(pieces, knightMoves, true);
-    int bishopsEval = evaluateBishops(pieces, magics, false) - evaluateBishops(pieces, magics, true);
-    int rooksEval = evaluateRooks(pieces, magics, false) - evaluateRooks(pieces, magics, true);
-    int queensEval = evaluateQueens(pieces, magics, false) - evaluateQueens(pieces, magics, true);
-
-    evalMidgame += MGVAL(material[0] - material[1]);
-    evalMidgame += MGVAL(pieceSquareEval);
-    evalMidgame += MGVAL(passedPawnsEval);
-    evalMidgame += MGVAL(pawnsEval);
-    evalMidgame += MGVAL(imbalanceEval);
-    evalMidgame += MGVAL(knightsEval);
-    evalMidgame += MGVAL(bishopsEval);
-    evalMidgame += MGVAL(rooksEval);
-    evalMidgame += MGVAL(queensEval);
-    evalMidgame += MGVAL(pawnShieldEval);
+    int evalMidgame = MGVAL(ret);
+    int evalEndgame = EGVAL(ret);
 
     KSAttackersCount[0] = std::min(KSAttackersCount[0], 7);
     KSAttackersCount[1] = std::min(KSAttackersCount[1], 7);
     evalMidgame += pieces[8] > 0? KSAttackersWeight[0] * pieceAttackWeight[KSAttackersCount[0]] / 100 : 0;
     evalMidgame -= pieces[9] > 0? KSAttackersWeight[1] * pieceAttackWeight[KSAttackersCount[1]] / 100 : 0;
 
-    evalEndgame += EGVAL(material[0] - material[1]);
-    evalEndgame += EGVAL(pieceSquareEval);
-    evalEndgame += EGVAL(passedPawnsEval);
-    evalEndgame += EGVAL(pawnsEval);
-    evalEndgame += EGVAL(imbalanceEval);
-    evalEndgame += EGVAL(knightsEval);
-    evalEndgame += EGVAL(bishopsEval);
-    evalEndgame += EGVAL(rooksEval);
-    evalEndgame += EGVAL(queensEval);
-    evalEndgame += EGVAL(pawnShieldEval);
+    evalMidgame += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
+
 
     int phase = TOTALPHASE;
     phase -= (pieceCount[0] + pieceCount[1]) * PAWNPHASE;
