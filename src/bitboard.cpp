@@ -1103,10 +1103,7 @@ bool Bitboard::isKiller(int depth, MOVE move) {
 
 // Returns true if null move pruning is allowed in the position
 bool Bitboard::nullMoveable() {
-    if (pieceCount[2] + pieceCount[3] + pieceCount[4] + pieceCount[5] + pieceCount[6] + pieceCount[7] + pieceCount[8] + pieceCount[9] > 0) {
-        return true;
-    }
-    return false;
+    return color[toMove] != (pieces[toMove] | pieces[10 + toMove]);
 }
 
 
