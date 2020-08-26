@@ -32,7 +32,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     #endif
 
     nodes++; // update nodes searched
-    seldepth = std::min(depth, seldepth); // update seldepth
+    seldepth = std::max(height, seldepth); // update seldepth
 
     // stop the search
     if (exit_thread_flag || tm.outOfTime()) {
@@ -616,7 +616,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
             cpScore = " score mate ";
         }
 
-        std::cout << "info depth " << i << " seldepth " << std::abs(seldepth) - 1 + i << cpScore << score <<
+        std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score <<
             " nodes " << nodesTotal << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
 
     }
