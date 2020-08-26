@@ -391,6 +391,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     int numMoves = 0;
     int ret = -INFINITY_VAL;
     int height = 0;
+    bool inCheck = b.InCheck();
 
     // Probe transposition table:
     ZobristVal hashedBoard;
@@ -425,7 +426,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
             tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, height + 1);
         }
         // Late move reductions
-        else if (depth >= 3 && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
+        else if (depth >= 3 && !inCheck && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
 
             lmr = std::min(depth - 1, std::max(lmr, 0));
