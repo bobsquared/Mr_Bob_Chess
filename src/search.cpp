@@ -284,7 +284,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)]; // Base reduction
 
             lmr -= b.isKiller(height, move); // Don't reduce as much for killer moves
-            lmr += !improving && numMoves >= 6; // Reduce if evaluation is improving
+            lmr += !improving && numMoves >= 8; // Reduce if evaluation is improving
             lmr -= 2 * isPv; // Don't reduce as much for PV nodes
 
             lmr = std::min(depth - 1, std::max(lmr, 0));
