@@ -45,6 +45,7 @@ private:
     int evaluateBishops(uint64_t *pieces, Magics *magics, bool col);
     int evaluateRooks(uint64_t *pieces, Magics *magics, bool col);
     int evaluateQueens(uint64_t *pieces, Magics *magics, bool col);
+    int evaluateKing(uint64_t *pieces, Magics *magics, bool col);
     int evaluatePawnShield(uint64_t *pieces, bool col);
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];
@@ -77,16 +78,18 @@ private:
 
 
     // King safety
-    const int pieceAttackValue[5] = {0, 20, 25, 42, 75};
     const int pieceAttackWeight[8] = {0, 0, 50, 75, 88, 94, 97, 100};
 
-
-
+    uint64_t attacksKnight[2];
+    uint64_t attacksBishop[2];
+    uint64_t attacksRook[2];
+    uint64_t attacksQueen[2];
 
     uint64_t occupied;
     uint64_t unsafeSquares[2];
     int KSAttackersCount[2];
     int KSAttackersWeight[2];
+    int KSAttacks[2];
 
     uint64_t mobilityUnsafeSquares[2];
     uint64_t minorUnsafe[2];
