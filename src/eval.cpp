@@ -41,6 +41,14 @@ int knightCheckVal = 102;
 int KSOffset = 91;
 
 
+int kingPawnFront = S(32, -11);
+int kingPawnFrontN = S(5, -1);
+
+int kingPawnAdj = S(17, -12);
+int kingPawnAdjN = S(9, -9);
+
+
+
 Eval::Eval() {
     InitPieceBoards();
     InitKingZoneMask();
@@ -830,16 +838,29 @@ int Eval::evaluatePawnShield(uint64_t *pieces, bool col) {
     int bscan = bitScan(piece);
     uint64_t shield = passedPawnMask[col][bscan] & (rowMask[col? std::max(bscan - 8, 0) : std::min(bscan + 8, 63)] | rowMask[col? std::max(bscan - 16, 0) : std::min(bscan + 16, 63)]);
 
-    ret += count_population(shield & pieces[col]) * 24;
-
+    ret += S(count_population(shield & pieces[col]) * 24, 0);
 
     if ((forwardMask[col][bscan] & pieces[col]) != 0) {
-        ret += 32;
+        ret += kingPawnFront;
         if ((forwardMask[col][bscan] & pieces[!col]) != 0) {
-            ret += 8;
+            ret += kingPawnFrontN;
         }
     }
 
-    return S(ret, 0);
+    if (bscan % 8 > 0 && (forwardMask[col][bscan - 1] & pieces[col]) != 0) {
+        ret += kingPawnAdj;
+        if ((forwardMask[col][bscan - 1] & pieces[!col]) != 0) {
+            ret += kingPawnAdjN;
+        }
+    }
+
+    if (bscan % 8 < 7 && (forwardMask[col][bscan + 1] & pieces[col]) != 0) {
+        ret += kingPawnAdj;
+        if ((forwardMask[col][bscan + 1] & pieces[!col]) != 0) {
+            ret += kingPawnAdjN;
+        }
+    }
+
+    return ret;
 
 }
