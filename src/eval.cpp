@@ -47,6 +47,10 @@ int kingPawnFrontN = S(5, -1);
 int kingPawnAdj = S(17, -12);
 int kingPawnAdjN = S(9, -9);
 
+int kingPawnDist = 200;
+int kingPassedDist = 300;
+
+
 
 
 Eval::Eval() {
@@ -641,18 +645,33 @@ int Eval::evaluatePawns(uint64_t *pieces, bool col) {
 int Eval::evaluatePassedPawns(uint64_t *pieces, bool col) {
 
     int ret = 0;
+    int dist = 0;
+    int distFinal = 0;
+    int numPawns = 0;
     uint64_t piece = pieces[col];
+    int ourKing = bitScan(pieces[10 + col]);
+    int theirKing = bitScan(pieces[10 + !col]);
     while (piece) {
         int bscan = bitScan(piece);
+
+        dist = manhattanArray[bscan][ourKing] * 2;
+        dist -= manhattanArray[bscan][theirKing] * 2;
         if ((passedPawnMask[col][bscan] & pieces[!col]) == 0 && (forwardMask[col][bscan] & pieces[col]) == 0) {
             ret += col? passedPawnWeight[(7 - (bscan / 8))] : passedPawnWeight[(bscan / 8)];
             if (columnMask[bscan] & pieces[6 + col]) {
                 ret += S(6, 12);
             }
+            dist *= 3;
         }
+
+        distFinal += dist;
+        numPawns++;
         piece &= piece - 1;
     }
 
+    if (numPawns > 0) {
+        ret += S(0, -distFinal / numPawns);
+    }
     return ret;
 
 }
