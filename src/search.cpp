@@ -290,7 +290,9 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             lmr = std::min(depth - 1, std::max(lmr, 0));
             score = -pvSearch(b, newDepth - 1 - lmr, -alpha - 1, -alpha, true, height + 1);
             if (score > alpha) {
-                score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true, height + 1);
+                if (lmr > 0) {
+                    score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true, height + 1);
+                }
                 if (score > alpha && score < beta) {
                     score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
                 }
@@ -432,7 +434,9 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
             lmr = std::min(depth - 1, std::max(lmr, 0));
             tempRet = -pvSearch(b, depth - 1 - lmr, -alpha - 1, -alpha, true, height + 1);
             if (tempRet > alpha) {
-                tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, height + 1);
+                if (lmr > 0) {
+                    tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, height + 1);
+                }
                 if (tempRet > alpha && tempRet < beta) {
                     tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, height + 1);
                 }
