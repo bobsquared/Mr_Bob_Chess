@@ -20,7 +20,6 @@ int passedPawnWeight[7] = {S(11, 0), S(11, 2), S(22, 2), S(-7, 23), S(12, 54), S
 
 // Doubled pawns and isolated pawns
 int doublePawnValue = S(18, 12);
-// int doublePawnValue = S(24, 17);
 int isolatedPawnValue = S(10, 16);
 
 // Mobility
@@ -47,8 +46,9 @@ int kingPawnFrontN = S(5, -1);
 int kingPawnAdj = S(17, -12);
 int kingPawnAdjN = S(9, -9);
 
-int kingPawnDist = 200;
-int kingPassedDist = 300;
+int rookOnOpen = S(27, -13);
+int rookOnSemiOpen = S(24, 3);
+int rookOnQueen = S(-20, 22);
 
 
 
@@ -770,15 +770,15 @@ int Eval::evaluateRooks(uint64_t *pieces, Magics *magics, bool col) {
 
         // Rook on open file
         if ((columnMask[bscan] & pieces[col]) == 0) {
-            ret += S(18, 0);
+            ret += rookOnSemiOpen;
             if ((columnMask[bscan] & pieces[!col]) == 0) {
-                ret += S(12, 6);
+                ret += rookOnOpen;
             }
         }
 
         // Rook on enemy queen file
         if ((columnMask[bscan] & pieces[8 + !col]) == 0) {
-            ret += S(5, 3);
+            ret += rookOnQueen;
         }
 
         piece &= piece - 1;
