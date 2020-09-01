@@ -84,15 +84,26 @@ void Perft(Bitboard & x, int depth, uint64_t numNodes, std::string fen) {
 // Perft recursive call
 uint64_t PerftCall(Bitboard & b, int depth) {
 
-    uint64_t nodes = 0;
-    MOVE move;
-    MoveList moveList;
-
     if (depth == 0) {
         return 1;
     }
 
+    uint64_t nodes = 0;
+    MOVE move;
+    MoveList moveList;
+
     moveGen->generate_all_moves(moveList, b);
+    if (depth == 1) {
+        int count = 0;
+
+        while (moveList.get_next_move(move)) {
+            if (b.isLegal(move)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     while (moveList.get_next_move(move)) {
 
         if (b.isLegal(move)) {
