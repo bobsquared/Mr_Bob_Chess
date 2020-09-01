@@ -1,4 +1,5 @@
 #include "defs.h"
+#include <intrin.h>
 
 uint64_t columnMask[64];
 uint64_t rowMask[64];
@@ -160,6 +161,10 @@ uint64_t knightAttacks(uint64_t knights) {
 // Counts the number of one bits
 int count_population(uint64_t bitboard) {
 
+    #ifdef POPCOUNT
+    return __popcnt64(bitboard);
+    #endif
+
     int count = 0;
     while (bitboard) {
         count++;
@@ -167,6 +172,7 @@ int count_population(uint64_t bitboard) {
     }
 
     return count;
+
 }
 
 
