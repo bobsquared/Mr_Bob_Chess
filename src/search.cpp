@@ -8,6 +8,7 @@ int seldepth;
 int height;
 std::atomic<bool> exit_thread_flag;
 TimeManager tm;
+bool nullMoveTree;
 
 extern int pieceValues[6];
 extern MovePick *movePick;
@@ -186,14 +187,24 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
 
     // Null move pruning
-    if (!isPv && canNullMove && !isCheck && eval >= beta && depth >= 2 && b.nullMoveable()) {
+    if (!isPv && canNullMove && !isCheck && eval >= beta && depth >= 2 && nullMoveTree && b.nullMoveable()) {
         int R = 3 + depth / 8;
         b.make_null_move();
         int nullRet = -pvSearch(b, depth - R - 1, -beta, -beta + 1, false, height + 1);
         b.undo_null_move();
 
-        if (nullRet >= beta && nullRet < 9000) {
-            return nullRet;
+        if (nullRet >= beta && std::abs(nullRet) < 9500) {
+
+            if (depth >= 8) {
+                nullMoveTree = false;
+                nullRet = pvSearch(b, depth - R - 1, beta - 1, beta, false, height + 1);
+                nullMoveTree = true;
+            }
+
+            if (nullRet >= beta) {
+                return nullRet;
+            }
+
         }
     }
 
@@ -497,6 +508,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
     uint64_t nps;
     uint64_t nodesTotal = 0;
     totalTime = 0;
+    nullMoveTree = true;
 
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
