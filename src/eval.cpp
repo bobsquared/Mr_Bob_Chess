@@ -50,6 +50,10 @@ int rookOnOpen = S(27, -13);
 int rookOnSemiOpen = S(24, 3);
 int rookOnQueen = S(-20, 22);
 
+int knightPair = S(14, 9);
+int rookPair = S(17, 17);
+int noPawns = S(0, 22);
+
 
 
 
@@ -583,17 +587,17 @@ int Eval::evaluateImbalance(int *pieceCount, bool col) {
 
     // Knight pair
     if (pieceCount[2 + col] >= 2) {
-        ret -= S(14, 19);
+        ret -= knightPair;
     }
 
     // Rook pair
     if (pieceCount[6 + col] >= 2) {
-        ret -= S(18, 18);
+        ret -= rookPair;
     }
 
     // Pawn count
     if (pieceCount[col] == 0) {
-        ret -= S(22, 35);
+        ret -= noPawns;
     }
 
     ret += knightWeight[pieceCount[col]] * pieceCount[2 + col];
