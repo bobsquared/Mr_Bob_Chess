@@ -181,7 +181,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
 
     // Reverse futility pruning
-    if (!isPv && !isCheck && depth <= 6 && eval - 220 * depth >= beta && eval < 9000) {
+    if (!isPv && !isCheck && depth <= 6 && eval - 220 * depth + (55 * depth * improving) >= beta && eval < 9000) {
         return eval;
     }
 
