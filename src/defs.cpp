@@ -1,5 +1,8 @@
 #include "defs.h"
+
+#ifdef _WIN32
 #include <intrin.h>
+#endif
 
 uint64_t columnMask[64];
 uint64_t rowMask[64];
