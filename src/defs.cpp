@@ -39,6 +39,16 @@ int get_move_to(uint16_t move) {
 
 // Scan the least significant bit
 int bitScan(const uint64_t bitboard) {
+
+    #if defined(_MSC_VER) || defined(__MINGW32__)
+    unsigned long ret;
+    _BitScanForward64(&ret, bitboard);
+    return (int) ret;
+
+    #elif defined(__GNUC__)
+    return __builtin_ctzll(bitboard);
+    #endif
+
     return MSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89) >> 58];
 }
 
@@ -162,7 +172,13 @@ uint64_t knightAttacks(uint64_t knights) {
 int count_population(uint64_t bitboard) {
 
     #ifdef POPCOUNT
+
+    #if defined(__MINGW32__) || defined(_MSC_VER)
     return __popcnt64(bitboard);
+    #elif defined(__GNUC__)
+    return __builtin_popcountll(bitboard);
+    #endif
+
     #endif
 
     int count = 0;
