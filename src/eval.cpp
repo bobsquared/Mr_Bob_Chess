@@ -17,7 +17,7 @@ int supportedPawnWeight[7] = {S(0, 0), S(0, 0), S(25, 24), S(21, 13), S(32, 10),
 int adjacentPawnWeight[7]  = {S(0, 0), S(11, 7), S(7, 10), S(18, 7), S(31, 29), S(101, 82), S(-69, 451)};
 
 // Passed Pawn weights
-int passedPawnWeight[7] = {S(11, 0), S(11, 2), S(22, 2), S(-7, 23), S(12, 54), S(19, 133), S(22, 193)};
+int passedPawnWeight[7] = {S(0, 0), S(5, 2), S(-3, 9), S(-7, 29), S(14, 60), S(29, 145), S(62, 213)};
 
 // Doubled pawns and isolated pawns
 int doublePawnValue = S(18, 12);
