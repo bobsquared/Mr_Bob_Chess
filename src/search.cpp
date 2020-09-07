@@ -10,6 +10,10 @@ std::atomic<bool> exit_thread_flag;
 TimeManager tm;
 bool nullMoveTree;
 
+int seePruningMargin[4] = {0, 0, -350, -500};
+int lateMoveMargin[2][4] = {{0, 5, 8, 13}, {0, 7, 10, 17}};
+
+
 extern int pieceValues[6];
 extern MovePick *movePick;
 extern MoveGen *moveGen;
@@ -252,28 +256,15 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
                 }
 
                 // Late move pruning
-                if (depth == 1 && quietsSearched > (improving? 7 : 5)) {
+                if (depth <= 3 && quietsSearched > lateMoveMargin[improving][depth]) {
                     continue;
                 }
-                else if (depth == 2 && quietsSearched > (improving? 10 : 8)) {
-                    continue;
-                }
-                else if (depth == 3 && quietsSearched > (improving? 17 : 13)) {
-                    continue;
-                }
+
             }
 
             // SEE pruning
-            if (depth <= 3 && numMoves > 0 && (move & PROMOTION_FLAG) == 0) {
-                if (depth == 1 && b.seeCapture(move) < 0) {
-                    continue;
-                }
-                else if (depth == 2 && b.seeCapture(move) < -350) {
-                    continue;
-                }
-                else if (depth == 3 && b.seeCapture(move) < -500) {
-                    continue;
-                }
+            if (depth <= 3 && numMoves > 0 && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < seePruningMargin[depth]) {
+                continue;
             }
         }
 
