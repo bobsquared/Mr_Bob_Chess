@@ -177,7 +177,7 @@ int count_population(uint64_t bitboard) {
     #ifdef POPCOUNT
 
     #if defined(__MINGW32__) || defined(_MSC_VER)
-    return __popcnt64(bitboard);
+    return _mm_popcnt_u64(bitboard);
     #elif defined(__GNUC__)
     return __builtin_popcountll(bitboard);
     #endif
