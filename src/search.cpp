@@ -119,6 +119,31 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     b.debugZobristHash();
     #endif
 
+
+
+    // Check for 3folds
+    if (alpha < 0 && b.isRepetition()) {
+        if (beta <= 0) {
+            nodes++;
+            return 0;
+        }
+    }
+
+    // Check if there are any potential wins that don't require help mate.
+    if (beta > 0 && b.noPotentialWin()) {
+        if (alpha >= 0) {
+            nodes++;
+            return 0;
+        }
+    }
+
+    // Dive into Quiesence search
+    if (depth <= 0) {
+        return qsearch(b, depth - 1, alpha, beta, height);
+    }
+
+    nodes++; // Increment number of nodes
+
     // Stop the search
     if (exit_thread_flag || tm.outOfTime()) {
         return 0;
@@ -129,27 +154,8 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         return 0;
     }
 
-    // Check for 3folds
-    if (alpha < 0 && b.isRepetition()) {
-        if (beta <= 0) {
-            return 0;
-        }
-    }
-
-    // Check if there are any potential wins that don't require help mate.
-    if (beta > 0 && b.noPotentialWin()) {
-        if (alpha >= 0) {
-            return 0;
-        }
-    }
-
-    // Dive into Quiesence search
-    if (depth <= 0) {
-        return qsearch(b, depth - 1, alpha, beta, height);
-    }
 
 
-    nodes++; // Increment number of nodes
     MOVE move;
     MOVE bestMove = NO_MOVE;
     MoveList moveList;
@@ -510,6 +516,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
     int tempAlpha;
     int tempBeta;
     int score = 0;
+    std::string cpScore;
 
     b.clearHashStats();
     moveGen->generate_all_moves(moveList, b);
@@ -550,15 +557,40 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
                 break;
             }
 
+
+            cpScore = " score cp ";
+            score = hashedBoard.score;
+            if (std::abs(hashedBoard.score) >= MATE_VALUE - 500) {
+                score = (MATE_VALUE - std::abs(hashedBoard.score) + 1) / 2;
+                if (hashedBoard.score < 0) {
+                    score = -score;
+                }
+                cpScore = " score mate ";
+            }
+
+            nodesTotal += nodes;
+            totalTime = tm.getTimePassed();
+            nps = (uint64_t) ((double) nodesTotal * 1000.0) / ((double) totalTime + 1);
+
             // Update the aspiration score
             // Fail high
             if (hashedBoard.score >= beta) {
                 beta = hashedBoard.score + delta;
+
+                if (totalTime > 3000) {
+                    std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score << " lowerbound"
+                        " nodes " << nodesTotal << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                }
             }
             // Fail low
             else if (hashedBoard.score <= alpha) {
                 beta = (alpha + beta) / 2;
                 alpha = hashedBoard.score - delta;
+
+                if (totalTime > 3000) {
+                    std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score << " upperbound"
+                        " nodes " << nodesTotal << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                }
             }
             // exact
             else {
@@ -572,16 +604,6 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
 
         if (exit_thread_flag || tm.outOfTime()) {
             break;
-        }
-
-        nodesTotal += nodes;
-        totalTime = tm.getTimePassed();
-
-        if (totalTime == 0) {
-            nps = 0;
-        }
-        else {
-            nps = (uint64_t) ((double) nodesTotal * 1000.0) / ((double) totalTime);
         }
 
         bestMove = hashedBoard.move;
@@ -614,7 +636,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
                 break;
         }
 
-        std::string cpScore = " score cp ";
+        cpScore = " score cp ";
         score = hashedBoard.score;
         if (std::abs(hashedBoard.score) >= MATE_VALUE - 500) {
             score = (MATE_VALUE - std::abs(hashedBoard.score) + 1) / 2;
