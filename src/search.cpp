@@ -543,6 +543,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
 
         while (true) {
 
+            nodes = 0;
             pvSearchRoot(b, i, moveList, alpha, beta);
             bool hashed = b.probeTT(posKey, hashedBoard, i, ttRet, tempAlpha, tempBeta, 0);
 
