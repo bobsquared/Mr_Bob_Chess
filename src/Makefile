@@ -1,5 +1,4 @@
 
-
 debug = no
 debug_zobrist = no
 popcount = no
@@ -12,7 +11,7 @@ CXXFLAGS += -DNDEBUG
 endif
 
 ifeq ($(popcount), yes)
-CXXFLAGS += -DPOPCOUNT
+CXXFLAGS += -msse3 -mpopcnt -DPOPCOUNT
 endif
 
 ifeq ($(debug_zobrist), yes)
