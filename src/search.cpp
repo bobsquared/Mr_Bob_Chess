@@ -263,7 +263,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
                 // Late move pruning
                 if (depth <= 3 && quietsSearched > lateMoveMargin[improving][depth]) {
-                    continue;
+                    break;
                 }
 
             }
