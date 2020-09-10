@@ -20,7 +20,9 @@ private:
     void generate_pawn_moves_quiet(MoveList &moveList, Bitboard &b);
     void generate_pawn_moves_noisy(MoveList &moveList, Bitboard &b);
 
-    void generate_knight_moves(MoveList &moveList, Bitboard &b, bool capPro);
+    void generate_knight_moves_noisy(MoveList &moveList, Bitboard &b);
+    void generate_knight_moves_quiet(MoveList &moveList, Bitboard &b);
+
     void generate_bishop_moves(MoveList &moveList, Bitboard &b, bool capPro);
     void generate_rook_moves(MoveList &moveList, Bitboard &b, bool capPro);
     void generate_queen_moves(MoveList &moveList, Bitboard &b, bool capPro);

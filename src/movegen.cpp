@@ -111,7 +111,26 @@ void MoveGen::generate_pawn_moves_noisy(MoveList &moveList, Bitboard &b) {
 
 
 
-void MoveGen::generate_knight_moves(MoveList &moveList, Bitboard &b, bool capPro) {
+void MoveGen::generate_knight_moves_quiet(MoveList &moveList, Bitboard &b) {
+
+    uint64_t bb = b.pieces[2 + b.toMove];
+    while (bb) {
+
+        int locIndex = bitScan(bb);
+        uint64_t nonCaptures = (~b.occupied) & b.knightMoves[locIndex];
+        while (nonCaptures) {
+            create_move(moveList, locIndex, bitScan(nonCaptures), QUIET_MOVES_FLAG);
+            nonCaptures &= nonCaptures - 1;
+        }
+
+        bb &= bb - 1;
+
+    }
+}
+
+
+
+void MoveGen::generate_knight_moves_noisy(MoveList &moveList, Bitboard &b) {
 
     uint64_t bb = b.pieces[2 + b.toMove];
     while (bb) {
@@ -123,16 +142,6 @@ void MoveGen::generate_knight_moves(MoveList &moveList, Bitboard &b, bool capPro
             create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
             captures &= captures - 1;
         }
-
-
-        if (!capPro) {
-            uint64_t nonCaptures = (~b.occupied) & b.knightMoves[locIndex];
-            while (nonCaptures) {
-                create_move(moveList, locIndex, bitScan(nonCaptures), QUIET_MOVES_FLAG);
-                nonCaptures &= nonCaptures - 1;
-            }
-        }
-
 
         bb &= bb - 1;
 
@@ -379,7 +388,10 @@ bool MoveGen::isAttackedCastleMask(Bitboard &b, uint64_t bitboard) {
 void MoveGen::generate_all_moves(MoveList &moveList, Bitboard &b) {
     generate_pawn_moves_quiet(moveList, b);
     generate_pawn_moves_noisy(moveList, b);
-    generate_knight_moves(moveList, b, false);
+
+    generate_knight_moves_quiet(moveList, b);
+    generate_knight_moves_noisy(moveList, b);
+
     generate_bishop_moves(moveList, b, false);
     generate_rook_moves(moveList, b, false);
     generate_queen_moves(moveList, b, false);
@@ -392,7 +404,7 @@ void MoveGen::generate_all_moves(MoveList &moveList, Bitboard &b) {
 void MoveGen::generate_captures_promotions(MoveList &moveList, Bitboard &b) {
 
     generate_pawn_moves_noisy(moveList, b);
-    generate_knight_moves(moveList, b, true);
+    generate_knight_moves_noisy(moveList, b);
     generate_bishop_moves(moveList, b, true);
     generate_rook_moves(moveList, b, true);
     generate_queen_moves(moveList, b, true);
