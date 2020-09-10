@@ -16,8 +16,10 @@ Magics::~Magics() {
 Magics::Magics(uint64_t *rookMoves, uint64_t *bishopMoves) : rookMoves(rookMoves), bishopMoves(bishopMoves) {
 
     // Initialize magic numbers
-    optimalMagicRook();
-    optimalMagicBishop();
+    uint64_t magicR[64];
+    uint64_t magicB[64];
+    optimalMagicRook(magicR);
+    optimalMagicBishop(magicB);
 
     for (uint8_t i = 0; i < 64; i++) {
 
@@ -55,11 +57,7 @@ Magics::Magics(uint64_t *rookMoves, uint64_t *bishopMoves) : rookMoves(rookMoves
         uint8_t mrShift = 64 - count;
         uint64_t mrMagic = magicR[i];
 
-        MagicPro mp = MagicPro();
-        mp.bitboard = rookMoves[i];
-        mp.shift = mrShift;
-        mp.magic = mrMagic;
-        mp.mask = mrMasked;
+        const MagicPro mp = MagicPro(rookMoves[i], mrShift, mrMagic, mrMasked);
         attacksR[i] = mp;
 
     }
@@ -70,11 +68,7 @@ Magics::Magics(uint64_t *rookMoves, uint64_t *bishopMoves) : rookMoves(rookMoves
         uint8_t mrShift = 64 - count;
         uint64_t mrMagic = magicB[i];
 
-        MagicPro mp = MagicPro();
-        mp.bitboard = bishopMoves[i];
-        mp.shift = mrShift;
-        mp.magic = mrMagic;
-        mp.mask = mrMasked;
+        const MagicPro mp = MagicPro(bishopMoves[i], mrShift, mrMagic, mrMasked);
         attacksB[i] = mp;
     }
 
@@ -99,7 +93,7 @@ Magics::Magics(uint64_t *rookMoves, uint64_t *bishopMoves) : rookMoves(rookMoves
 
 
 // Magic bishop numbers for each square. numbers generated with Generate_Magic_Rooks function
-void Magics::optimalMagicRook() {
+void Magics::optimalMagicRook(uint64_t *magicR) {
     magicR[0] = 36029348655939588ULL;
     magicR[1] = 1170971087756869632ULL;
     magicR[2] = 2954370427062910992ULL;
@@ -170,7 +164,7 @@ void Magics::optimalMagicRook() {
 
 
 // Magic bishop numbers for each square. numbers generated with Generate_Magic_Bishops function
-void Magics::optimalMagicBishop() {
+void Magics::optimalMagicBishop(uint64_t *magicB) {
     magicB[0] = 18058413343254592ULL;
     magicB[1] = 580969858422935552ULL;
     magicB[2] = 4774382545141760288ULL;
