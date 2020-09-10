@@ -253,7 +253,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         }
 
 
-        if (!isPv && !isCheck && ret > -9500) {
+        if (!isPv && ret > -9500) {
             if (isQuiet) {
 
                 // Futility pruning
