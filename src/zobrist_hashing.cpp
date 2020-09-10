@@ -4,6 +4,7 @@
 // Adapted from https://en.wikipedia.org/wiki/Zobrist_hashing
 #include "zobrist_hashing.h"
 #include <iostream>
+#include "defs.h"
 
 
 
@@ -130,20 +131,9 @@ void Zobrist::hashBoard_enpassant(uint64_t &board, int square) {
 // Iterative way to determine hash key:
 // Update castling rights
 void Zobrist::hashBoard_castle(uint64_t &board, uint8_t castleFlag) {
-    if (1 & castleFlag) {
-        board ^= castle[0];
-    }
-
-    if (2 & castleFlag) {
-        board ^= castle[1];
-    }
-
-    if (4 & castleFlag) {
-        board ^= castle[2];
-    }
-
-    if (8 & castleFlag) {
-        board ^= castle[3];
+    while (castleFlag) {
+        board ^= castle[bitScan(castleFlag)];
+        castleFlag &= castleFlag - 1;
     }
 }
 
