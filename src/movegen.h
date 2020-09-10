@@ -23,10 +23,18 @@ private:
     void generate_knight_moves_noisy(MoveList &moveList, Bitboard &b);
     void generate_knight_moves_quiet(MoveList &moveList, Bitboard &b);
 
-    void generate_bishop_moves(MoveList &moveList, Bitboard &b, bool capPro);
-    void generate_rook_moves(MoveList &moveList, Bitboard &b, bool capPro);
-    void generate_queen_moves(MoveList &moveList, Bitboard &b, bool capPro);
-    void generate_king_moves(MoveList &moveList, Bitboard &b, bool capPro);
+    void generate_bishop_moves_quiet(MoveList &moveList, Bitboard &b);
+    void generate_bishop_moves_noisy(MoveList &moveList, Bitboard &b);
+
+    void generate_rook_moves_quiet(MoveList &moveList, Bitboard &b);
+    void generate_rook_moves_noisy(MoveList &moveList, Bitboard &b);
+
+    void generate_queen_moves_quiet(MoveList &moveList, Bitboard &b);
+    void generate_queen_moves_noisy(MoveList &moveList, Bitboard &b);
+
+    void generate_king_moves_quiet(MoveList &moveList, Bitboard &b);
+    void generate_king_moves_noisy(MoveList &moveList, Bitboard &b);
+
     void create_all_promotions_captures(MoveList &moveList, int from, int to);
     void create_all_promotions(MoveList &moveList, int from, int to);
 
