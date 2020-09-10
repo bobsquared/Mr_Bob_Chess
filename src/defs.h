@@ -103,7 +103,7 @@ struct MoveList {
 
         int index = 0;
         for (int i = 0; i < count; i++) {
-            if (moveList[i].score >= moveList[index].score) {
+            if (moveList[i].score > moveList[index].score) {
                 index = i;
             }
         }
