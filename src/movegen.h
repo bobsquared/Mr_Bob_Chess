@@ -17,7 +17,9 @@ public:
 private:
 
     void create_move(MoveList &moveList, int from, int to, MOVE flags);
-    void generate_pawn_moves(MoveList &moveList, Bitboard &b, bool capPro);
+    void generate_pawn_moves_quiet(MoveList &moveList, Bitboard &b);
+    void generate_pawn_moves_noisy(MoveList &moveList, Bitboard &b);
+
     void generate_knight_moves(MoveList &moveList, Bitboard &b, bool capPro);
     void generate_bishop_moves(MoveList &moveList, Bitboard &b, bool capPro);
     void generate_rook_moves(MoveList &moveList, Bitboard &b, bool capPro);

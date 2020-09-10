@@ -43,37 +43,46 @@ void MoveGen::create_all_promotions_captures(MoveList &moveList, int from, int t
 
 
 
-void MoveGen::generate_pawn_moves(MoveList &moveList, Bitboard &b, bool capPro) {
+void MoveGen::generate_pawn_moves_quiet(MoveList &moveList, Bitboard &b) {
 
-    uint64_t bb = b.pieces[0 + b.toMove];
-    uint64_t enpassantSq = b.enpassantSq? 1ULL << b.enpassantSq : 0;
+    uint64_t bb = (b.toMove? (~b.occupied << 8) & ~rowMask[8] : (~b.occupied >> 8) & ~rowMask[48]) & b.pieces[b.toMove];
 
-    int nPush = 8;
-    int dPush = 16;
-    uint64_t promotionRank = rowMask[48];
-    uint64_t startRank = rowMask[8];
+    while (bb) {
 
-    if (b.toMove) {
-        nPush = -8;
-        dPush = -16;
-        promotionRank = rowMask[8];
-        startRank = rowMask[48];
+        uint64_t loc = bb & -bb;
+
+        // Pawn pushes and normal promotions
+        int locIndex = bitScan(loc);
+        create_move(moveList, locIndex, locIndex + (b.toMove? -8 : 8), QUIET_MOVES_FLAG);
+
+        // Consider double pawn pushes
+        if ((rowMask[8 + b.toMove * 40] & loc) && !((b.toMove? (loc >> 16) : (loc << 16)) & b.occupied)) {
+            create_move(moveList, locIndex, locIndex + (b.toMove? -16 : 16), DOUBLE_PAWN_PUSH_FLAG);
+        }
+
+        bb &= bb - 1;
+
     }
+}
 
+
+
+void MoveGen::generate_pawn_moves_noisy(MoveList &moveList, Bitboard &b) {
+
+
+    uint64_t enpassantSq = b.enpassantSq? 1ULL << b.enpassantSq : 0;
+    uint64_t bb = (rowMask[48 - b.toMove * 40] | pawnAttacksAll(b.color[!b.toMove] | enpassantSq, !b.toMove)) & b.pieces[b.toMove];
 
     while (bb) {
 
         uint64_t loc = bb & -bb;
         int locIndex = bitScan(loc);
-        bool isPromotion = promotionRank & loc;
-        bool canDoubleMove = startRank & loc;
-
 
         // Captures
         uint64_t captures = b.color[!b.toMove] & b.pawnAttacks[locIndex][b.toMove];
         while (captures) {
 
-            if (!isPromotion) {
+            if (!(rowMask[48 - b.toMove * 40] & loc)) {
                 create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
             }
             else {
@@ -86,25 +95,13 @@ void MoveGen::generate_pawn_moves(MoveList &moveList, Bitboard &b, bool capPro) 
         // Enpassants
         captures = enpassantSq & b.pawnAttacks[locIndex][b.toMove];
         if (captures) {
-            create_move(moveList, locIndex, bitScan(captures), ENPASSANT_FLAG);
+            create_move(moveList, locIndex, b.enpassantSq, ENPASSANT_FLAG);
         }
 
 
         // Pawn pushes and normal promotions
-        if (!((b.toMove? (loc >> 8) : (loc << 8)) & b.occupied)) {
-
-            if (isPromotion) {
-                create_all_promotions(moveList, locIndex, locIndex + nPush);
-            }
-            else if (!capPro) {
-                create_move(moveList, locIndex, locIndex + nPush, QUIET_MOVES_FLAG);
-
-                // Consider double pawn pushes
-                if (canDoubleMove && !((b.toMove? (loc >> 16) : (loc << 16)) & b.occupied)) {
-                    create_move(moveList, locIndex, locIndex + dPush, DOUBLE_PAWN_PUSH_FLAG);
-                }
-            }
-
+        if ((rowMask[48 - b.toMove * 40] & loc) && !((b.toMove? (loc >> 8) : (loc << 8)) & b.occupied)) {
+            create_all_promotions(moveList, locIndex, locIndex + (b.toMove? -8 : 8));
         }
 
         bb &= bb - 1;
@@ -380,7 +377,8 @@ bool MoveGen::isAttackedCastleMask(Bitboard &b, uint64_t bitboard) {
 
 // Generate all pseudo-legal moves
 void MoveGen::generate_all_moves(MoveList &moveList, Bitboard &b) {
-    generate_pawn_moves(moveList, b, false);
+    generate_pawn_moves_quiet(moveList, b);
+    generate_pawn_moves_noisy(moveList, b);
     generate_knight_moves(moveList, b, false);
     generate_bishop_moves(moveList, b, false);
     generate_rook_moves(moveList, b, false);
@@ -393,7 +391,7 @@ void MoveGen::generate_all_moves(MoveList &moveList, Bitboard &b) {
 // Generate all pseudo-legal captures
 void MoveGen::generate_captures_promotions(MoveList &moveList, Bitboard &b) {
 
-    generate_pawn_moves(moveList, b, true);
+    generate_pawn_moves_noisy(moveList, b);
     generate_knight_moves(moveList, b, true);
     generate_bishop_moves(moveList, b, true);
     generate_rook_moves(moveList, b, true);
