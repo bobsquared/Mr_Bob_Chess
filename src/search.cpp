@@ -23,7 +23,7 @@ int lmrReduction[64][64];
 void InitLateMoveArray() {
     for (int i = 0; i < 64; i++) {
         for (int j = 0; j < 64; j++) {
-            lmrReduction[i][j] = (exp(2) * log(i) * log(j) + 12) / (exp(exp(1)));
+            lmrReduction[i][j] = (exp(2) * log(i) * log(j) + 12) / (exp(exp(1.02)));
         }
     }
 }
