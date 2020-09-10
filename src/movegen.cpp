@@ -316,30 +316,15 @@ void MoveGen::generate_king_moves_noisy(MoveList &moveList, Bitboard &b) {
 
 bool MoveGen::can_castle_king(Bitboard &b) {
 
-    uint8_t crightsMask;
-    uint64_t occupiedMask;
-    uint64_t attackedMask;
-
-    if (b.toMove) {
-        crightsMask = KING_CASTLE_RIGHTS_BLACK;
-        occupiedMask = KING_CASTLE_OCCUPIED_BLACK_MASK;
-        attackedMask = KING_CASTLE_BLACK_MASK;
-    }
-    else {
-        crightsMask = KING_CASTLE_RIGHTS_WHITE;
-        occupiedMask = KING_CASTLE_OCCUPIED_WHITE_MASK;
-        attackedMask = KING_CASTLE_WHITE_MASK;
-    }
-
-    if ((b.castleRights & crightsMask) == 0) {
+    if (!(b.castleRights & (b.toMove? KING_CASTLE_RIGHTS_BLACK : KING_CASTLE_RIGHTS_WHITE))) {
         return false;
     }
 
-    if (b.occupied & occupiedMask) {
+    if (b.occupied & (b.toMove? KING_CASTLE_OCCUPIED_BLACK_MASK : KING_CASTLE_OCCUPIED_WHITE_MASK)) {
         return false;
     }
 
-    if (isAttackedCastleMask(b, attackedMask)) {
+    if (isAttackedCastleMask(b, b.toMove? KING_CASTLE_BLACK_MASK : KING_CASTLE_WHITE_MASK)) {
         return false;
     }
 
@@ -351,30 +336,15 @@ bool MoveGen::can_castle_king(Bitboard &b) {
 // Determine if player can castle queenside
 bool MoveGen::can_castle_queen(Bitboard &b) {
 
-    uint8_t crightsMask;
-    uint64_t occupiedMask;
-    uint64_t attackedMask;
-
-    if (b.toMove) {
-        crightsMask = QUEEN_CASTLE_RIGHTS_BLACK;
-        occupiedMask = QUEEN_CASTLE_OCCUPIED_BLACK_MASK;
-        attackedMask = QUEEN_CASTLE_BLACK_MASK;
-    }
-    else {
-        crightsMask = QUEEN_CASTLE_RIGHTS_WHITE;
-        occupiedMask = QUEEN_CASTLE_OCCUPIED_WHITE_MASK;
-        attackedMask = QUEEN_CASTLE_WHITE_MASK;
-    }
-
-    if ((b.castleRights & crightsMask) == 0) {
+    if (!(b.castleRights & (b.toMove? QUEEN_CASTLE_RIGHTS_BLACK : QUEEN_CASTLE_RIGHTS_WHITE))) {
         return false;
     }
 
-    if (b.occupied & occupiedMask) {
+    if (b.occupied & (b.toMove? QUEEN_CASTLE_OCCUPIED_BLACK_MASK : QUEEN_CASTLE_OCCUPIED_WHITE_MASK)) {
         return false;
     }
 
-    if (isAttackedCastleMask(b, attackedMask)) {
+    if (isAttackedCastleMask(b, b.toMove? QUEEN_CASTLE_BLACK_MASK : QUEEN_CASTLE_WHITE_MASK)) {
         return false;
     }
 
@@ -428,6 +398,7 @@ bool MoveGen::isAttackedCastleMask(Bitboard &b, uint64_t bitboard) {
 
 // Generate all pseudo-legal moves
 void MoveGen::generate_all_moves(MoveList &moveList, Bitboard &b) {
+
     generate_pawn_moves_quiet(moveList, b);
     generate_pawn_moves_noisy(moveList, b);
 
