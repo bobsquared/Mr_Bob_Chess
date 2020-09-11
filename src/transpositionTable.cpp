@@ -65,9 +65,11 @@ void TranspositionTable::saveTT(MOVE move, int score, int depth, uint8_t flag, u
 
     if (hashTable[posKey].posKey == 0) {
         ttWrites++;
+        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, age);
     }
-
-    hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, age);
+    else if (age > hashTable[posKey].halfMove || flag == 0 || depth > hashTable[posKey].depth - 2){
+        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, age);
+    }
 
 }
 
