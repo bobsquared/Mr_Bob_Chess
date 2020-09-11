@@ -87,7 +87,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     int numMoves = 0;
 
     inCheck? moveGen->generate_all_moves(moveList, b) : moveGen->generate_captures_promotions(moveList, b);
-    movePick->scoreMoves(moveList, b, 0, NO_MOVE);
+    movePick->scoreMoves(moveList, b, 0, hashedBoard.move);
     while (moveList.get_next_move(move)) {
 
         // Prune negative SEE
