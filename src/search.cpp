@@ -49,7 +49,19 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
         return 0;
     }
 
+    // Probe Transpostion Table:
+    ZobristVal hashedBoard;
+    uint64_t posKey = b.getPosKey();
+    bool ttRet = false;
+    b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, height);
+
+    if (ttRet) {
+        return hashedBoard.score <= alpha? alpha : (hashedBoard.score >= beta? beta : hashedBoard.score);
+    }
+
+
     bool inCheck = b.InCheck();
+    int prevAlpha = alpha;
     int stand_pat = inCheck? -MATE_VALUE + height : 0;
     if (!inCheck) {
         stand_pat = std::max(alpha, b.evaluate());
@@ -70,6 +82,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     }
 
     MOVE move;
+    MOVE bestMove = NO_MOVE;
     MoveList moveList;
     int numMoves = 0;
 
@@ -93,16 +106,33 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
         int score = -qsearch(b, depth - 1, -beta, -alpha, height + 1);
         b.undo_move(move);
 
+        if (bestMove == NO_MOVE) {
+            bestMove = move;
+        }
+
         if (score > stand_pat) {
             stand_pat = score;
+            bestMove = move;
             if (score > alpha) {
                 alpha = score;
                 if (score >= beta) {
+                    b.saveTT(move, score, depth, 1, posKey, height);
                     return score;
                 }
             }
         }
 
+    }
+
+    if (numMoves > 0) {
+        if (prevAlpha >= stand_pat) {
+            assert (bestMove != 0);
+            b.saveTT(bestMove, stand_pat, depth, 2, posKey, height);
+        }
+        else {
+            assert (bestMove != 0);
+            b.saveTT(bestMove, stand_pat, depth, 0, posKey, height);
+        }
     }
 
     return stand_pat;
