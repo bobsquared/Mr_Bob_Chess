@@ -99,10 +99,6 @@ private:
     uint64_t whiteKings;
     uint64_t blackKings;
 
-    // Piece movement
-    uint64_t bishopMoves[64];
-    uint64_t rookMoves[64];
-
     // Position info
     int material[2];
     int pieceCount[12];

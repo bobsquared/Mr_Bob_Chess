@@ -13,11 +13,18 @@ Magics::~Magics() {
 
 
 
-Magics::Magics(uint64_t *rookMoves, uint64_t *bishopMoves) : rookMoves(rookMoves), bishopMoves(bishopMoves) {
+Magics::Magics() {
 
     // Initialize magic numbers
     uint64_t magicR[64];
     uint64_t magicB[64];
+
+    uint64_t bishopMoves[64];
+    uint64_t rookMoves[64];
+
+    InitBishopMoves(bishopMoves);
+    InitRookMoves(rookMoves);
+    
     optimalMagicRook(magicR);
     optimalMagicBishop(magicB);
 
@@ -381,4 +388,103 @@ void Magics::Generate_Magic_Bishops() {
         }
         std::cout << "  magicB[" << unsigned(i) << "] = " << x << "ULL;" << std::endl;
     }
+}
+
+
+
+// Initialize all bishop moves
+void Magics::InitBishopMoves(uint64_t *bishopMoves) {
+
+    for (int i = 0; i < 64; i++) {
+        uint64_t tempBitBoard = 0;
+        uint64_t tempBitBoard1 = 0;
+        uint64_t tempBitBoard2 = 0;
+        uint64_t tempBitBoard3 = 0;
+        uint64_t tempBitBoard4 = 0;
+
+        tempBitBoard |= 1ULL << i;
+        uint8_t col = i % 8;
+
+        for (uint8_t k = col; k < 8; k++) {
+            if (k == 7) {
+                break;
+            }
+            else {
+                tempBitBoard1 |= tempBitBoard << (9 + 9 * (k - col));
+            }
+        }
+
+        for (uint8_t k = col; k < 8; k++) {
+            if (k == 7) {
+                break;
+            }
+            else {
+                tempBitBoard2 |= tempBitBoard >> (7 + 7 * (k - col));
+            }
+        }
+
+        for (int8_t k = col; k >= 0; k--) {
+            if (k == 0) {
+                break;
+            }
+            else {
+                tempBitBoard3 |= tempBitBoard << (7 + 7 * (col - k));
+            }
+        }
+
+        for (int8_t k = col; k >= 0; k--) {
+            if (k == 0) {
+                break;
+            }
+            else {
+                tempBitBoard4 |= tempBitBoard >> (9 + 9 * (col - k));
+            }
+        }
+
+        bishopMoves[i] = tempBitBoard1 | tempBitBoard2 | tempBitBoard4 | tempBitBoard3;
+    }
+
+}
+
+
+
+// Initialize all rook moves
+void Magics::InitRookMoves(uint64_t *rookMoves) {
+
+    for (int i = 0; i < 64; i++) {
+        uint64_t tempBitBoard = 0;
+        uint64_t tempBitBoard1 = 0;
+        uint64_t tempBitBoard2 = 0;
+        uint64_t tempBitBoard3 = 0;
+        uint64_t tempBitBoard4 = 0;
+
+        tempBitBoard |= 1ULL << i;
+        uint8_t col = i % 8;
+
+        for (int k = 0; k < 8; k++) {
+            tempBitBoard1 |= tempBitBoard >> (8 + k * 8);
+            tempBitBoard2 |= (tempBitBoard << (8 + k * 8));
+        }
+
+        for (int k = col; k < 8; k++) {
+            if (k == 7) {
+                break;
+            }
+            else {
+                tempBitBoard3 |= (tempBitBoard << (1 + 1 * (k - col)));
+            }
+        }
+
+        for (int k = col; k >= 0; k--) {
+            if (k == 0) {
+                break;
+            }
+            else {
+                tempBitBoard4 |= tempBitBoard >> (1 + 1 * (col - k));
+            }
+        }
+
+        rookMoves[i] = (tempBitBoard1 | tempBitBoard2 | tempBitBoard4 | tempBitBoard3) & (~tempBitBoard);
+    }
+
 }

@@ -10,7 +10,7 @@ class Magics{
 public:
 
     ~Magics();
-    Magics(uint64_t *rookMoves, uint64_t *bishopMoves);
+    Magics();
     void Generate_Magic_Rooks();
     void Generate_Magic_Bishops();
     uint64_t rookAttacksMask(uint64_t occupations, int index);
@@ -44,6 +44,9 @@ private:
 
     void optimalMagicRook(uint64_t *magicR);
     void optimalMagicBishop(uint64_t *magicB);
+
+    void InitBishopMoves(uint64_t *bishopMoves);
+    void InitRookMoves(uint64_t *rookMoves);
 
     MagicPro attacksR[64];
     MagicPro attacksB[64];
