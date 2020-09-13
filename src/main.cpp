@@ -216,7 +216,7 @@ int main() {
 
     }
 
-    delete evals;
+    delete eval;
     delete movePick;
     delete moveGen;
     delete magics;
