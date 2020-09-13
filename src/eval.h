@@ -22,8 +22,8 @@ class Eval {
 
 public:
     Eval();
-    int evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occupied, bool col);
-    int evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occupied);
+    int evaluate(int *material, uint64_t *pieces, uint64_t *knightMoves, int *pieceCount, uint64_t occupied, bool col);
+    int evaluate_debug(int *material, uint64_t *pieces, uint64_t *knightMoves, int *pieceCount, uint64_t occupied);
 
 private:
 
@@ -42,10 +42,10 @@ private:
     int evaluatePawns(uint64_t *pieces, bool col);
     int evaluatePassedPawns(uint64_t *pieces, bool col);
     int evaluateKnights(uint64_t *pieces, uint64_t *knightMoves, bool col);
-    int evaluateBishops(uint64_t *pieces, Magics *magics, bool col);
-    int evaluateRooks(uint64_t *pieces, Magics *magics, bool col);
-    int evaluateQueens(uint64_t *pieces, Magics *magics, bool col);
-    int evaluateKing(uint64_t *pieces, Magics *magics, bool col);
+    int evaluateBishops(uint64_t *pieces, bool col);
+    int evaluateRooks(uint64_t *pieces, bool col);
+    int evaluateQueens(uint64_t *pieces, bool col);
+    int evaluateKing(uint64_t *pieces, bool col);
     int evaluatePawnShield(uint64_t *pieces, bool col);
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];

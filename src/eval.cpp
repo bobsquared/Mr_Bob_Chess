@@ -1,5 +1,7 @@
 #include "eval.h"
 
+extern Magics *magics;
+
 
 
 int pieceValues[6] = {S(114, 94), S(491, 332), S(500, 328), S(694, 559), S(1271, 1259), S(5000, 5000)};
@@ -289,7 +291,7 @@ uint64_t Eval::adjacentMask(uint64_t pawns) {
 
 
 // Evaluate the position
-int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occ, bool col) {
+int Eval::evaluate(int *material, uint64_t *pieces, uint64_t *knightMoves, int *pieceCount, uint64_t occ, bool col) {
 
     // Asserts for debugging mode
     #ifndef NDEBUG
@@ -379,10 +381,10 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
     ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
     ret += evaluatePawnShield(pieces, false) - evaluatePawnShield(pieces, true);
     ret += evaluateKnights(pieces, knightMoves, false) - evaluateKnights(pieces, knightMoves, true);
-    ret += evaluateBishops(pieces, magics, false) - evaluateBishops(pieces, magics, true);
-    ret += evaluateRooks(pieces, magics, false) - evaluateRooks(pieces, magics, true);
-    ret += evaluateQueens(pieces, magics, false) - evaluateQueens(pieces, magics, true);
-    ret += evaluateKing(pieces, magics, false) - evaluateKing(pieces, magics, true);
+    ret += evaluateBishops(pieces, false) - evaluateBishops(pieces, true);
+    ret += evaluateRooks(pieces, false) - evaluateRooks(pieces, true);
+    ret += evaluateQueens(pieces, false) - evaluateQueens(pieces, true);
+    ret += evaluateKing(pieces, false) - evaluateKing(pieces, true);
 
     int evalMidgame = MGVAL(ret);
     int evalEndgame = EGVAL(ret);
@@ -404,7 +406,7 @@ int Eval::evaluate(int *material, uint64_t *pieces, Magics *magics, uint64_t *kn
 
 
 // Evaluate the position with debugging
-int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64_t *knightMoves, int *pieceCount, uint64_t occ) {
+int Eval::evaluate_debug(int *material, uint64_t *pieces, uint64_t *knightMoves, int *pieceCount, uint64_t occ) {
 
     #ifndef NDEBUG
     int debugMaterialCount = 0;
@@ -487,9 +489,9 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     occupied = occ;
 
     ret += evaluateKnights(pieces, knightMoves, false) - evaluateKnights(pieces, knightMoves, true);
-    ret += evaluateBishops(pieces, magics, false) - evaluateBishops(pieces, magics, true);
-    ret += evaluateRooks(pieces, magics, false) - evaluateRooks(pieces, magics, true);
-    ret += evaluateQueens(pieces, magics, false) - evaluateQueens(pieces, magics, true);
+    ret += evaluateBishops(pieces, false) - evaluateBishops(pieces, true);
+    ret += evaluateRooks(pieces, false) - evaluateRooks(pieces, true);
+    ret += evaluateQueens(pieces, false) - evaluateQueens(pieces, true);
     ret += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
 
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -498,7 +500,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "White imbalance: " << evaluateImbalance(pieceCount, false) << std::endl;
     std::cout << "White pawns: " << evaluatePawns(pieces, false) << std::endl;
     std::cout << "White passed pawns: " << evaluatePassedPawns(pieces, false) << std::endl;
-    std::cout << "White Kings: " << MGVAL(evaluateKing(pieces, magics, false)) << std::endl;
+    std::cout << "White Kings: " << MGVAL(evaluateKing(pieces, false)) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -507,7 +509,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "Black imbalance: " << evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "Black pawns: " << evaluatePawns(pieces, true) << std::endl;
     std::cout << "Black passed pawns: " << evaluatePassedPawns(pieces, true) << std::endl;
-    std::cout << "Black Kings: " << MGVAL(evaluateKing(pieces, magics, true)) << std::endl;
+    std::cout << "Black Kings: " << MGVAL(evaluateKing(pieces, true)) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
@@ -516,7 +518,7 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, Magics *magics, uint64
     std::cout << "All imbalance: " << evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true) << std::endl;
     std::cout << "All pawns: " << evaluatePawns(pieces, false) - evaluatePawns(pieces, true) << std::endl;
     std::cout << "All passed pawns: " << evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true) << std::endl;
-    std::cout << "All Kings: " << MGVAL(evaluateKing(pieces, magics, false) - evaluateKing(pieces, magics, true)) << std::endl;
+    std::cout << "All Kings: " << MGVAL(evaluateKing(pieces, false) - evaluateKing(pieces, true)) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
 
     int phase = TOTALPHASE;
@@ -720,7 +722,7 @@ int Eval::evaluateKnights(uint64_t *pieces, uint64_t *knightMoves, bool col) {
 
 
 
-int Eval::evaluateBishops(uint64_t *pieces, Magics *magics, bool col) {
+int Eval::evaluateBishops(uint64_t *pieces, bool col) {
 
     int ret = 0;
     uint64_t piece = pieces[4 + col];
@@ -751,7 +753,7 @@ int Eval::evaluateBishops(uint64_t *pieces, Magics *magics, bool col) {
 
 
 
-int Eval::evaluateRooks(uint64_t *pieces, Magics *magics, bool col) {
+int Eval::evaluateRooks(uint64_t *pieces, bool col) {
 
     int ret = 0;
     uint64_t piece = pieces[6 + col];
@@ -795,7 +797,7 @@ int Eval::evaluateRooks(uint64_t *pieces, Magics *magics, bool col) {
 
 
 
-int Eval::evaluateQueens(uint64_t *pieces, Magics *magics, bool col) {
+int Eval::evaluateQueens(uint64_t *pieces, bool col) {
 
     int ret = 0;
     uint64_t piece = pieces[8 + col];
@@ -826,7 +828,7 @@ int Eval::evaluateQueens(uint64_t *pieces, Magics *magics, bool col) {
 
 
 
-int Eval::evaluateKing(uint64_t *pieces, Magics *magics, bool col) {
+int Eval::evaluateKing(uint64_t *pieces, bool col) {
 
     int ret = 0;
     int theirKing = bitScan(pieces[10 + !col]);

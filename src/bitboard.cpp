@@ -20,7 +20,6 @@ Bitboard::Bitboard() {
     InitRookMoves();
     InitKingMoves();
 
-    magics = new Magics();
     eval = new Eval();
     zobrist = new Zobrist();
     tt = new TranspositionTable();
@@ -32,7 +31,6 @@ Bitboard::Bitboard() {
 
 
 Bitboard::~Bitboard() {
-    delete magics;
     delete eval;
     delete zobrist;
     delete tt;
@@ -662,7 +660,7 @@ bool Bitboard::isLegal(MOVE move) {
 
 // Returns the heuristic evaluation for the current position.
 int Bitboard::evaluate() {
-    return -(toMove * 2 - 1) * eval->evaluate(material, pieces, magics, knightMoves, pieceCount, occupied, toMove);
+    return -(toMove * 2 - 1) * eval->evaluate(material, pieces, knightMoves, pieceCount, occupied, toMove);
 }
 
 
@@ -670,7 +668,7 @@ int Bitboard::evaluate() {
 // Returns the heuristic evaluation for the current position.
 // Prints the evaluation with different sections for debugging
 int Bitboard::evaluate_debug() {
-    return eval->evaluate_debug(material, pieces, magics, knightMoves, pieceCount, occupied);
+    return eval->evaluate_debug(material, pieces, knightMoves, pieceCount, occupied);
 }
 
 

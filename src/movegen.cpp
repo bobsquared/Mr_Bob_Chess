@@ -1,5 +1,7 @@
 #include "movegen.h"
 
+extern Magics *magics;
+
 
 
 // Move is 16 bit:
@@ -156,7 +158,7 @@ void MoveGen::generate_bishop_moves_quiet(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t bishopAtt = b.magics->bishopAttacksMask(b.occupied, locIndex);
+        uint64_t bishopAtt = magics->bishopAttacksMask(b.occupied, locIndex);
 
         uint64_t nonCaptures = (~b.occupied) & bishopAtt;
         while (nonCaptures) {
@@ -177,7 +179,7 @@ void MoveGen::generate_bishop_moves_noisy(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t bishopAtt = b.magics->bishopAttacksMask(b.occupied, locIndex);
+        uint64_t bishopAtt = magics->bishopAttacksMask(b.occupied, locIndex);
 
         uint64_t captures = b.color[!b.toMove] & bishopAtt;
         while (captures) {
@@ -198,7 +200,7 @@ void MoveGen::generate_rook_moves_quiet(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t rookAtt = b.magics->rookAttacksMask(b.occupied, locIndex);
+        uint64_t rookAtt = magics->rookAttacksMask(b.occupied, locIndex);
 
         uint64_t nonCaptures = (~b.occupied) & rookAtt;
         while (nonCaptures) {
@@ -219,7 +221,7 @@ void MoveGen::generate_rook_moves_noisy(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t rookAtt = b.magics->rookAttacksMask(b.occupied, locIndex);
+        uint64_t rookAtt = magics->rookAttacksMask(b.occupied, locIndex);
 
         uint64_t captures = b.color[!b.toMove] & rookAtt;
         while (captures) {
@@ -240,7 +242,7 @@ void MoveGen::generate_queen_moves_quiet(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t queenAtt = b.magics->queenAttacksMask(b.occupied, locIndex);
+        uint64_t queenAtt = magics->queenAttacksMask(b.occupied, locIndex);
 
         uint64_t nonCaptures = (~b.occupied) & queenAtt;
         while (nonCaptures) {
@@ -261,7 +263,7 @@ void MoveGen::generate_queen_moves_noisy(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t queenAtt = b.magics->queenAttacksMask(b.occupied, locIndex);
+        uint64_t queenAtt = magics->queenAttacksMask(b.occupied, locIndex);
 
         uint64_t captures = b.color[!b.toMove] & queenAtt;
         while (captures) {
@@ -368,7 +370,7 @@ bool MoveGen::isAttackedCastleMask(Bitboard &b, uint64_t bitboard) {
 
     uint64_t piece = b.pieces[4 + !b.toMove];
     while (piece) {
-        if (b.magics->bishopAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
+        if (magics->bishopAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
             return true;
         }
         piece &= piece - 1;
@@ -376,7 +378,7 @@ bool MoveGen::isAttackedCastleMask(Bitboard &b, uint64_t bitboard) {
 
     piece = b.pieces[6 + !b.toMove];
     while (piece) {
-        if (b.magics->rookAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
+        if (magics->rookAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
             return true;
         }
         piece &= piece - 1;
@@ -384,7 +386,7 @@ bool MoveGen::isAttackedCastleMask(Bitboard &b, uint64_t bitboard) {
 
     piece = b.pieces[8 + !b.toMove];
     while (piece) {
-        if (b.magics->queenAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
+        if (magics->queenAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
             return true;
         }
         piece &= piece - 1;

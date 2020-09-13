@@ -3,6 +3,7 @@
 #include <regex>
 #include <thread>
 #include <climits>
+#include "magic_bitboards.h"
 #include "movegen.h"
 #include "defs.h"
 #include "perft.h"
@@ -12,8 +13,10 @@
 
 
 
+
 MovePick *movePick = new MovePick();
 MoveGen *moveGen = new MoveGen();
+Magics *magics = new Magics();
 extern int pieceValues[6];
 
 
@@ -213,5 +216,6 @@ int main() {
 
     delete movePick;
     delete moveGen;
+    delete magics;
     return 0;
 }

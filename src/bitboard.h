@@ -4,7 +4,6 @@
 #include <string>
 #include <regex>
 #include "defs.h"
-#include "magic_bitboards.h"
 #include "eval.h"
 #include "zobrist_hashing.h"
 #include "transpositionTable.h"
@@ -36,7 +35,6 @@ public:
     uint64_t occupied;
     bool toMove;
     uint8_t castleRights;
-    Magics *magics;
 
     Bitboard();
     ~Bitboard();
