@@ -216,8 +216,10 @@ int main() {
 
     }
 
+    delete evals;
     delete movePick;
     delete moveGen;
     delete magics;
+
     return 0;
 }
