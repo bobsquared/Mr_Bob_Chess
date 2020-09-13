@@ -37,11 +37,8 @@ private:
     void InitIsolatedPawnsMask();
     void InitOutpostMask();
     uint64_t adjacentMask(uint64_t pawns);
-    int evaluate_piece_square_values(Bitboard &board, bool col);
-    int evaluateTrappedRook(Bitboard &board, bool col);
     int evaluateImbalance(Bitboard &board, bool col);
     int evaluatePawns(Bitboard &board, bool col);
-    int evaluatePassedPawns(Bitboard &board, bool col);
     int evaluateKnights(Bitboard &board, bool col);
     int evaluateBishops(Bitboard &board, bool col);
     int evaluateRooks(Bitboard &board, bool col);
