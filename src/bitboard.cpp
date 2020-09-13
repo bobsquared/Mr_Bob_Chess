@@ -20,7 +20,6 @@ Bitboard::Bitboard() {
     InitRookMoves();
     InitKingMoves();
 
-    eval = new Eval();
     zobrist = new Zobrist();
     tt = new TranspositionTable();
 
@@ -31,7 +30,6 @@ Bitboard::Bitboard() {
 
 
 Bitboard::~Bitboard() {
-    delete eval;
     delete zobrist;
     delete tt;
 }
@@ -650,27 +648,6 @@ bool Bitboard::isLegal(MOVE move) {
 
     return !attacked;
 }
-
-
-
-/************************************************************************************************
-**  Evaluation section
-**  Used for determining the value of the position and who is winning.
-*************************************************************************************************/
-
-// Returns the heuristic evaluation for the current position.
-int Bitboard::evaluate() {
-    return -(toMove * 2 - 1) * eval->evaluate(material, pieces, knightMoves, pieceCount, occupied, toMove);
-}
-
-
-
-// Returns the heuristic evaluation for the current position.
-// Prints the evaluation with different sections for debugging
-int Bitboard::evaluate_debug() {
-    return eval->evaluate_debug(material, pieces, knightMoves, pieceCount, occupied);
-}
-
 
 
 /************************************************************************************************

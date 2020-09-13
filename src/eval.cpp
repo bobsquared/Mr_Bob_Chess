@@ -291,50 +291,50 @@ uint64_t Eval::adjacentMask(uint64_t pawns) {
 
 
 // Evaluate the position
-int Eval::evaluate(int *material, uint64_t *pieces, uint64_t *knightMoves, int *pieceCount, uint64_t occ, bool col) {
+int Eval::evaluate(Bitboard &board) {
 
     // Asserts for debugging mode
     #ifndef NDEBUG
     int debugMaterialCount = 0;
-    int pawnCount = count_population(pieces[0]);
-    int knightCount = count_population(pieces[2]);
-    int bishopCount = count_population(pieces[4]);
-    int rookCount = count_population(pieces[6]);
-    int queenCount = count_population(pieces[8]);
-    int kingCount = count_population(pieces[10]);
+    int pawnCount = count_population(board.pieces[0]);
+    int knightCount = count_population(board.pieces[2]);
+    int bishopCount = count_population(board.pieces[4]);
+    int rookCount = count_population(board.pieces[6]);
+    int queenCount = count_population(board.pieces[8]);
+    int kingCount = count_population(board.pieces[10]);
     debugMaterialCount += pawnCount * MGVAL(pieceValues[0]);
     debugMaterialCount += knightCount * MGVAL(pieceValues[1]);
     debugMaterialCount += bishopCount * MGVAL(pieceValues[2]);
     debugMaterialCount += rookCount * MGVAL(pieceValues[3]);
     debugMaterialCount += queenCount * MGVAL(pieceValues[4]);
     debugMaterialCount += kingCount * MGVAL(pieceValues[5]);
-    assert(debugMaterialCount == MGVAL(material[0]));
-    assert(pawnCount == pieceCount[0]);
-    assert(knightCount == pieceCount[2]);
-    assert(bishopCount == pieceCount[4]);
-    assert(rookCount == pieceCount[6]);
-    assert(queenCount == pieceCount[8]);
-    assert(kingCount == pieceCount[10]);
+    assert(debugMaterialCount == MGVAL(board.material[0]));
+    assert(pawnCount == board.pieceCount[0]);
+    assert(knightCount == board.pieceCount[2]);
+    assert(bishopCount == board.pieceCount[4]);
+    assert(rookCount == board.pieceCount[6]);
+    assert(queenCount == board.pieceCount[8]);
+    assert(kingCount == board.pieceCount[10]);
 
-    pawnCount = count_population(pieces[1]);
-    knightCount = count_population(pieces[3]);
-    bishopCount = count_population(pieces[5]);
-    rookCount = count_population(pieces[7]);
-    queenCount = count_population(pieces[9]);
-    kingCount = count_population(pieces[11]);
+    pawnCount = count_population(board.pieces[1]);
+    knightCount = count_population(board.pieces[3]);
+    bishopCount = count_population(board.pieces[5]);
+    rookCount = count_population(board.pieces[7]);
+    queenCount = count_population(board.pieces[9]);
+    kingCount = count_population(board.pieces[11]);
     debugMaterialCount = pawnCount * EGVAL(pieceValues[0]);
     debugMaterialCount += knightCount * EGVAL(pieceValues[1]);
     debugMaterialCount += bishopCount * EGVAL(pieceValues[2]);
     debugMaterialCount += rookCount * EGVAL(pieceValues[3]);
     debugMaterialCount += queenCount * EGVAL(pieceValues[4]);
     debugMaterialCount += kingCount * EGVAL(pieceValues[5]);
-    assert(debugMaterialCount == EGVAL(material[1]));
-    assert(pawnCount == pieceCount[1]);
-    assert(knightCount == pieceCount[3]);
-    assert(bishopCount == pieceCount[5]);
-    assert(rookCount == pieceCount[7]);
-    assert(queenCount == pieceCount[9]);
-    assert(kingCount == pieceCount[11]);
+    assert(debugMaterialCount == EGVAL(board.material[1]));
+    assert(pawnCount == board.pieceCount[1]);
+    assert(knightCount == board.pieceCount[3]);
+    assert(bishopCount == board.pieceCount[5]);
+    assert(rookCount == board.pieceCount[7]);
+    assert(queenCount == board.pieceCount[9]);
+    assert(kingCount == board.pieceCount[11]);
     #endif
 
 
@@ -351,108 +351,107 @@ int Eval::evaluate(int *material, uint64_t *pieces, uint64_t *knightMoves, int *
         attacksQueen[i] = 0;
     }
 
-    uint64_t pawnAttacksW = pawnAttacksAll(pieces[0], 0);
-    uint64_t pawnAttacksB = pawnAttacksAll(pieces[1], 1);
+    uint64_t pawnAttacksW = pawnAttacksAll(board.pieces[0], 0);
+    uint64_t pawnAttacksB = pawnAttacksAll(board.pieces[1], 1);
 
-    uint64_t knightAttacksW = knightAttacks(pieces[2]);
-    uint64_t knightAttacksB = knightAttacks(pieces[3]);
+    uint64_t knightAttacksW = knightAttacks(board.pieces[2]);
+    uint64_t knightAttacksB = knightAttacks(board.pieces[3]);
 
     // Mobility
-    mobilityUnsafeSquares[0] = pawnAttacksB | pieces[0] | pieces[10];
-    mobilityUnsafeSquares[1] = pawnAttacksW | pieces[1] | pieces[11];
+    mobilityUnsafeSquares[0] = pawnAttacksB | board.pieces[0] | board.pieces[10];
+    mobilityUnsafeSquares[1] = pawnAttacksW | board.pieces[1] | board.pieces[11];
 
-    minorUnsafe[0] = mobilityUnsafeSquares[0] | pieces[8];
-    minorUnsafe[1] = mobilityUnsafeSquares[1] | pieces[9];
+    minorUnsafe[0] = mobilityUnsafeSquares[0] | board.pieces[8];
+    minorUnsafe[1] = mobilityUnsafeSquares[1] | board.pieces[9];
 
     queenUnsafe[0] = mobilityUnsafeSquares[0] | knightAttacksB;
     queenUnsafe[1] = mobilityUnsafeSquares[1] | knightAttacksW;
 
-    tempUnsafe[0] = ~(pawnAttacksB | knightAttacksB | pieces[0]) & kingZoneMask[0][bitScan(pieces[11])];
-    tempUnsafe[1] = ~(pawnAttacksW | knightAttacksW | pieces[1]) & kingZoneMask[1][bitScan(pieces[10])];
-    occupied = occ;
+    tempUnsafe[0] = ~(pawnAttacksB | knightAttacksB | board.pieces[0]) & kingZoneMask[0][bitScan(board.pieces[11])];
+    tempUnsafe[1] = ~(pawnAttacksW | knightAttacksW | board.pieces[1]) & kingZoneMask[1][bitScan(board.pieces[10])];
 
 
     int ret = 0;
-    ret += col? S(-16, -16) : S(16, 16);
-    ret += material[0] - material[1];
-    ret += evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true);
-    ret += evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true);
-    ret += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
-    ret += evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true);
-    ret += evaluatePawnShield(pieces, false) - evaluatePawnShield(pieces, true);
-    ret += evaluateKnights(pieces, knightMoves, false) - evaluateKnights(pieces, knightMoves, true);
-    ret += evaluateBishops(pieces, false) - evaluateBishops(pieces, true);
-    ret += evaluateRooks(pieces, false) - evaluateRooks(pieces, true);
-    ret += evaluateQueens(pieces, false) - evaluateQueens(pieces, true);
-    ret += evaluateKing(pieces, false) - evaluateKing(pieces, true);
+    ret += board.toMove? S(-16, -16) : S(16, 16);
+    ret += board.material[0] - board.material[1];
+    ret += evaluate_piece_square_values(board, false) - evaluate_piece_square_values(board, true);
+    ret += evaluatePassedPawns(board, false) - evaluatePassedPawns(board, true);
+    ret += evaluatePawns(board, false) - evaluatePawns(board, true);
+    ret += evaluateImbalance(board, false) - evaluateImbalance(board, true);
+    ret += evaluatePawnShield(board, false) - evaluatePawnShield(board, true);
+    ret += evaluateKnights(board, false) - evaluateKnights(board, true);
+    ret += evaluateBishops(board, false) - evaluateBishops(board, true);
+    ret += evaluateRooks(board, false) - evaluateRooks(board, true);
+    ret += evaluateQueens(board, false) - evaluateQueens(board, true);
+    ret += evaluateKing(board, false) - evaluateKing(board, true);
 
     int evalMidgame = MGVAL(ret);
     int evalEndgame = EGVAL(ret);
 
-    evalMidgame += evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true);
+    evalMidgame += evaluateTrappedRook(board, false) - evaluateTrappedRook(board, true);
 
     int phase = TOTALPHASE;
-    phase -= (pieceCount[0] + pieceCount[1]) * PAWNPHASE;
-    phase -= (pieceCount[2] + pieceCount[3]) * KNIGHTPHASE;
-    phase -= (pieceCount[4] + pieceCount[5]) * BISHOPPHASE;
-    phase -= (pieceCount[6] + pieceCount[7]) * ROOKPHASE;
-    phase -= (pieceCount[8] + pieceCount[9]) * QUEENPHASE;
+    phase -= (board.pieceCount[0] + board.pieceCount[1]) * PAWNPHASE;
+    phase -= (board.pieceCount[2] + board.pieceCount[3]) * KNIGHTPHASE;
+    phase -= (board.pieceCount[4] + board.pieceCount[5]) * BISHOPPHASE;
+    phase -= (board.pieceCount[6] + board.pieceCount[7]) * ROOKPHASE;
+    phase -= (board.pieceCount[8] + board.pieceCount[9]) * QUEENPHASE;
 
     phase = (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
     ret = ((evalMidgame * (256 - phase)) + (evalEndgame * phase)) / 256;
-    return ret;
+    return board.toMove? -ret : ret;
 }
 
 
 
 // Evaluate the position with debugging
-int Eval::evaluate_debug(int *material, uint64_t *pieces, uint64_t *knightMoves, int *pieceCount, uint64_t occ) {
+int Eval::evaluate_debug(Bitboard &board) {
 
     #ifndef NDEBUG
     int debugMaterialCount = 0;
-    int pawnCount = count_population(pieces[0]);
-    int knightCount = count_population(pieces[2]);
-    int bishopCount = count_population(pieces[4]);
-    int rookCount = count_population(pieces[6]);
-    int queenCount = count_population(pieces[8]);
-    int kingCount = count_population(pieces[10]);
+    int pawnCount = count_population(board.pieces[0]);
+    int knightCount = count_population(board.pieces[2]);
+    int bishopCount = count_population(board.pieces[4]);
+    int rookCount = count_population(board.pieces[6]);
+    int queenCount = count_population(board.pieces[8]);
+    int kingCount = count_population(board.pieces[10]);
     debugMaterialCount += pawnCount * MGVAL(pieceValues[0]);
     debugMaterialCount += knightCount * MGVAL(pieceValues[1]);
     debugMaterialCount += bishopCount * MGVAL(pieceValues[2]);
     debugMaterialCount += rookCount * MGVAL(pieceValues[3]);
     debugMaterialCount += queenCount * MGVAL(pieceValues[4]);
     debugMaterialCount += kingCount * MGVAL(pieceValues[5]);
-    assert(debugMaterialCount == MGVAL(material[0]));
-    assert(pawnCount == pieceCount[0]);
-    assert(knightCount == pieceCount[2]);
-    assert(bishopCount == pieceCount[4]);
-    assert(rookCount == pieceCount[6]);
-    assert(queenCount == pieceCount[8]);
-    assert(kingCount == pieceCount[10]);
+    assert(debugMaterialCount == MGVAL(board.material[0]));
+    assert(pawnCount == board.pieceCount[0]);
+    assert(knightCount == board.pieceCount[2]);
+    assert(bishopCount == board.pieceCount[4]);
+    assert(rookCount == board.pieceCount[6]);
+    assert(queenCount == board.pieceCount[8]);
+    assert(kingCount == board.pieceCount[10]);
 
-    pawnCount = count_population(pieces[1]);
-    knightCount = count_population(pieces[3]);
-    bishopCount = count_population(pieces[5]);
-    rookCount = count_population(pieces[7]);
-    queenCount = count_population(pieces[9]);
-    kingCount = count_population(pieces[11]);
+    pawnCount = count_population(board.pieces[1]);
+    knightCount = count_population(board.pieces[3]);
+    bishopCount = count_population(board.pieces[5]);
+    rookCount = count_population(board.pieces[7]);
+    queenCount = count_population(board.pieces[9]);
+    kingCount = count_population(board.pieces[11]);
     debugMaterialCount = pawnCount * EGVAL(pieceValues[0]);
     debugMaterialCount += knightCount * EGVAL(pieceValues[1]);
     debugMaterialCount += bishopCount * EGVAL(pieceValues[2]);
     debugMaterialCount += rookCount * EGVAL(pieceValues[3]);
     debugMaterialCount += queenCount * EGVAL(pieceValues[4]);
     debugMaterialCount += kingCount * EGVAL(pieceValues[5]);
-    assert(debugMaterialCount == EGVAL(material[1]));
-    assert(pawnCount == pieceCount[1]);
-    assert(knightCount == pieceCount[3]);
-    assert(bishopCount == pieceCount[5]);
-    assert(rookCount == pieceCount[7]);
-    assert(queenCount == pieceCount[9]);
-    assert(kingCount == pieceCount[11]);
+    assert(debugMaterialCount == EGVAL(board.material[1]));
+    assert(pawnCount == board.pieceCount[1]);
+    assert(knightCount == board.pieceCount[3]);
+    assert(bishopCount == board.pieceCount[5]);
+    assert(rookCount == board.pieceCount[7]);
+    assert(queenCount == board.pieceCount[9]);
+    assert(kingCount == board.pieceCount[11]);
     #endif
 
 
-    int ret = MGVAL(material[0] - material[1]);
+    int ret = MGVAL(board.material[0] - board.material[1]);
 
     int evalMidgame = ret;
     int evalEndgame = ret;
@@ -468,65 +467,64 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, uint64_t *knightMoves,
         attacksQueen[i] = 0;
     }
 
-    uint64_t pawnAttacksW = pawnAttacksAll(pieces[0], 0);
-    uint64_t pawnAttacksB = pawnAttacksAll(pieces[1], 1);
+    uint64_t pawnAttacksW = pawnAttacksAll(board.pieces[0], 0);
+    uint64_t pawnAttacksB = pawnAttacksAll(board.pieces[1], 1);
 
-    uint64_t knightAttacksW = knightAttacks(pieces[2]);
-    uint64_t knightAttacksB = knightAttacks(pieces[3]);
+    uint64_t knightAttacksW = knightAttacks(board.pieces[2]);
+    uint64_t knightAttacksB = knightAttacks(board.pieces[3]);
 
     // Mobility
-    mobilityUnsafeSquares[0] = pawnAttacksB | pieces[0] | pieces[10];
-    mobilityUnsafeSquares[1] = pawnAttacksW | pieces[1] | pieces[11];
+    mobilityUnsafeSquares[0] = pawnAttacksB | board.pieces[0] | board.pieces[10];
+    mobilityUnsafeSquares[1] = pawnAttacksW | board.pieces[1] | board.pieces[11];
 
-    minorUnsafe[0] = mobilityUnsafeSquares[0] | pieces[8];
-    minorUnsafe[1] = mobilityUnsafeSquares[1] | pieces[9];
+    minorUnsafe[0] = mobilityUnsafeSquares[0] | board.pieces[8];
+    minorUnsafe[1] = mobilityUnsafeSquares[1] | board.pieces[9];
 
     queenUnsafe[0] = mobilityUnsafeSquares[0] | knightAttacksB;
     queenUnsafe[1] = mobilityUnsafeSquares[1] | knightAttacksW;
 
-    tempUnsafe[0] = ~(pawnAttacksB | knightAttacksB | pieces[0]) & kingZoneMask[0][bitScan(pieces[11])];
-    tempUnsafe[1] = ~(pawnAttacksW | knightAttacksW | pieces[1]) & kingZoneMask[1][bitScan(pieces[10])];
-    occupied = occ;
+    tempUnsafe[0] = ~(pawnAttacksB | knightAttacksB | board.pieces[0]) & kingZoneMask[0][bitScan(board.pieces[11])];
+    tempUnsafe[1] = ~(pawnAttacksW | knightAttacksW | board.pieces[1]) & kingZoneMask[1][bitScan(board.pieces[10])];
 
-    ret += evaluateKnights(pieces, knightMoves, false) - evaluateKnights(pieces, knightMoves, true);
-    ret += evaluateBishops(pieces, false) - evaluateBishops(pieces, true);
-    ret += evaluateRooks(pieces, false) - evaluateRooks(pieces, true);
-    ret += evaluateQueens(pieces, false) - evaluateQueens(pieces, true);
-    ret += evaluatePawns(pieces, false) - evaluatePawns(pieces, true);
+    ret += evaluateKnights(board, false) - evaluateKnights(board, true);
+    ret += evaluateBishops(board, false) - evaluateBishops(board, true);
+    ret += evaluateRooks(board, false) - evaluateRooks(board, true);
+    ret += evaluateQueens(board, false) - evaluateQueens(board, true);
+    ret += evaluatePawns(board, false) - evaluatePawns(board, true);
 
     std::cout << "----------------------------------------------------------" << std::endl;
-    std::cout << "White piece square: " << evaluate_piece_square_values(pieces, false) << std::endl;
-    std::cout << "White trapped rook: " << evaluateTrappedRook(pieces, false) << std::endl;
-    std::cout << "White imbalance: " << evaluateImbalance(pieceCount, false) << std::endl;
-    std::cout << "White pawns: " << evaluatePawns(pieces, false) << std::endl;
-    std::cout << "White passed pawns: " << evaluatePassedPawns(pieces, false) << std::endl;
-    std::cout << "White Kings: " << MGVAL(evaluateKing(pieces, false)) << std::endl;
+    std::cout << "White piece square: " << evaluate_piece_square_values(board, false) << std::endl;
+    std::cout << "White trapped rook: " << evaluateTrappedRook(board, false) << std::endl;
+    std::cout << "White imbalance: " << evaluateImbalance(board, false) << std::endl;
+    std::cout << "White pawns: " << evaluatePawns(board, false) << std::endl;
+    std::cout << "White passed pawns: " << evaluatePassedPawns(board, false) << std::endl;
+    std::cout << "White Kings: " << MGVAL(evaluateKing(board, false)) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
-    std::cout << "Black piece square: " << evaluate_piece_square_values(pieces, true) << std::endl;
-    std::cout << "Black trapped rook: " << evaluateTrappedRook(pieces, true) << std::endl;
-    std::cout << "Black imbalance: " << evaluateImbalance(pieceCount, true) << std::endl;
-    std::cout << "Black pawns: " << evaluatePawns(pieces, true) << std::endl;
-    std::cout << "Black passed pawns: " << evaluatePassedPawns(pieces, true) << std::endl;
-    std::cout << "Black Kings: " << MGVAL(evaluateKing(pieces, true)) << std::endl;
+    std::cout << "Black piece square: " << evaluate_piece_square_values(board, true) << std::endl;
+    std::cout << "Black trapped rook: " << evaluateTrappedRook(board, true) << std::endl;
+    std::cout << "Black imbalance: " << evaluateImbalance(board, true) << std::endl;
+    std::cout << "Black pawns: " << evaluatePawns(board, true) << std::endl;
+    std::cout << "Black passed pawns: " << evaluatePassedPawns(board, true) << std::endl;
+    std::cout << "Black Kings: " << MGVAL(evaluateKing(board, true)) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
     std::cout << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
-    std::cout << "All trapped rook: " << evaluateTrappedRook(pieces, false) - evaluateTrappedRook(pieces, true) << std::endl;
-    std::cout << "All piece square: " << evaluate_piece_square_values(pieces, false) - evaluate_piece_square_values(pieces, true) << std::endl;
-    std::cout << "All imbalance: " << evaluateImbalance(pieceCount, false) - evaluateImbalance(pieceCount, true) << std::endl;
-    std::cout << "All pawns: " << evaluatePawns(pieces, false) - evaluatePawns(pieces, true) << std::endl;
-    std::cout << "All passed pawns: " << evaluatePassedPawns(pieces, false) - evaluatePassedPawns(pieces, true) << std::endl;
-    std::cout << "All Kings: " << MGVAL(evaluateKing(pieces, false) - evaluateKing(pieces, true)) << std::endl;
+    std::cout << "All trapped rook: " << evaluateTrappedRook(board, false) - evaluateTrappedRook(board, true) << std::endl;
+    std::cout << "All piece square: " << evaluate_piece_square_values(board, false) - evaluate_piece_square_values(board, true) << std::endl;
+    std::cout << "All imbalance: " << evaluateImbalance(board, false) - evaluateImbalance(board, true) << std::endl;
+    std::cout << "All pawns: " << evaluatePawns(board, false) - evaluatePawns(board, true) << std::endl;
+    std::cout << "All passed pawns: " << evaluatePassedPawns(board, false) - evaluatePassedPawns(board, true) << std::endl;
+    std::cout << "All Kings: " << MGVAL(evaluateKing(board, false) - evaluateKing(board, true)) << std::endl;
     std::cout << "----------------------------------------------------------" << std::endl;
 
     int phase = TOTALPHASE;
-    phase -= (pieceCount[0] + pieceCount[1]) * PAWNPHASE;
-    phase -= (pieceCount[2] + pieceCount[3]) * KNIGHTPHASE;
-    phase -= (pieceCount[4] + pieceCount[5]) * BISHOPPHASE;
-    phase -= (pieceCount[6] + pieceCount[7]) * ROOKPHASE;
-    phase -= (pieceCount[8] + pieceCount[9]) * QUEENPHASE;
+    phase -= (board.pieceCount[0] + board.pieceCount[1]) * PAWNPHASE;
+    phase -= (board.pieceCount[2] + board.pieceCount[3]) * KNIGHTPHASE;
+    phase -= (board.pieceCount[4] + board.pieceCount[5]) * BISHOPPHASE;
+    phase -= (board.pieceCount[6] + board.pieceCount[7]) * ROOKPHASE;
+    phase -= (board.pieceCount[8] + board.pieceCount[9]) * QUEENPHASE;
 
     phase = (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
     ret = ((evalMidgame * (256 - phase)) + (evalEndgame * phase)) / 256;
@@ -537,13 +535,13 @@ int Eval::evaluate_debug(int *material, uint64_t *pieces, uint64_t *knightMoves,
 
 
 // Evaluate piece square values
-int Eval::evaluate_piece_square_values(uint64_t *pieces, bool col) {
+int Eval::evaluate_piece_square_values(Bitboard &board, bool col) {
 
     int ret = 0;
     uint64_t piece;
 
     for (int i = col; i < 12; i += 2) {
-        piece = pieces[i];
+        piece = board.pieces[i];
         while (piece) {
             ret += pieceSquare[i][bitScan(piece)];
             piece &= piece - 1;
@@ -555,18 +553,18 @@ int Eval::evaluate_piece_square_values(uint64_t *pieces, bool col) {
 
 
 // Evaluate trapped rook
-int Eval::evaluateTrappedRook(uint64_t *pieces, bool col) {
+int Eval::evaluateTrappedRook(Bitboard &board, bool col) {
 
     int ret = 0;
-    uint64_t piece = pieces[6 + col];
+    uint64_t piece = board.pieces[6 + col];
 
     while (piece) {
         uint64_t pieceLoc = piece & -piece;
         if (rowMask[col * 56] & pieceLoc) {
-            if (pieces[col + 10] > 1ULL << (3 + (col * 56)) && pieceLoc > pieces[col + 10]) {
+            if (board.pieces[col + 10] > 1ULL << (3 + (col * 56)) && pieceLoc > board.pieces[col + 10]) {
                 ret -= 40;
             }
-            if (pieces[col + 10] < 1ULL << (4 + (col * 56)) && pieceLoc < pieces[col + 10]) {
+            if (board.pieces[col + 10] < 1ULL << (4 + (col * 56)) && pieceLoc < board.pieces[col + 10]) {
                 ret -= 40;
             }
         }
@@ -579,53 +577,53 @@ int Eval::evaluateTrappedRook(uint64_t *pieces, bool col) {
 
 
 // Evaluate material imbalance
-int Eval::evaluateImbalance(int *pieceCount, bool col) {
+int Eval::evaluateImbalance(Bitboard &board, bool col) {
 
     int ret = 0;
 
     // Bishop pair
-    if (pieceCount[4 + col] >= 2) {
-        ret += bishopWeight[pieceCount[0] + pieceCount[1]];
+    if (board.pieceCount[4 + col] >= 2) {
+        ret += bishopWeight[board.pieceCount[0] + board.pieceCount[1]];
     }
 
     // Knight pair
-    if (pieceCount[2 + col] >= 2) {
+    if (board.pieceCount[2 + col] >= 2) {
         ret -= knightPair;
     }
 
     // Rook pair
-    if (pieceCount[6 + col] >= 2) {
+    if (board.pieceCount[6 + col] >= 2) {
         ret -= rookPair;
     }
 
     // Pawn count
-    if (pieceCount[col] == 0) {
+    if (board.pieceCount[col] == 0) {
         ret -= noPawns;
     }
 
-    ret += knightWeight[pieceCount[col]] * pieceCount[2 + col];
-    ret += rookWeight[pieceCount[col]] * pieceCount[6 + col];
-    ret += queenWeight[std::min(pieceCount[2 + col] + pieceCount[4 + col] + pieceCount[6 + col], 6)] * pieceCount[8 + col];
+    ret += knightWeight[board.pieceCount[col]] * board.pieceCount[2 + col];
+    ret += rookWeight[board.pieceCount[col]] * board.pieceCount[6 + col];
+    ret += queenWeight[std::min(board.pieceCount[2 + col] + board.pieceCount[4 + col] + board.pieceCount[6 + col], 6)] * board.pieceCount[8 + col];
 
     return ret;
 }
 
 
 
-int Eval::evaluatePawns(uint64_t *pieces, bool col) {
+int Eval::evaluatePawns(Bitboard &board, bool col) {
 
     int ret = 0;
-    unsafeSquares[!col] |= pawnAttacksAll(pieces[col], col);
-    uint64_t supportedPawns = pieces[col] & pawnAttacksAll(pieces[col], col);
-    uint64_t adjacentPawns = pieces[col] & adjacentMask(pieces[col]);
-    uint64_t doubledPawns = col? ((pieces[col] ^ supportedPawns) << 8) & pieces[col] : ((pieces[col] ^ supportedPawns) >> 8) & pieces[col];
+    unsafeSquares[!col] |= pawnAttacksAll(board.pieces[col], col);
+    uint64_t supportedPawns = board.pieces[col] & pawnAttacksAll(board.pieces[col], col);
+    uint64_t adjacentPawns = board.pieces[col] & adjacentMask(board.pieces[col]);
+    uint64_t doubledPawns = col? ((board.pieces[col] ^ supportedPawns) << 8) & board.pieces[col] : ((board.pieces[col] ^ supportedPawns) >> 8) & board.pieces[col];
 
     ret -= doublePawnValue * count_population(doubledPawns);
 
-    uint64_t piece = pieces[col] & (!supportedPawns & !adjacentPawns);
+    uint64_t piece = board.pieces[col] & (!supportedPawns & !adjacentPawns);
     while (piece) {
         int bscan = bitScan(piece);
-        if ((isolatedPawnMask[bscan] & pieces[col]) == 0) {
+        if ((isolatedPawnMask[bscan] & board.pieces[col]) == 0) {
             ret -= isolatedPawnValue;
         }
         piece &= piece - 1;
@@ -649,23 +647,23 @@ int Eval::evaluatePawns(uint64_t *pieces, bool col) {
 
 
 
-int Eval::evaluatePassedPawns(uint64_t *pieces, bool col) {
+int Eval::evaluatePassedPawns(Bitboard &board, bool col) {
 
     int ret = 0;
     int dist = 0;
     int distFinal = 0;
     int numPawns = 0;
-    uint64_t piece = pieces[col];
-    int ourKing = bitScan(pieces[10 + col]);
-    int theirKing = bitScan(pieces[10 + !col]);
+    uint64_t piece = board.pieces[col];
+    int ourKing = bitScan(board.pieces[10 + col]);
+    int theirKing = bitScan(board.pieces[10 + !col]);
     while (piece) {
         int bscan = bitScan(piece);
 
         dist = manhattanArray[bscan][ourKing] * 2;
         dist -= manhattanArray[bscan][theirKing] * 2;
-        if ((passedPawnMask[col][bscan] & pieces[!col]) == 0 && (forwardMask[col][bscan] & pieces[col]) == 0) {
+        if ((passedPawnMask[col][bscan] & board.pieces[!col]) == 0 && (forwardMask[col][bscan] & board.pieces[col]) == 0) {
             ret += col? passedPawnWeight[(7 - (bscan / 8))] : passedPawnWeight[(bscan / 8)];
-            if (columnMask[bscan] & pieces[6 + col]) {
+            if (columnMask[bscan] & board.pieces[6 + col]) {
                 ret += S(6, 12);
             }
             dist *= 3;
@@ -685,23 +683,23 @@ int Eval::evaluatePassedPawns(uint64_t *pieces, bool col) {
 
 
 
-int Eval::evaluateKnights(uint64_t *pieces, uint64_t *knightMoves, bool col) {
+int Eval::evaluateKnights(Bitboard &board, bool col) {
 
     int ret = 0;
-    uint64_t piece = pieces[2 + col];
-    uint64_t holes = pawnAttacksAll(pieces[col], col);
+    uint64_t piece = board.pieces[2 + col];
+    uint64_t holes = pawnAttacksAll(board.pieces[col], col);
     uint64_t defendedKnight = piece & holes;
 
     while (piece) {
         int bscan = bitScan(piece);
 
         // Mobility
-        ret += knightMobilityBonus[count_population(knightMoves[bscan] & ~minorUnsafe[col])];
+        ret += knightMobilityBonus[count_population(board.knightMoves[bscan] & ~minorUnsafe[col])];
 
         // King safety
-        unsafeSquares[!col] |= knightMoves[bscan];
-        attacksKnight[col] |= knightMoves[bscan];
-        int attacks = count_population(knightMoves[bscan] & tempUnsafe[col]);
+        unsafeSquares[!col] |= board.knightMoves[bscan];
+        attacksKnight[col] |= board.knightMoves[bscan];
+        int attacks = count_population(board.knightMoves[bscan] & tempUnsafe[col]);
         if (attacks) {
             KSAttackersWeight[col] += pieceAttackValue[1];
             KSAttacks[col] += attacks;
@@ -709,7 +707,7 @@ int Eval::evaluateKnights(uint64_t *pieces, uint64_t *knightMoves, bool col) {
         }
 
         // Outposts
-        if (defendedKnight & (1ULL << bscan) && (outpostMask[col][bscan] & pieces[!col]) == 0) {
+        if (defendedKnight & (1ULL << bscan) && (outpostMask[col][bscan] & board.pieces[!col]) == 0) {
             ret += S(outpostPotential[col][bscan], 0);
         }
 
@@ -722,14 +720,14 @@ int Eval::evaluateKnights(uint64_t *pieces, uint64_t *knightMoves, bool col) {
 
 
 
-int Eval::evaluateBishops(uint64_t *pieces, bool col) {
+int Eval::evaluateBishops(Bitboard &board, bool col) {
 
     int ret = 0;
-    uint64_t piece = pieces[4 + col];
+    uint64_t piece = board.pieces[4 + col];
 
     while (piece) {
         int bscan = bitScan(piece);
-        uint64_t bishopAttacks = magics->bishopAttacksMask(occupied ^ pieces[8 + col], bscan);
+        uint64_t bishopAttacks = magics->bishopAttacksMask(board.occupied ^ board.pieces[8 + col], bscan);
 
         // Mobility
         ret += bishopMobilityBonus[count_population(bishopAttacks & ~minorUnsafe[col])];
@@ -753,14 +751,14 @@ int Eval::evaluateBishops(uint64_t *pieces, bool col) {
 
 
 
-int Eval::evaluateRooks(uint64_t *pieces, bool col) {
+int Eval::evaluateRooks(Bitboard &board, bool col) {
 
     int ret = 0;
-    uint64_t piece = pieces[6 + col];
+    uint64_t piece = board.pieces[6 + col];
 
     while (piece) {
         int bscan = bitScan(piece);
-        uint64_t rookAttacks = magics->rookAttacksMask(occupied ^ pieces[8 + col], bscan);
+        uint64_t rookAttacks = magics->rookAttacksMask(board.occupied ^ board.pieces[8 + col], bscan);
 
         // Mobility
         ret += rookMobilityBonus[count_population(rookAttacks & ~mobilityUnsafeSquares[col])];
@@ -776,15 +774,15 @@ int Eval::evaluateRooks(uint64_t *pieces, bool col) {
         }
 
         // Rook on open file
-        if ((columnMask[bscan] & pieces[col]) == 0) {
+        if ((columnMask[bscan] & board.pieces[col]) == 0) {
             ret += rookOnSemiOpen;
-            if ((columnMask[bscan] & pieces[!col]) == 0) {
+            if ((columnMask[bscan] & board.pieces[!col]) == 0) {
                 ret += rookOnOpen;
             }
         }
 
         // Rook on enemy queen file
-        if ((columnMask[bscan] & pieces[8 + !col]) == 0) {
+        if ((columnMask[bscan] & board.pieces[8 + !col]) == 0) {
             ret += rookOnQueen;
         }
 
@@ -797,14 +795,14 @@ int Eval::evaluateRooks(uint64_t *pieces, bool col) {
 
 
 
-int Eval::evaluateQueens(uint64_t *pieces, bool col) {
+int Eval::evaluateQueens(Bitboard &board, bool col) {
 
     int ret = 0;
-    uint64_t piece = pieces[8 + col];
+    uint64_t piece = board.pieces[8 + col];
 
     while (piece) {
         int bscan = bitScan(piece);
-        uint64_t queenAttacks = magics->queenAttacksMask(occupied, bscan);
+        uint64_t queenAttacks = magics->queenAttacksMask(board.occupied, bscan);
 
         // Mobility
         ret += queenMobilityBonus[count_population(queenAttacks & ~queenUnsafe[col])];
@@ -828,17 +826,17 @@ int Eval::evaluateQueens(uint64_t *pieces, bool col) {
 
 
 
-int Eval::evaluateKing(uint64_t *pieces, bool col) {
+int Eval::evaluateKing(Bitboard &board, bool col) {
 
     int ret = 0;
-    int theirKing = bitScan(pieces[10 + !col]);
+    int theirKing = bitScan(board.pieces[10 + !col]);
 
     if (KSAttackersCount[col] > 1) {
 
-        uint64_t knightChecks = knightAttacks(pieces[10 + !col]) & attacksKnight[col] & ~unsafeSquares[col];
-        uint64_t bishopChecks = magics->bishopAttacksMask(occupied, theirKing) & attacksBishop[col] & ~unsafeSquares[col];
-        uint64_t rookChecks = magics->rookAttacksMask(occupied, theirKing) & attacksRook[col] & ~unsafeSquares[col];
-        uint64_t queenChecks = magics->queenAttacksMask(occupied, theirKing) & attacksQueen[col] & ~unsafeSquares[col];
+        uint64_t knightChecks = knightAttacks(board.pieces[10 + !col]) & attacksKnight[col] & ~unsafeSquares[col];
+        uint64_t bishopChecks = magics->bishopAttacksMask(board.occupied, theirKing) & attacksBishop[col] & ~unsafeSquares[col];
+        uint64_t rookChecks = magics->rookAttacksMask(board.occupied, theirKing) & attacksRook[col] & ~unsafeSquares[col];
+        uint64_t queenChecks = magics->queenAttacksMask(board.occupied, theirKing) & attacksQueen[col] & ~unsafeSquares[col];
 
         // King safety
         ret += KSAttackersWeight[col];
@@ -846,8 +844,8 @@ int Eval::evaluateKing(uint64_t *pieces, bool col) {
         ret += rookCheckVal * count_population(rookChecks);
         ret += bishopCheckVal * count_population(bishopChecks);
         ret += knightCheckVal * count_population(knightChecks);
-        ret += KSAttacks[col] * attacksSafety / (count_population(kingZoneMask[!col][theirKing] & pieces[!col]) + 1);
-        ret += (pieces[8 + col] == 0) * -175;
+        ret += KSAttacks[col] * attacksSafety / (count_population(kingZoneMask[!col][theirKing] & board.pieces[!col]) + 1);
+        ret += (board.pieces[8 + col] == 0) * -175;
         ret -= KSOffset;
     }
 
@@ -857,32 +855,32 @@ int Eval::evaluateKing(uint64_t *pieces, bool col) {
 
 
 
-int Eval::evaluatePawnShield(uint64_t *pieces, bool col) {
+int Eval::evaluatePawnShield(Bitboard &board, bool col) {
 
     int ret = 0;
-    uint64_t piece = pieces[10 + col];
+    uint64_t piece = board.pieces[10 + col];
     int bscan = bitScan(piece);
     uint64_t shield = passedPawnMask[col][bscan] & (rowMask[col? std::max(bscan - 8, 0) : std::min(bscan + 8, 63)] | rowMask[col? std::max(bscan - 16, 0) : std::min(bscan + 16, 63)]);
 
-    ret += S(count_population(shield & pieces[col]) * 24, 0);
+    ret += S(count_population(shield & board.pieces[col]) * 24, 0);
 
-    if ((forwardMask[col][bscan] & pieces[col]) != 0) {
+    if ((forwardMask[col][bscan] & board.pieces[col]) != 0) {
         ret += kingPawnFront;
-        if ((forwardMask[col][bscan] & pieces[!col]) != 0) {
+        if ((forwardMask[col][bscan] & board.pieces[!col]) != 0) {
             ret += kingPawnFrontN;
         }
     }
 
-    if (bscan % 8 > 0 && (forwardMask[col][bscan - 1] & pieces[col]) != 0) {
+    if (bscan % 8 > 0 && (forwardMask[col][bscan - 1] & board.pieces[col]) != 0) {
         ret += kingPawnAdj;
-        if ((forwardMask[col][bscan - 1] & pieces[!col]) != 0) {
+        if ((forwardMask[col][bscan - 1] & board.pieces[!col]) != 0) {
             ret += kingPawnAdjN;
         }
     }
 
-    if (bscan % 8 < 7 && (forwardMask[col][bscan + 1] & pieces[col]) != 0) {
+    if (bscan % 8 < 7 && (forwardMask[col][bscan + 1] & board.pieces[col]) != 0) {
         ret += kingPawnAdj;
-        if ((forwardMask[col][bscan + 1] & pieces[!col]) != 0) {
+        if ((forwardMask[col][bscan + 1] & board.pieces[!col]) != 0) {
             ret += kingPawnAdjN;
         }
     }

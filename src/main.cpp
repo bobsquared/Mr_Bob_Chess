@@ -4,6 +4,7 @@
 #include <thread>
 #include <climits>
 #include "magic_bitboards.h"
+#include "eval.h"
 #include "movegen.h"
 #include "defs.h"
 #include "perft.h"
@@ -17,6 +18,7 @@
 MovePick *movePick = new MovePick();
 MoveGen *moveGen = new MoveGen();
 Magics *magics = new Magics();
+Eval *eval = new Eval();
 extern int pieceValues[6];
 
 
@@ -174,7 +176,7 @@ int main() {
 
         // Debug the evaluation
         if (command == "evaluate debug") {
-            pos.evaluate_debug();
+            eval->evaluate_debug(pos);
             continue;
         }
 

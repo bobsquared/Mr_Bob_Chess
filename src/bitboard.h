@@ -4,7 +4,7 @@
 #include <string>
 #include <regex>
 #include "defs.h"
-#include "eval.h"
+#include "magic_bitboards.h"
 #include "zobrist_hashing.h"
 #include "transpositionTable.h"
 
@@ -36,6 +36,9 @@ public:
     bool toMove;
     uint8_t castleRights;
 
+    int material[2];
+    int pieceCount[12];
+
     Bitboard();
     ~Bitboard();
 
@@ -53,8 +56,6 @@ public:
     void make_null_move();
     void undo_null_move();
 
-    int evaluate();
-    int evaluate_debug();
     bool isDraw();
     bool noPotentialWin();
 
@@ -98,8 +99,7 @@ private:
     uint64_t blackKings;
 
     // Position info
-    int material[2];
-    int pieceCount[12];
+
     uint8_t rookCastleFlagMask[64];
 
     // Move info
@@ -108,7 +108,6 @@ private:
     int halfMoves;
 
     // Additional objects
-    Eval *eval;
     Zobrist *zobrist;
     TranspositionTable *tt;
 

@@ -2,6 +2,7 @@
 #include "defs.h"
 #include "piecesquaretable.h"
 #include "magic_bitboards.h"
+#include "bitboard.h"
 
 
 
@@ -22,8 +23,8 @@ class Eval {
 
 public:
     Eval();
-    int evaluate(int *material, uint64_t *pieces, uint64_t *knightMoves, int *pieceCount, uint64_t occupied, bool col);
-    int evaluate_debug(int *material, uint64_t *pieces, uint64_t *knightMoves, int *pieceCount, uint64_t occupied);
+    int evaluate(Bitboard &board);
+    int evaluate_debug(Bitboard &board);
 
 private:
 
@@ -36,17 +37,17 @@ private:
     void InitIsolatedPawnsMask();
     void InitOutpostMask();
     uint64_t adjacentMask(uint64_t pawns);
-    int evaluate_piece_square_values(uint64_t *pieces, bool col);
-    int evaluateTrappedRook(uint64_t *pieces, bool col);
-    int evaluateImbalance(int *pieceCount, bool col);
-    int evaluatePawns(uint64_t *pieces, bool col);
-    int evaluatePassedPawns(uint64_t *pieces, bool col);
-    int evaluateKnights(uint64_t *pieces, uint64_t *knightMoves, bool col);
-    int evaluateBishops(uint64_t *pieces, bool col);
-    int evaluateRooks(uint64_t *pieces, bool col);
-    int evaluateQueens(uint64_t *pieces, bool col);
-    int evaluateKing(uint64_t *pieces, bool col);
-    int evaluatePawnShield(uint64_t *pieces, bool col);
+    int evaluate_piece_square_values(Bitboard &board, bool col);
+    int evaluateTrappedRook(Bitboard &board, bool col);
+    int evaluateImbalance(Bitboard &board, bool col);
+    int evaluatePawns(Bitboard &board, bool col);
+    int evaluatePassedPawns(Bitboard &board, bool col);
+    int evaluateKnights(Bitboard &board, bool col);
+    int evaluateBishops(Bitboard &board, bool col);
+    int evaluateRooks(Bitboard &board, bool col);
+    int evaluateQueens(Bitboard &board, bool col);
+    int evaluateKing(Bitboard &board, bool col);
+    int evaluatePawnShield(Bitboard &board, bool col);
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];
     uint64_t kingZoneMask[2][64];
@@ -85,7 +86,6 @@ private:
     uint64_t attacksRook[2];
     uint64_t attacksQueen[2];
 
-    uint64_t occupied;
     uint64_t unsafeSquares[2];
     int KSAttackersCount[2];
     int KSAttackersWeight[2];

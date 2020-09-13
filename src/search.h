@@ -2,6 +2,7 @@
 #include <atomic>
 #include <chrono>
 #include "defs.h"
+#include "eval.h"
 #include "bitboard.h"
 #include "movepick.h"
 #include "movegen.h"

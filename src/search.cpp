@@ -17,6 +17,7 @@ int lateMoveMargin[2][4] = {{0, 5, 8, 13}, {0, 7, 10, 17}};
 extern int pieceValues[6];
 extern MovePick *movePick;
 extern MoveGen *moveGen;
+extern Eval *eval;
 
 
 int lmrReduction[64][64];
@@ -64,7 +65,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     int prevAlpha = alpha;
     int stand_pat = inCheck? -MATE_VALUE + height : 0;
     if (!inCheck) {
-        stand_pat = std::max(alpha, b.evaluate());
+        stand_pat = std::max(alpha, eval->evaluate(b));
 
         // standing pat
         if (stand_pat >= beta) {
@@ -207,27 +208,27 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
 
-    int eval = hashed? hashedBoard.score : b.evaluate();
-    evalStack[height] = eval;
-    bool improving = height >= 2? eval > evalStack[height - 2] : false;
+    int staticEval = hashed? hashedBoard.score : eval->evaluate(b);
+    evalStack[height] = staticEval;
+    bool improving = height >= 2? staticEval > evalStack[height - 2] : false;
     bool isCheck = b.InCheck();
     b.removeKiller(height + 1);
 
 
     // Razoring
-    if (!isPv && !isCheck && depth <= 1 && eval <= alpha - 350) {
+    if (!isPv && !isCheck && depth <= 1 && staticEval <= alpha - 350) {
         return qsearch(b, -1, alpha, beta, height);
     }
 
 
     // Reverse futility pruning
-    if (!isPv && !isCheck && depth <= 6 && eval - 220 * depth + (55 * depth * improving) >= beta && eval < 9000) {
-        return eval;
+    if (!isPv && !isCheck && depth <= 6 && staticEval - 220 * depth + (55 * depth * improving) >= beta && staticEval < 9000) {
+        return staticEval;
     }
 
 
     // Null move pruning
-    if (!isPv && canNullMove && !isCheck && eval >= beta && depth >= 2 && nullMoveTree && b.nullMoveable()) {
+    if (!isPv && canNullMove && !isCheck && staticEval >= beta && depth >= 2 && nullMoveTree && b.nullMoveable()) {
         int R = 3 + depth / 8;
         b.make_null_move();
         int nullRet = -pvSearch(b, depth - R - 1, -beta, -beta + 1, false, height + 1);
@@ -287,7 +288,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             if (isQuiet) {
 
                 // Futility pruning
-                if (depth <= 6 && numMoves > 0 && eval + 215 * depth <= alpha && alpha < 9000) {
+                if (depth <= 6 && numMoves > 0 && staticEval + 215 * depth <= alpha && alpha < 9000) {
                     continue;
                 }
 
@@ -441,7 +442,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
 
 
     // Initialize evaluation stack
-    evalStack[height] = hashed? hashedBoard.score : b.evaluate();
+    evalStack[height] = hashed? hashedBoard.score : eval->evaluate(b);
 
 
     while (moveList.get_next_move(move)) {
