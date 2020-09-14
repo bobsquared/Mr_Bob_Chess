@@ -47,6 +47,9 @@ private:
     int evaluateKing(Bitboard &board, bool col);
     int evaluatePawnShield(Bitboard &board, bool col);
 
+    void savePawnHash(uint64_t key, int score);
+    int probePawnHash(uint64_t key, bool &hit);
+
     int getPhase(Bitboard &board);
 
     int pieceSquare[12][64];
@@ -97,5 +100,24 @@ private:
     uint64_t queenUnsafe[2];
     uint64_t tempUnsafe[2];
 
+
+
+    struct PawnHash{
+        uint64_t pawnKey;
+        int score;
+
+        PawnHash() :
+            pawnKey(0), score(0) {};
+
+        PawnHash(uint64_t pawnKey, int score) :
+            pawnKey(pawnKey), score(score) {};
+    };
+
+
+    uint64_t numPawnHashes;
+    PawnHash *pawnHash;
+
+    bool hit;
+    int pawnScore;
 
 };

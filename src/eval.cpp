@@ -70,6 +70,27 @@ Eval::Eval() {
     InitDistanceArray();
     InitIsolatedPawnsMask();
     InitOutpostMask();
+
+    numPawnHashes = (0xFFFFF / sizeof(PawnHash));
+    pawnHash = new PawnHash [numPawnHashes];
+}
+
+
+
+void Eval::savePawnHash(uint64_t key, int score) {
+    pawnHash[key % numPawnHashes] = PawnHash(key, score);
+}
+
+
+
+int Eval::probePawnHash(uint64_t key, bool &hit) {
+    if (pawnHash[key % numPawnHashes].pawnKey == key && key != 0) {
+        hit = true;
+        return pawnHash[key % numPawnHashes].score;
+    }
+
+    hit = false;
+    return 0;
 }
 
 
@@ -294,6 +315,7 @@ uint64_t Eval::adjacentMask(uint64_t pawns) {
 
 // Initialize variables in evaluation
 void Eval::InitializeEval(Bitboard &board) {
+    pawnScore = 0;
 
     // King safety
     for (int i = 0; i < 2; i++) {
@@ -394,12 +416,17 @@ int Eval::evaluate(Bitboard &board) {
     ret += evaluateImbalance(board, false) - evaluateImbalance(board, true);
     ret += evaluatePawnShield(board, false) - evaluatePawnShield(board, true);
 
+    ret += probePawnHash(board.getPawnKey(), hit);
     ret += evaluatePawns(board, false) - evaluatePawns(board, true);
     ret += evaluateKnights(board, false) - evaluateKnights(board, true);
     ret += evaluateBishops(board, false) - evaluateBishops(board, true);
     ret += evaluateRooks(board, false) - evaluateRooks(board, true);
     ret += evaluateQueens(board, false) - evaluateQueens(board, true);
     ret += evaluateKing(board, false) - evaluateKing(board, true);
+
+    if (!hit) {
+        savePawnHash(board.getPawnKey(), pawnScore);
+    }
 
     int phase = getPhase(board);
     ret = ((MGVAL(ret) * (256 - phase)) + (EGVAL(ret) * phase)) / 256;
@@ -574,23 +601,31 @@ int Eval::evaluatePawns(Bitboard &board, bool col) {
     int theirKing = bitScan(board.pieces[10 + !col]);
 
     unsafeSquares[!col] |= pawnAttacksAll(board.pieces[col], col);
-    uint64_t supportedPawns = board.pieces[col] & pawnAttacksAll(board.pieces[col], col);
-    uint64_t adjacentPawns = board.pieces[col] & adjacentMask(board.pieces[col]);
-    uint64_t doubledPawns = col? ((board.pieces[col] ^ supportedPawns) << 8) & board.pieces[col] : ((board.pieces[col] ^ supportedPawns) >> 8) & board.pieces[col];
 
-    ret -= doublePawnValue * count_population(doubledPawns);
 
-    while (supportedPawns) {
-        int bscan = bitScan(supportedPawns) / 8;
-        ret += supportedPawnWeight[col? 7 - bscan : bscan];
-        supportedPawns &= supportedPawns - 1;
+
+    if (!hit) {
+        uint64_t supportedPawns = board.pieces[col] & pawnAttacksAll(board.pieces[col], col);
+        uint64_t adjacentPawns = board.pieces[col] & adjacentMask(board.pieces[col]);
+        uint64_t doubledPawns = col? ((board.pieces[col] ^ supportedPawns) << 8) & board.pieces[col] : ((board.pieces[col] ^ supportedPawns) >> 8) & board.pieces[col];
+
+        ret -= doublePawnValue * count_population(doubledPawns);
+
+        while (supportedPawns) {
+            int bscan = bitScan(supportedPawns) / 8;
+            ret += supportedPawnWeight[col? 7 - bscan : bscan];
+            supportedPawns &= supportedPawns - 1;
+        }
+
+        while (adjacentPawns) {
+            int bscan = bitScan(adjacentPawns) / 8;
+            ret += adjacentPawnWeight[col? 7 - bscan : bscan];
+            adjacentPawns &= adjacentPawns - 1;
+        }
+
+        pawnScore += col? -ret : ret;
     }
 
-    while (adjacentPawns) {
-        int bscan = bitScan(adjacentPawns) / 8;
-        ret += adjacentPawnWeight[col? 7 - bscan : bscan];
-        adjacentPawns &= adjacentPawns - 1;
-    }
 
     while (piece) {
         int bscan = bitScan(piece);

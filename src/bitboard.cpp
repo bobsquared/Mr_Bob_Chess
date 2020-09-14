@@ -754,6 +754,13 @@ uint64_t Bitboard::getPosKey() {
 
 
 
+// Return the current pawn key
+uint64_t Bitboard::getPawnKey() {
+    return pawnKey;
+}
+
+
+
 // Probe the transposition table for duplicate positions
 bool Bitboard::probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta, int ply) {
     return tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
