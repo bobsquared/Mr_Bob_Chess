@@ -73,6 +73,7 @@ void Bitboard::reset() {
     InitPieceCount();
     moveHistory.clear();
     posKey = zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove);
+    pawnKey = zobrist->hashBoardPawns(pieces);
 }
 
 
@@ -276,9 +277,13 @@ void Bitboard::move_quiet(int from, int to, int piece, uint64_t i1i2) {
 // Make null move.
 void Bitboard::make_null_move() {
     toMove = !toMove;
-    moveHistory.insert(MoveInfo(0, enpassantSq, halfMoves, castleRights, posKey, NULL_MOVE));
-    zobrist->hashBoard_enpassant(posKey, enpassantSq);
-    enpassantSq = 0;
+    moveHistory.insert(MoveInfo(0, enpassantSq, halfMoves, castleRights, posKey, pawnKey, NULL_MOVE));
+
+    if (enpassantSq) {
+        zobrist->hashBoard_enpassant(posKey, enpassantSq);
+        enpassantSq = 0;
+    }
+
     zobrist->hashBoard_turn(posKey);
     return;
 }
@@ -292,6 +297,7 @@ void Bitboard::undo_null_move() {
     castleRights = moveInfo.castleRights;
     enpassantSq = moveInfo.enpassantSq;
     posKey = moveInfo.posKey;
+    pawnKey = moveInfo.pawnKey;
     return;
 }
 
@@ -315,13 +321,16 @@ void Bitboard::make_move(MOVE move) {
     int hmoves = halfMoves;
     int enSq = enpassantSq;
     uint64_t prevPosKey = posKey;
+    uint64_t prevPawnKey = pawnKey;
     int moveFlags = move & MOVE_FLAGS;
 
     halfMoves++;
     fullMoves += toMove;
 
-    zobrist->hashBoard_enpassant(posKey, enpassantSq);
-    enpassantSq = 0;
+    if (enpassantSq) {
+        zobrist->hashBoard_enpassant(posKey, enpassantSq);
+        enpassantSq = 0;
+    }
 
     // Update half moves
     if (fromPiece == toMove) {
@@ -352,6 +361,10 @@ void Bitboard::make_move(MOVE move) {
         assert(toPiece == -1);
         move_quiet(from, to, fromPiece, i1i2);
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
+
+        if (fromPiece == toMove) {
+            zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
+        }
     }
     // Make enpassant move
     else if (moveFlags == ENPASSANT_FLAG) {
@@ -361,7 +374,9 @@ void Bitboard::make_move(MOVE move) {
 
         uint64_t toCap = to + (toMove * 2 - 1) * 8;
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
+        zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
         zobrist->hashBoard_square(posKey, toCap, !toMove);
+        zobrist->hashBoard_square(pawnKey, toCap, !toMove);
         color[!toMove] ^= 1ULL << toCap;
         pieces[!toMove] ^= 1ULL << toCap;
         occupied ^= 1ULL << toCap;
@@ -397,11 +412,24 @@ void Bitboard::make_move(MOVE move) {
             pieceCount[toMove]--;
             pieceCount[promotePiece]++;
             zobrist->hashBoard_capture_promotion(posKey, from, to, fromPiece, toPiece, promotePiece);
+            zobrist->hashBoard_square(pawnKey, from, toMove);
         }
         else {
             pieceAt[to] = fromPiece;
             pieces[fromPiece] ^= i1i2;
             zobrist->hashBoard_capture(posKey, from, to, fromPiece, toPiece);
+
+            if (fromPiece == toMove) {
+                if (toPiece == !toMove) {
+                    zobrist->hashBoard_capture(pawnKey, from, to, fromPiece, toPiece);
+                }
+                else {
+                    zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
+                }
+            }
+            else if (toPiece == !toMove) {
+                zobrist->hashBoard_square(pawnKey, to, !toMove);
+            }
         }
 
         halfMoves = 0;
@@ -413,6 +441,7 @@ void Bitboard::make_move(MOVE move) {
         enpassantSq = to + (toMove * 2 - 1) * 8;
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
         zobrist->hashBoard_enpassant(posKey, enpassantSq);
+        zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
     }
     // Make a promotion
     else if (move & PROMOTION_FLAG) {
@@ -431,6 +460,7 @@ void Bitboard::make_move(MOVE move) {
         pieceCount[toMove]--;
         pieceCount[promotePiece]++;
         zobrist->hashBoard_promotion(posKey, from, to, fromPiece, promotePiece);
+        zobrist->hashBoard_square(pawnKey, from, toMove);
     }
     // Castle kingside
     else if (moveFlags == KING_CASTLE_FLAG) {
@@ -453,7 +483,7 @@ void Bitboard::make_move(MOVE move) {
 
     toMove = !toMove;
     zobrist->hashBoard_turn(posKey);
-    moveHistory.insert(MoveInfo(toPiece, enSq, hmoves, crights, prevPosKey, move));
+    moveHistory.insert(MoveInfo(toPiece, enSq, hmoves, crights, prevPosKey, prevPawnKey, move));
 }
 
 
@@ -477,6 +507,7 @@ void Bitboard::undo_move(MOVE move) {
     castleRights = moveInfo.castleRights;
     enpassantSq = moveInfo.enpassantSq;
     posKey = moveInfo.posKey;
+    pawnKey = moveInfo.pawnKey;
 
     fullMoves -= toMove;
 
@@ -838,6 +869,7 @@ void Bitboard::debugZobristHash() {
         std::cout << posKey << " " << zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove) << std::endl;
     }
     assert (posKey == zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove));
+    assert (pawnKey == zobrist->hashBoardPawns(pieces));
 }
 
 
@@ -1296,6 +1328,7 @@ void Bitboard::setPosFen(std::string fen) {
     }
 
     posKey = zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove);
+    pawnKey = zobrist->hashBoardPawns(pieces);
 
 }
 

@@ -160,6 +160,7 @@ struct MoveInfo {
     int halfMoves;
     uint8_t castleRights;
     uint64_t posKey;
+    uint64_t pawnKey;
     MOVE move;
 
     bool operator==(const uint64_t& rhs) {
@@ -167,10 +168,10 @@ struct MoveInfo {
     }
 
     MoveInfo() :
-        captureType(-1), enpassantSq(0), halfMoves(0), castleRights(15), posKey(0), move(NO_MOVE) {}
+        captureType(-1), enpassantSq(0), halfMoves(0), castleRights(15), posKey(0), pawnKey(0), move(NO_MOVE) {}
 
-    MoveInfo(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey, MOVE move) :
-        captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), castleRights(castleRights), posKey(posKey), move(move) {}
+    MoveInfo(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey, uint64_t pawnKey, MOVE move) :
+        captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), castleRights(castleRights), posKey(posKey), pawnKey(pawnKey), move(move) {}
 };
 
 

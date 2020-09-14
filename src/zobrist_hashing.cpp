@@ -75,6 +75,27 @@ uint64_t Zobrist::hashBoard(uint64_t *pieces, uint8_t castleFlag, int enpassantS
 
 
 
+// Non iterative way to determine the hash key: loop through the board
+// Used to initialize the board's starting position
+uint64_t Zobrist::hashBoardPawns(uint64_t *pieces) {
+
+    uint64_t ret = 0;
+
+    for (int i = 0; i < 64; ++i) {
+        uint64_t shiftI = 1ULL << i;
+        for (int j = 0; j < 2; j++) {
+            if (pieces[j] & shiftI) {
+                ret ^= table[i][j];
+                break;
+            }
+        }
+    }
+
+    return ret;
+}
+
+
+
 // Iterative way to determine hash key:
 // Used in making moves to keep track of the key much faster
 void Zobrist::hashBoard_quiet(uint64_t &board, int from, int to, int pieceFrom) {

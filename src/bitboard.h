@@ -104,6 +104,7 @@ private:
 
     // Move info
     uint64_t posKey;
+    uint64_t pawnKey;
     int fullMoves;
     int halfMoves;
 

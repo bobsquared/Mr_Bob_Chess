@@ -13,6 +13,7 @@ public:
 
     // Determine hashing key
     uint64_t hashBoard(uint64_t *pieces, uint8_t castleFlag, int enpassantSq, bool col);
+    uint64_t hashBoardPawns(uint64_t *pieces);
     uint64_t hashBoardM(uint64_t board, int pieceFrom, int pieceTo, int moveType, int captureType, bool turn, bool isEnpassant, bool whiteCastleK, bool whiteCastleQ, bool blackCastleK, bool blackCastleQ);
 
     void hashBoard_quiet(uint64_t &board, int from, int to, int pieceFrom);
