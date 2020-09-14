@@ -28,6 +28,7 @@ public:
 
 private:
 
+    void InitializeEval(Bitboard &board);
     void InitPieceBoards();
     void InitKingZoneMask();
     void InitPassedPawnsMask();
@@ -45,6 +46,9 @@ private:
     int evaluateQueens(Bitboard &board, bool col);
     int evaluateKing(Bitboard &board, bool col);
     int evaluatePawnShield(Bitboard &board, bool col);
+
+    int getPhase(Bitboard &board);
+
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];
     uint64_t kingZoneMask[2][64];

@@ -57,6 +57,8 @@ int knightPair = S(14, 9);
 int rookPair = S(17, 17);
 int noPawns = S(0, 22);
 
+int trappedRook = S(40, 0);
+
 
 
 
@@ -290,6 +292,51 @@ uint64_t Eval::adjacentMask(uint64_t pawns) {
 
 
 
+// Initialize variables in evaluation
+void Eval::InitializeEval(Bitboard &board) {
+
+    // King safety
+    for (int i = 0; i < 2; i++) {
+        unsafeSquares[i] = 0;
+        KSAttackersWeight[i] = 0;
+        KSAttacks[i] = 0;
+        KSAttackersCount[i] = 0;
+        attacksKnight[i] = 0;
+        attacksBishop[i] = 0;
+        attacksRook[i] = 0;
+        attacksQueen[i] = 0;
+    }
+
+    // Mobility
+    mobilityUnsafeSquares[0] = pawnAttacksAll(board.pieces[1], 1) | board.pieces[0] | board.pieces[10];
+    mobilityUnsafeSquares[1] = pawnAttacksAll(board.pieces[0], 0) | board.pieces[1] | board.pieces[11];
+
+    minorUnsafe[0] = mobilityUnsafeSquares[0] | board.pieces[8];
+    minorUnsafe[1] = mobilityUnsafeSquares[1] | board.pieces[9];
+
+    queenUnsafe[0] = mobilityUnsafeSquares[0] | knightAttacks(board.pieces[3]);
+    queenUnsafe[1] = mobilityUnsafeSquares[1] | knightAttacks(board.pieces[2]);
+
+    tempUnsafe[0] = ~(pawnAttacksAll(board.pieces[1], 1) | knightAttacks(board.pieces[3]) | board.pieces[0]) & kingZoneMask[0][bitScan(board.pieces[11])];
+    tempUnsafe[1] = ~(pawnAttacksAll(board.pieces[0], 0) | knightAttacks(board.pieces[2]) | board.pieces[1]) & kingZoneMask[1][bitScan(board.pieces[10])];
+}
+
+
+
+// get the Phase value
+int Eval::getPhase(Bitboard &board) {
+    int phase = TOTALPHASE;
+    phase -= (board.pieceCount[0] + board.pieceCount[1]) * PAWNPHASE;
+    phase -= (board.pieceCount[2] + board.pieceCount[3]) * KNIGHTPHASE;
+    phase -= (board.pieceCount[4] + board.pieceCount[5]) * BISHOPPHASE;
+    phase -= (board.pieceCount[6] + board.pieceCount[7]) * ROOKPHASE;
+    phase -= (board.pieceCount[8] + board.pieceCount[9]) * QUEENPHASE;
+
+    return (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
+}
+
+
+
 // Evaluate the position
 int Eval::evaluate(Bitboard &board) {
 
@@ -338,59 +385,23 @@ int Eval::evaluate(Bitboard &board) {
     #endif
 
 
-    // King safety
 
-    for (int i = 0; i < 2; i++) {
-        unsafeSquares[i] = 0;
-        KSAttackersWeight[i] = 0;
-        KSAttacks[i] = 0;
-        KSAttackersCount[i] = 0;
-        attacksKnight[i] = 0;
-        attacksBishop[i] = 0;
-        attacksRook[i] = 0;
-        attacksQueen[i] = 0;
-    }
-
-    uint64_t pawnAttacksW = pawnAttacksAll(board.pieces[0], 0);
-    uint64_t pawnAttacksB = pawnAttacksAll(board.pieces[1], 1);
-
-    uint64_t knightAttacksW = knightAttacks(board.pieces[2]);
-    uint64_t knightAttacksB = knightAttacks(board.pieces[3]);
-
-    // Mobility
-    mobilityUnsafeSquares[0] = pawnAttacksB | board.pieces[0] | board.pieces[10];
-    mobilityUnsafeSquares[1] = pawnAttacksW | board.pieces[1] | board.pieces[11];
-
-    minorUnsafe[0] = mobilityUnsafeSquares[0] | board.pieces[8];
-    minorUnsafe[1] = mobilityUnsafeSquares[1] | board.pieces[9];
-
-    queenUnsafe[0] = mobilityUnsafeSquares[0] | knightAttacksB;
-    queenUnsafe[1] = mobilityUnsafeSquares[1] | knightAttacksW;
-
-    tempUnsafe[0] = ~(pawnAttacksB | knightAttacksB | board.pieces[0]) & kingZoneMask[0][bitScan(board.pieces[11])];
-    tempUnsafe[1] = ~(pawnAttacksW | knightAttacksW | board.pieces[1]) & kingZoneMask[1][bitScan(board.pieces[10])];
-
+    InitializeEval(board);
 
     int ret = 0;
     ret += board.toMove? S(-16, -16) : S(16, 16);
     ret += board.material[0] - board.material[1];
-    ret += evaluatePawns(board, false) - evaluatePawns(board, true);
     ret += evaluateImbalance(board, false) - evaluateImbalance(board, true);
     ret += evaluatePawnShield(board, false) - evaluatePawnShield(board, true);
+
+    ret += evaluatePawns(board, false) - evaluatePawns(board, true);
     ret += evaluateKnights(board, false) - evaluateKnights(board, true);
     ret += evaluateBishops(board, false) - evaluateBishops(board, true);
     ret += evaluateRooks(board, false) - evaluateRooks(board, true);
     ret += evaluateQueens(board, false) - evaluateQueens(board, true);
     ret += evaluateKing(board, false) - evaluateKing(board, true);
 
-    int phase = TOTALPHASE;
-    phase -= (board.pieceCount[0] + board.pieceCount[1]) * PAWNPHASE;
-    phase -= (board.pieceCount[2] + board.pieceCount[3]) * KNIGHTPHASE;
-    phase -= (board.pieceCount[4] + board.pieceCount[5]) * BISHOPPHASE;
-    phase -= (board.pieceCount[6] + board.pieceCount[7]) * ROOKPHASE;
-    phase -= (board.pieceCount[8] + board.pieceCount[9]) * QUEENPHASE;
-
-    phase = (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
+    int phase = getPhase(board);
     ret = ((MGVAL(ret) * (256 - phase)) + (EGVAL(ret) * phase)) / 256;
     return board.toMove? -ret : ret;
 }
@@ -734,10 +745,10 @@ int Eval::evaluateRooks(Bitboard &board, bool col) {
         uint64_t pieceLoc = piece & -piece;
         if (rowMask[col * 56] & pieceLoc) {
             if (board.pieces[col + 10] > 1ULL << (3 + (col * 56)) && pieceLoc > board.pieces[col + 10]) {
-                ret -= S(40, 0);
+                ret -= trappedRook;
             }
             if (board.pieces[col + 10] < 1ULL << (4 + (col * 56)) && pieceLoc < board.pieces[col + 10]) {
-                ret -= S(40, 0);
+                ret -= trappedRook;
             }
         }
 
