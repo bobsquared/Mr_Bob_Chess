@@ -608,8 +608,16 @@ int Eval::evaluatePawns(Bitboard &board, bool col) {
         uint64_t supportedPawns = board.pieces[col] & pawnAttacksAll(board.pieces[col], col);
         uint64_t adjacentPawns = board.pieces[col] & adjacentMask(board.pieces[col]);
         uint64_t doubledPawns = col? ((board.pieces[col] ^ supportedPawns) << 8) & board.pieces[col] : ((board.pieces[col] ^ supportedPawns) >> 8) & board.pieces[col];
+        uint64_t isolatedPawns = ~supportedPawns & ~adjacentPawns & board.pieces[col];
 
         ret -= doublePawnValue * count_population(doubledPawns);
+
+        while (isolatedPawns) {
+            if ((isolatedPawnMask[bitScan(isolatedPawns)] & board.pieces[col]) == 0) {
+                ret -= isolatedPawnValue;
+            }
+            isolatedPawns &= isolatedPawns - 1;
+        }
 
         while (supportedPawns) {
             int bscan = bitScan(supportedPawns) / 8;
@@ -645,10 +653,7 @@ int Eval::evaluatePawns(Bitboard &board, bool col) {
             dist *= 3;
         }
 
-        // Isolated pawns
-        // if ((isolatedPawnMask[bscan] & board.pieces[col]) == 0) {
-        //     ret -= isolatedPawnValue;
-        // }
+
 
         distFinal += dist;
         piece &= piece - 1;
