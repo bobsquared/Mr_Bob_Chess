@@ -57,7 +57,7 @@ int knightPair = S(14, 9);
 int rookPair = S(17, 17);
 int noPawns = S(0, 22);
 
-int trappedRook = S(40, 0);
+int trappedRook = S(-8, 48);
 
 
 
@@ -652,8 +652,6 @@ int Eval::evaluatePawns(Bitboard &board, bool col) {
             }
             dist *= 3;
         }
-
-
 
         distFinal += dist;
         piece &= piece - 1;
