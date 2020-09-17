@@ -691,7 +691,7 @@ bool Bitboard::isLegal(MOVE move) {
 bool Bitboard::isDraw(int ply) {
 
     // 50 move rule
-    if (moveHistory.count > 0 && moveHistory.move[moveHistory.count - 1].halfMoves >= 100) {
+    if (halfMoves >= 100) {
         return true;
     }
 
