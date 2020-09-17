@@ -688,7 +688,7 @@ bool Bitboard::isLegal(MOVE move) {
 
 
 // Returns a boolean on whether the position is a draw.
-bool Bitboard::isDraw() {
+bool Bitboard::isDraw(int ply) {
 
     // 50 move rule
     if (moveHistory.count > 0 && moveHistory.move[moveHistory.count - 1].halfMoves >= 100) {
@@ -696,8 +696,11 @@ bool Bitboard::isDraw() {
     }
 
     // Repetition
-    if (moveHistory.count >= 3 && std::count(moveHistory.move, moveHistory.move + moveHistory.count, posKey) >= 1) {
-        return true;
+    (void) ply;
+    for (int i = moveHistory.count - 2; i >= moveHistory.count - halfMoves; i -= 2) {
+        if (moveHistory.move[i].posKey == posKey) {
+            return true;
+        }
     }
 
     // Material draw.

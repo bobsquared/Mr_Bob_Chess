@@ -56,7 +56,7 @@ public:
     void make_null_move();
     void undo_null_move();
 
-    bool isDraw();
+    bool isDraw(int ply);
     bool noPotentialWin();
 
     void reset();

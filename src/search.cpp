@@ -46,7 +46,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     }
 
     // determine if it is a draw
-    if (b.isDraw()) {
+    if (b.isDraw(height)) {
         return 0;
     }
 
@@ -150,16 +150,6 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     b.debugZobristHash();
     #endif
 
-
-
-    // Check for 3folds
-    if (alpha < 0 && b.isRepetition()) {
-        if (beta <= 0) {
-            nodes++;
-            return 0;
-        }
-    }
-
     // Check if there are any potential wins that don't require help mate.
     if (beta > 0 && b.noPotentialWin()) {
         if (alpha >= 0) {
@@ -181,7 +171,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
     // Determine if the position is a textbook draw
-    if (b.isDraw()) {
+    if (b.isDraw(height)) {
         return 0;
     }
 
