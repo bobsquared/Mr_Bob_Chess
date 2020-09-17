@@ -696,7 +696,7 @@ bool Bitboard::isDraw() {
     }
 
     // Repetition
-    if (moveHistory.count >= 3 && std::count(moveHistory.move, moveHistory.move + moveHistory.count, posKey) >= 2) {
+    if (moveHistory.count >= 3 && std::count(moveHistory.move, moveHistory.move + moveHistory.count, posKey) >= 1) {
         return true;
     }
 
