@@ -1,7 +1,7 @@
 
 debug = no
 debug_zobrist = no
-popcount = no
+popcount = yes
 
 
 CXXFLAGS := -Wall -Wextra -std=c++11 -static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
@@ -22,7 +22,7 @@ CXX := bitboard.cpp magic_bitboards.cpp defs.cpp dumb7flooding.cpp movegen.cpp p
 
 
 engine: $(CXX)
-	g++ -O3 -o bob $(CXXFLAGS) main.cpp $(CXX)
+	g++ -O3 -o ../bob $(CXXFLAGS) main.cpp $(CXX)
 
 tuner: $(CXX)
 	g++ -O3 -o tuner $(CXXFLAGS) tuner.cpp $(CXX)
