@@ -696,10 +696,13 @@ bool Bitboard::isDraw(int ply) {
     }
 
     // Repetition
-    (void) ply;
-    for (int i = moveHistory.count - 2; i >= moveHistory.count - halfMoves; i -= 2) {
+    bool repetition = false;
+    for (int i = moveHistory.count - 2; i >= std::max(0, moveHistory.count - halfMoves) ; i -= 2) {
         if (moveHistory.move[i].posKey == posKey) {
-            return true;
+            if (repetition || ply > 1) {
+                return true;
+            }
+            repetition = true;
         }
     }
 
