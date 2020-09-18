@@ -5,7 +5,7 @@
 uint64_t nodes;
 int totalTime;
 int seldepth;
-int height;
+int ply;
 std::atomic<bool> exit_thread_flag;
 TimeManager tm;
 bool nullMoveTree;
@@ -31,14 +31,14 @@ void InitLateMoveArray() {
 
 
 
-int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
+int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
     #endif
 
     nodes++; // update nodes searched
-    seldepth = std::max(height, seldepth); // update seldepth
+    seldepth = std::max(ply, seldepth); // update seldepth
 
     // stop the search
     if (exit_thread_flag || tm.outOfTime()) {
@@ -46,7 +46,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     }
 
     // determine if it is a draw
-    if (b.isDraw(height)) {
+    if (b.isDraw(ply)) {
         return 0;
     }
 
@@ -54,7 +54,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, height);
+    b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
 
     if (ttRet) {
         return hashedBoard.score <= alpha? alpha : (hashedBoard.score >= beta? beta : hashedBoard.score);
@@ -63,7 +63,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
 
     bool inCheck = b.InCheck();
     int prevAlpha = alpha;
-    int stand_pat = inCheck? -MATE_VALUE + height : 0;
+    int stand_pat = inCheck? -MATE_VALUE + ply : 0;
     if (!inCheck) {
         stand_pat = std::max(alpha, eval->evaluate(b));
 
@@ -104,7 +104,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
         // Search more captures
         numMoves++;
         b.make_move(move);
-        int score = -qsearch(b, depth - 1, -beta, -alpha, height + 1);
+        int score = -qsearch(b, depth - 1, -beta, -alpha, ply + 1);
         b.undo_move(move);
 
         if (bestMove == NO_MOVE) {
@@ -117,7 +117,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
             if (score > alpha) {
                 alpha = score;
                 if (score >= beta) {
-                    b.saveTT(move, score, depth, 1, posKey, height);
+                    b.saveTT(move, score, depth, 1, posKey, ply);
                     return score;
                 }
             }
@@ -128,11 +128,11 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
     if (numMoves > 0) {
         if (prevAlpha >= stand_pat) {
             assert (bestMove != 0);
-            b.saveTT(bestMove, stand_pat, depth, 2, posKey, height);
+            b.saveTT(bestMove, stand_pat, depth, 2, posKey, ply);
         }
         else {
             assert (bestMove != 0);
-            b.saveTT(bestMove, stand_pat, depth, 0, posKey, height);
+            b.saveTT(bestMove, stand_pat, depth, 0, posKey, ply);
         }
     }
 
@@ -144,7 +144,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int height) {
 
 
 
-int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int height) {
+int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int ply) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
@@ -160,7 +160,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
     // Dive into Quiesence search
     if (depth <= 0) {
-        return qsearch(b, depth - 1, alpha, beta, height);
+        return qsearch(b, depth - 1, alpha, beta, ply);
     }
 
     nodes++; // Increment number of nodes
@@ -171,7 +171,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
     // Determine if the position is a textbook draw
-    if (b.isDraw(height)) {
+    if (b.isDraw(ply)) {
         return 0;
     }
 
@@ -191,7 +191,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, height);
+    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
 
     if (ttRet) {
         return hashedBoard.score;
@@ -199,15 +199,15 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
 
     int staticEval = hashed? hashedBoard.score : eval->evaluate(b);
-    evalStack[height] = staticEval;
-    bool improving = height >= 2? staticEval > evalStack[height - 2] : false;
+    evalStack[ply] = staticEval;
+    bool improving = ply >= 2? staticEval > evalStack[ply - 2] : false;
     bool isCheck = b.InCheck();
-    b.removeKiller(height + 1);
+    b.removeKiller(ply + 1);
 
 
     // Razoring
     if (!isPv && !isCheck && depth <= 1 && staticEval <= alpha - 350) {
-        return qsearch(b, -1, alpha, beta, height);
+        return qsearch(b, -1, alpha, beta, ply);
     }
 
 
@@ -221,14 +221,14 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     if (!isPv && canNullMove && !isCheck && staticEval >= beta && depth >= 2 && nullMoveTree && b.nullMoveable()) {
         int R = 3 + depth / 8;
         b.make_null_move();
-        int nullRet = -pvSearch(b, depth - R - 1, -beta, -beta + 1, false, height + 1);
+        int nullRet = -pvSearch(b, depth - R - 1, -beta, -beta + 1, false, ply + 1);
         b.undo_null_move();
 
         if (nullRet >= beta && std::abs(nullRet) < 9500) {
 
             if (depth >= 8) {
                 nullMoveTree = false;
-                nullRet = pvSearch(b, depth - R - 1, beta - 1, beta, false, height + 1);
+                nullRet = pvSearch(b, depth - R - 1, beta - 1, beta, false, ply + 1);
                 nullMoveTree = true;
             }
 
@@ -241,7 +241,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
 
     // Mate distance pruning
-    int mateDistance = MATE_VALUE - height;
+    int mateDistance = MATE_VALUE - ply;
     if (mateDistance < beta) {
         beta = mateDistance;
         if (alpha >= mateDistance) {
@@ -249,7 +249,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         }
     }
 
-    mateDistance = -MATE_VALUE + height;
+    mateDistance = -MATE_VALUE + ply;
     if (mateDistance > alpha) {
         alpha = mateDistance;
         if (beta <= mateDistance) {
@@ -262,7 +262,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     int quietsSearched = 0;
     MOVE quiets[MAX_NUM_MOVES];
     moveGen->generate_all_moves(moveList, b); // Generate moves
-    movePick->scoreMoves(moveList, b, height, hashedBoard.move);
+    movePick->scoreMoves(moveList, b, ply, hashedBoard.move);
     while (moveList.get_next_move(move)) {
         int score;
         int extension = 0;
@@ -306,32 +306,32 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
         // First move search at full depth and full window
         if (numMoves == 0) {
-            score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
+            score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, ply + 1);
         }
         // Late move reductions
         else if (depth >= 3 && isQuiet && !isCheck) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)]; // Base reduction
 
-            lmr -= b.isKiller(height, move); // Don't reduce as much for killer moves
+            lmr -= b.isKiller(ply, move); // Don't reduce as much for killer moves
             lmr += !improving && numMoves >= 8; // Reduce if evaluation is improving
             lmr -= 2 * isPv; // Don't reduce as much for PV nodes
 
             lmr = std::min(depth - 1, std::max(lmr, 0));
-            score = -pvSearch(b, newDepth - 1 - lmr, -alpha - 1, -alpha, true, height + 1);
+            score = -pvSearch(b, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
             if (score > alpha) {
                 if (lmr > 0) {
-                    score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true, height + 1);
+                    score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
                 }
                 if (score > alpha && score < beta) {
-                    score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
+                    score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, ply + 1);
                 }
             }
         }
         // Null window search
         else {
-            score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true, height + 1);
+            score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
             if (score > alpha && score < beta) {
-                score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, height + 1);
+                score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, ply + 1);
             }
         }
 
@@ -365,7 +365,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
     // Update Histories
     if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
-        b.insertKiller(height, move);
+        b.insertKiller(ply, move);
         b.insertCounterMove(move);
 
         int hist = history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;
@@ -381,7 +381,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     // Check for checkmates and stalemates
     if (numMoves == 0) {
         if (isCheck) {
-            return -MATE_VALUE + height;
+            return -MATE_VALUE + ply;
         }
         else {
             return 0;
@@ -397,15 +397,15 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     assert(alpha >= prevAlpha);
     if (alpha >= beta) {
         assert(move != 0);
-        b.saveTT(bestMove, ret, depth, 1, posKey, height);
+        b.saveTT(bestMove, ret, depth, 1, posKey, ply);
     }
     else if (prevAlpha >= ret) {
         assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, 2, posKey, height);
+        b.saveTT(bestMove, ret, depth, 2, posKey, ply);
     }
     else {
         assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, 0, posKey, height);
+        b.saveTT(bestMove, ret, depth, 0, posKey, ply);
     }
 
     return ret;
@@ -421,18 +421,18 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     MOVE bestMove = 0;
     int numMoves = 0;
     int ret = -INFINITY_VAL;
-    int height = 0;
+    int ply = 0;
     bool inCheck = b.InCheck();
 
     // Probe transposition table:
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, height);
+    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
 
 
     // Initialize evaluation stack
-    evalStack[height] = hashed? hashedBoard.score : eval->evaluate(b);
+    evalStack[ply] = hashed? hashedBoard.score : eval->evaluate(b);
 
 
     while (moveList.get_next_move(move)) {
@@ -454,28 +454,28 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
 
         // First move search at full depth and full window
         if (numMoves == 0) {
-            tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, height + 1);
+            tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, ply + 1);
         }
         // Late move reductions
         else if (depth >= 3 && !inCheck && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
 
             lmr = std::min(depth - 1, std::max(lmr, 0));
-            tempRet = -pvSearch(b, depth - 1 - lmr, -alpha - 1, -alpha, true, height + 1);
+            tempRet = -pvSearch(b, depth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
             if (tempRet > alpha) {
                 if (lmr > 0) {
-                    tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, height + 1);
+                    tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, ply + 1);
                 }
                 if (tempRet > alpha && tempRet < beta) {
-                    tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, height + 1);
+                    tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, ply + 1);
                 }
             }
         }
         // Null window search
         else {
-            tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, height + 1);
+            tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, ply + 1);
             if (tempRet > alpha && tempRet < beta) {
-                tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, height + 1);
+                tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, ply + 1);
             }
         }
 
@@ -509,7 +509,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     // Update transposition table
     if (!exit_thread_flag && !tm.outOfTime()) {
         assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, 0, posKey, height);
+        b.saveTT(bestMove, ret, depth, 0, posKey, ply);
     }
 
     return BestMoveInfo(bestMove, ret);
