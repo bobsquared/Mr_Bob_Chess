@@ -23,6 +23,9 @@ struct BestMoveInfo {
 
 
 extern std::atomic<bool> exit_thread_flag;
+extern uint64_t nodes;
+extern int totalTime;
+extern bool printInfo;
 
 int pvSearch(Bitboard &b, int depth, int alpha, int beta);
 extern BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha, int beta);

@@ -9,6 +9,7 @@ int ply;
 std::atomic<bool> exit_thread_flag;
 TimeManager tm;
 bool nullMoveTree;
+bool printInfo = true;
 
 int seePruningMargin[4] = {0, 0, -350, -500};
 int lateMoveMargin[2][4] = {{0, 5, 8, 13}, {0, 7, 10, 17}};
@@ -445,7 +446,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
         }
 
         // UCI information
-        if (totalTime > 3000) {
+        if (totalTime > 3000 && printInfo) {
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
@@ -524,7 +525,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
     MoveList moveList;
     std::string algMove;
     uint64_t nps;
-    uint64_t nodesTotal = 0;
+    nodes = 0;
     totalTime = 0;
     nullMoveTree = true;
 
@@ -548,7 +549,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
 
         int delta = ASPIRATION_DELTA;
         int aspNum = 0;
-        nodes = 0;
+
         seldepth = i;
 
         // Use aspiration window with depth >= 4
@@ -564,7 +565,6 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
 
         while (true) {
 
-            nodes = 0;
             pvSearchRoot(b, i, moveList, alpha, beta);
             bool hashed = b.probeTT(posKey, hashedBoard, i, ttRet, tempAlpha, tempBeta, 0);
 
@@ -590,18 +590,17 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
                 cpScore = " score mate ";
             }
 
-            nodesTotal += nodes;
             totalTime = tm.getTimePassed();
-            nps = (uint64_t) ((double) nodesTotal * 1000.0) / ((double) totalTime + 1);
+            nps = (uint64_t) ((double) nodes * 1000.0) / ((double) totalTime + 1);
 
             // Update the aspiration score
             // Fail high
             if (hashedBoard.score >= beta) {
                 beta = hashedBoard.score + delta;
 
-                if (totalTime > 3000) {
+                if (totalTime > 3000 && printInfo) {
                     std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score << " lowerbound"
-                        " nodes " << nodesTotal << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                        " nodes " << nodes << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
                 }
             }
             // Fail low
@@ -609,9 +608,9 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
                 beta = (alpha + beta) / 2;
                 alpha = hashedBoard.score - delta;
 
-                if (totalTime > 3000) {
+                if (totalTime > 3000 && printInfo) {
                     std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score << " upperbound"
-                        " nodes " << nodesTotal << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                        " nodes " << nodes << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
                 }
             }
             // exact
@@ -668,8 +667,11 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
             cpScore = " score mate ";
         }
 
-        std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score <<
-            " nodes " << nodesTotal << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+        if (printInfo) {
+            std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score <<
+                " nodes " << nodes << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+        }
+
 
     }
 

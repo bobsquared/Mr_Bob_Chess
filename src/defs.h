@@ -176,7 +176,7 @@ struct MoveInfo {
 
 
 struct MoveInfoStack {
-    MoveInfo move[1024];
+    MoveInfo move[1024] = {};
     int count;
 
     MoveInfoStack() : count(0) {}

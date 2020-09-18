@@ -5,6 +5,9 @@
 #include "zobrist_hashing.h"
 #include <iostream>
 #include "defs.h"
+#include <random>
+
+
 
 
 
@@ -13,26 +16,29 @@
 // Collisions are possible but rare.
 Zobrist::Zobrist() {
 
+    std::mt19937_64 rng;
+    rng.seed(0);
+
     for (int i = 0; i < 64; i++) {
         for (int j = 0; j < 12; j++) {
-            table[i][j] = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+            table[i][j] = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
         }
     }
 
     for (int i = 0; i < 8; i++) {
-        enpassant[i] = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+        enpassant[i] = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
     }
 
     for (int i = 0; i < 4; i++) {
-        castle[i] = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+        castle[i] = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
     }
 
     // Flags for castling, and black turn
-    blackTurn = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
-    whiteKingCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
-    blackKingCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
-    whiteQueenCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
-    blackQueenCastle = (uint64_t)((rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48));
+    blackTurn = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
+    whiteKingCastle = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
+    blackKingCastle = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
+    whiteQueenCastle = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
+    blackQueenCastle = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
 
     whiteKingCastleFlag = false;
     blackKingCastleFlag = false;

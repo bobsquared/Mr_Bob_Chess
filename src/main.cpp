@@ -15,6 +15,7 @@
 
 
 
+
 MovePick *movePick = new MovePick();
 MoveGen *moveGen = new MoveGen();
 Magics *magics = new Magics();
@@ -22,7 +23,34 @@ Eval *eval = new Eval();
 extern int pieceValues[6];
 
 
-int main() {
+void Bench(Bitboard &b) {
+    // positions from Ethereal
+    static const char* Benchmarks[] = {
+    #include "bench.csv"
+        ""};
+
+    int nn = 0;
+    int time  = 0;
+
+    printInfo = false;
+    for (int i = 0; strcmp(Benchmarks[i], ""); i++) {
+        b.setPosFen(Benchmarks[i]);
+        search(b, 13, INT_MAX, INT_MAX, 0, 0, 0);
+        printf("Bench [# %2d] %12d nodes %8d nps\n", i + 1, (int) nodes, (int) (1000.0f * nodes / (totalTime + 1)));
+        nn += nodes;
+        time += totalTime;
+        b.reset();
+    }
+    printInfo = true;
+
+    printf("OVERALL: %53d nodes %8d nps\n", 1, (int) (1000.0f * nn / (time + 1)));
+}
+
+
+
+int main(int argc, char* argv[]) {
+
+
 
     InitColumnsMask();
     InitRowsMask();
@@ -31,6 +59,10 @@ int main() {
     InitCounterMoves();
     Bitboard pos = Bitboard();
     UCI uci = UCI();
+
+    if (argc > 1 && strcmp(argv[1], "bench") == 0) {
+        Bench(pos);
+    }
 
     std::regex setHash("setoption\\sname\\shash\\svalue\\s(\\d+)");
     std::regex wtime(".*wtime\\s(\\d+).*");
