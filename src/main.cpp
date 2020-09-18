@@ -62,6 +62,7 @@ int main(int argc, char* argv[]) {
 
     if (argc > 1 && strcmp(argv[1], "bench") == 0) {
         Bench(pos);
+        return 0;
     }
 
     std::regex setHash("setoption\\sname\\shash\\svalue\\s(\\d+)");
