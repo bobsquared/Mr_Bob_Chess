@@ -64,7 +64,6 @@ public:
     void insertKiller(int depth, MOVE move);
     void insertCounterMove(MOVE move);
 
-
     uint64_t getPosKey();
     uint64_t getPawnKey();
     bool probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta, int ply);
@@ -100,7 +99,6 @@ private:
     uint64_t blackKings;
 
     // Position info
-
     uint8_t rookCastleFlagMask[64];
 
     // Move info

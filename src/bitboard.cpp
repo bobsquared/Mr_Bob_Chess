@@ -737,16 +737,6 @@ bool Bitboard::noPotentialWin() {
 
 
 
-// Determines if there is one repetition in the position
-bool Bitboard::isRepetition() {
-    if (std::count(moveHistory.move, moveHistory.move + moveHistory.count, posKey) >= 1) {
-        return true;
-    }
-    return false;
-}
-
-
-
 /************************************************************************************************
 **  Zobrist Hashing and Transposition table Section
 **  Used for move ordering and massive search improvements.
