@@ -579,6 +579,35 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
                 break;
             }
 
+            bestMove = hashedBoard.move;
+            algMove = TO_ALG[get_move_from(bestMove)] + TO_ALG[get_move_to(bestMove)];
+
+            switch (bestMove & MOVE_FLAGS) {
+                case QUEEN_PROMOTION_FLAG:
+                    algMove += "q";
+                    break;
+                case QUEEN_PROMOTION_CAPTURE_FLAG:
+                    algMove += "q";
+                    break;
+                case ROOK_PROMOTION_FLAG:
+                    algMove += "r";
+                    break;
+                case ROOK_PROMOTION_CAPTURE_FLAG:
+                    algMove += "r";
+                    break;
+                case BISHOP_PROMOTION_FLAG:
+                    algMove += "b";
+                    break;
+                case BISHOP_PROMOTION_CAPTURE_FLAG:
+                    algMove += "b";
+                    break;
+                case KNIGHT_PROMOTION_FLAG:
+                    algMove += "n";
+                    break;
+                case KNIGHT_PROMOTION_CAPTURE_FLAG:
+                    algMove += "n";
+                    break;
+            }
 
             cpScore = " score cp ";
             score = hashedBoard.score;
@@ -625,46 +654,6 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
 
         if (exit_thread_flag || tm.outOfTime()) {
             break;
-        }
-
-        bestMove = hashedBoard.move;
-        algMove = TO_ALG[get_move_from(bestMove)] + TO_ALG[get_move_to(bestMove)];
-
-        switch (bestMove & MOVE_FLAGS) {
-            case QUEEN_PROMOTION_FLAG:
-                algMove += "q";
-                break;
-            case QUEEN_PROMOTION_CAPTURE_FLAG:
-                algMove += "q";
-                break;
-            case ROOK_PROMOTION_FLAG:
-                algMove += "r";
-                break;
-            case ROOK_PROMOTION_CAPTURE_FLAG:
-                algMove += "r";
-                break;
-            case BISHOP_PROMOTION_FLAG:
-                algMove += "b";
-                break;
-            case BISHOP_PROMOTION_CAPTURE_FLAG:
-                algMove += "b";
-                break;
-            case KNIGHT_PROMOTION_FLAG:
-                algMove += "n";
-                break;
-            case KNIGHT_PROMOTION_CAPTURE_FLAG:
-                algMove += "n";
-                break;
-        }
-
-        cpScore = " score cp ";
-        score = hashedBoard.score;
-        if (std::abs(hashedBoard.score) >= MATE_VALUE - 500) {
-            score = (MATE_VALUE - std::abs(hashedBoard.score) + 1) / 2;
-            if (hashedBoard.score < 0) {
-                score = -score;
-            }
-            cpScore = " score mate ";
         }
 
         if (printInfo) {
