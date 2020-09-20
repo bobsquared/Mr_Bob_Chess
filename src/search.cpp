@@ -456,6 +456,13 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
         // First move search at full depth and full window
         if (numMoves == 0) {
             tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, ply + 1);
+            if (tempRet <= alpha) {
+                numMoves++;
+                bestMove = move;
+                ret = tempRet;
+                b.undo_move(move);
+                break;
+            }
         }
         // Late move reductions
         else if (depth >= 3 && !inCheck && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
