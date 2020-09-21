@@ -58,7 +58,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
     b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
 
     if (ttRet) {
-        return hashedBoard.score <= alpha? alpha : (hashedBoard.score >= beta? beta : hashedBoard.score);
+        return hashedBoard.score;
     }
 
 
