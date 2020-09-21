@@ -35,7 +35,7 @@ void Bench(Bitboard &b) {
     printInfo = false;
     for (int i = 0; strcmp(Benchmarks[i], ""); i++) {
         b.setPosFen(Benchmarks[i]);
-        search(b, 13, INT_MAX, INT_MAX, 0, 0, 0);
+        search(b, 13, INT_MAX, INT_MAX, 0, 0, 0, true);
         printf("Bench [# %2d] %12d nodes %8d nps\n", i + 1, (int) nodes, (int) (1000.0f * nodes / (totalTime + 1)));
         nn += nodes;
         time += totalTime;
@@ -130,7 +130,7 @@ int main(int argc, char* argv[]) {
         // Search (virtually) forever.
         if (command == "go infinite") {
             exit_thread_flag = false;
-            thr = std::thread(search, std::ref(pos), 255, INT_MAX, INT_MAX, 0, 0, 0);
+            thr = std::thread(search, std::ref(pos), 255, INT_MAX, INT_MAX, 0, 0, 0, true);
             thr.detach();
             continue;
         }
@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
 
 
 
-            thr = std::thread(search, std::ref(pos), 99, whitetime, blacktime, whiteInc, blackInc, movestogo);
+            thr = std::thread(search, std::ref(pos), 99, whitetime, blacktime, whiteInc, blackInc, movestogo, false);
             thr.detach();
             continue;
         }

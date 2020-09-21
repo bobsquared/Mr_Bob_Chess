@@ -29,6 +29,6 @@ extern bool printInfo;
 
 int pvSearch(Bitboard &b, int depth, int alpha, int beta);
 extern BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha, int beta);
-extern void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo);
+extern void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
 extern void InitLateMoveArray();
 extern int qsearch(Bitboard &b, int depth, int alpha, int beta, int height);

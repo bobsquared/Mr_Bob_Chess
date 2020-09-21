@@ -415,7 +415,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
 
 
-BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, int beta) {
+BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, int beta, bool analysis) {
 
     nodes++;
     MOVE move;
@@ -510,7 +510,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     }
 
     // Stop the search
-    if (numMoves == 0) {
+    if (numMoves == 0 || (depth == 2 && numMoves == 1 && !analysis)) {
         exit_thread_flag = true;
     }
 
@@ -526,7 +526,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
 
 
 
-void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo) {
+void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
 
     MOVE bestMove;
     MoveList moveList;
@@ -572,7 +572,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
 
         while (true) {
 
-            pvSearchRoot(b, i, moveList, alpha, beta);
+            pvSearchRoot(b, i, moveList, alpha, beta, analysis);
             bool hashed = b.probeTT(posKey, hashedBoard, i, ttRet, tempAlpha, tempBeta, 0);
 
             if (i > 1 && !exit_thread_flag && !tm.outOfTime()) {
