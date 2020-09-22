@@ -545,8 +545,6 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
     int tempAlpha;
     int tempBeta;
     int score = 0;
-    int aspirationReduction = 0;
-
     std::string cpScore;
 
     b.clearHashStats();
@@ -557,7 +555,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
     tm = TimeManager(b.getSideToMove(), wtime, btime, winc, binc, movesToGo, moveList.count);
     for (int i = 1; i <= depth; i++) {
 
-        int delta = std::max(MIN_ASPIRATION_DELTA, ASPIRATION_DELTA - aspirationReduction);
+        int delta = ASPIRATION_DELTA;
         int aspNum = 0;
 
         seldepth = i;
@@ -572,7 +570,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
             beta = INFINITY_VAL;
         }
 
-        bool aspirationFlag = false;
+
         while (true) {
 
             pvSearchRoot(b, i, moveList, alpha, beta, analysis);
@@ -638,12 +636,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
             // Update the aspiration score
             // Fail high
             if (hashedBoard.score >= beta) {
-
-                delta += aspirationReduction / 2;
-                aspirationReduction = 0;
-
                 beta = hashedBoard.score + delta;
-                aspirationFlag = true;
 
                 if (totalTime > 3000 && printInfo) {
                     std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score << " lowerbound"
@@ -652,13 +645,8 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
             }
             // Fail low
             else if (hashedBoard.score <= alpha) {
-
-                delta += aspirationReduction / 2;
-                aspirationReduction = 0;
-
                 beta = (alpha + beta) / 2;
                 alpha = hashedBoard.score - delta;
-                aspirationFlag = true;
 
                 if (totalTime > 3000 && printInfo) {
                     std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score << " upperbound"
@@ -667,9 +655,6 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
             }
             // exact
             else {
-                if (!aspirationFlag && i >= 4 && i % 2 == 0) {
-                    aspirationReduction = std::min(ASPIRATION_DELTA - MIN_ASPIRATION_DELTA, aspirationReduction + 1);
-                }
                 break;
             }
 
