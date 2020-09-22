@@ -73,6 +73,7 @@ public:
     void clearHashTable();
     int getHashFull();
     void replaceHash(int hashSize);
+    void setTTAge();
 
     bool nullMoveable();
     int seeCapture(MOVE capture);

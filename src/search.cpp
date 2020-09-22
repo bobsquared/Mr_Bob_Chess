@@ -548,6 +548,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
     std::string cpScore;
 
     b.clearHashStats();
+    b.setTTAge();
     moveGen->generate_all_moves(moveList, b);
     movePick->scoreMoves(moveList, b, 0, NO_MOVE);
 
