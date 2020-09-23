@@ -270,12 +270,6 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         int extension = 0;
         bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
 
-        // Check extension
-        if (isCheck) {
-            extension = 1;
-        }
-
-
         if (!isPv && ret > -9500) {
             if (isQuiet) {
 
@@ -300,6 +294,12 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         // Skip the move it is not legal
         if (!b.isLegal(move)) {
             continue;
+        }
+
+
+        // Check extension
+        if (isCheck) {
+            extension = 1;
         }
 
         int newDepth = depth + extension; // Extend
