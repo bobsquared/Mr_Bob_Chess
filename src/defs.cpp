@@ -9,7 +9,6 @@ uint64_t rowMask[64];
 int history[2][64][64];
 MOVE killers[128][2];
 MOVE counterMove[2][64][64];
-int evalStack[128];
 
 
 // Algebra to number

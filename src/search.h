@@ -22,6 +22,11 @@ struct BestMoveInfo {
 };
 
 
+struct SearchStack {
+    int eval;
+};
+
+
 extern std::atomic<bool> exit_thread_flag;
 extern uint64_t nodes;
 extern int totalTime;

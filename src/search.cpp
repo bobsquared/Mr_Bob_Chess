@@ -10,6 +10,7 @@ std::atomic<bool> exit_thread_flag;
 TimeManager tm;
 bool nullMoveTree;
 bool printInfo = true;
+SearchStack searchStack[128];
 
 int seePruningMargin[4] = {0, 0, -350, -500};
 int lateMoveMargin[2][4] = {{0, 5, 8, 13}, {0, 7, 10, 17}};
@@ -200,8 +201,8 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
 
     int staticEval = hashed? hashedBoard.score : eval->evaluate(b);
-    evalStack[ply] = staticEval;
-    bool improving = ply >= 2? staticEval > evalStack[ply - 2] : false;
+    searchStack[ply].eval = staticEval;
+    bool improving = ply >= 2? staticEval > searchStack[ply - 2].eval : false;
     bool isCheck = b.InCheck();
     b.removeKiller(ply + 1);
 
@@ -433,7 +434,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
 
 
     // Initialize evaluation stack
-    evalStack[ply] = hashed? hashedBoard.score : eval->evaluate(b);
+    searchStack[ply].eval = hashed? hashedBoard.score : eval->evaluate(b);
 
 
     while (moveList.get_next_move(move)) {
