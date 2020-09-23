@@ -9,7 +9,7 @@ int pieceValues[6] = {S(114, 94), S(491, 332), S(500, 328), S(694, 559), S(1271,
 // Queen, Bishop, Knight and rook weights
 int knightWeight[9] = {S(-30, -30), S(-24, -24), S(-18, -18), S(-12, -12), S(-6, -6), S(0, 0), S(6, 6) , S(12, 12), S(18, 18)};
 int rookWeight[9] = {S(60, 60), S(48, 48), S(36, 36), S(24, 24), S(12, 12), S(0, 0), S(-12, -12), S(-24, -24), S(-36, -36)};
-int bishopWeight[17] = {S(57, 57), S(56, 56), S(54, 54), S(52, 52), S(50, 50), S(46, 46), S(45, 45), S(43, 43), S(42, 42), S(40, 40), S(39, 39), S(37, 37), S(35, 35), S(33, 33), S(27, 27), S(26, 26), S(23, 23)};
+int bishopWeight[9] = {S(97, 74), S(80, 72), S(51, 68), S(46, 66), S(39, 53), S(35, 48), S(26, 47), S(25, 46), S(24, 45)};
 int queenWeight[7] = {S(0, 0), S(12, 12), S(15, 15), S(18, 18), S(22, 22), S(26, 26), S(30, 30)};
 
 // Supported and adjacent pawn weights
@@ -564,7 +564,7 @@ int Eval::evaluateImbalance(Bitboard &board, bool col) {
 
     // Bishop pair
     if (board.pieceCount[4 + col] >= 2) {
-        ret += bishopWeight[board.pieceCount[0] + board.pieceCount[1]];
+        ret += bishopWeight[board.pieceCount[0]];
     }
 
     // Knight pair
