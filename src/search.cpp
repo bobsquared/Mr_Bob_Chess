@@ -13,7 +13,7 @@ bool printInfo = true;
 SearchStack searchStack[128];
 
 int seePruningMargin[4] = {0, 0, -350, -500};
-int lateMoveMargin[2][5] = {{0, 5, 8, 13, 23}, {0, 7, 10, 17, 29}};
+int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}};
 
 
 extern int pieceValues[6];
@@ -279,7 +279,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
                 }
 
                 // Late move pruning
-                if (depth <= 4 && quietsSearched > lateMoveMargin[improving][depth]) {
+                if (depth <= 5 && quietsSearched > lateMoveMargin[improving][depth]) {
                     break;
                 }
 
