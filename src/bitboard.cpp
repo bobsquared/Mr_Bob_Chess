@@ -1018,7 +1018,10 @@ void Bitboard::removeKiller(int depth) {
 // Insert counter move into array
 void Bitboard::insertCounterMove(MOVE move) {
     MOVE prevMove = moveHistory.move[moveHistory.count - 1].move;
-    counterMove[toMove][get_move_from(prevMove)][get_move_to(prevMove)] = move;
+
+    if (prevMove != NULL_MOVE) {
+        counterMove[toMove][get_move_from(prevMove)][get_move_to(prevMove)] = move;
+    }
 }
 
 
