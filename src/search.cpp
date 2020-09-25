@@ -67,7 +67,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
     int prevAlpha = alpha;
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
     if (!inCheck) {
-        stand_pat = std::max(alpha, eval->evaluate(b));
+        stand_pat = eval->evaluate(b);
 
         // standing pat
         if (stand_pat >= beta) {
