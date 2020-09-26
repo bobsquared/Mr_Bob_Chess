@@ -24,6 +24,8 @@ struct BestMoveInfo {
 
 struct SearchStack {
     int eval;
+
+    SearchStack() : eval(0) {};
 };
 
 

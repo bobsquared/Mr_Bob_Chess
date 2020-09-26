@@ -10,10 +10,10 @@ std::atomic<bool> exit_thread_flag;
 TimeManager tm;
 bool nullMoveTree;
 bool printInfo = true;
-SearchStack searchStack[128];
+SearchStack searchStack[128] = {};
 
-int seePruningMargin[4] = {0, 0, -350, -500};
-int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}};
+const int seePruningMargin[4] = {0, 0, -350, -500};
+const int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}};
 
 
 extern int pieceValues[6];
@@ -151,6 +151,8 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     #ifdef DEBUGHASH
     b.debugZobristHash();
     #endif
+
+    seldepth = std::max(ply, seldepth); // update seldepth
 
     // Check if there are any potential wins that don't require help mate.
     if (beta > 0 && b.noPotentialWin()) {
@@ -559,7 +561,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
         int delta = ASPIRATION_DELTA;
         int aspNum = 0;
 
-        seldepth = i;
+        seldepth = 1;
 
         // Use aspiration window with depth >= 4
         if (i >= 4) {
