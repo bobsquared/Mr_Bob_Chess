@@ -106,10 +106,10 @@ bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int dept
         if (hashedBoard.depth >= depth) {
 
             if (hashedBoard.flag == 1) { // Low bound
-                alpha = std::max(alpha, (int) hashedBoard.score);
+                alpha = hashedBoard.score;
             }
             else if (hashedBoard.flag == 2) { // Upper bound
-                beta = std::min(beta, (int) hashedBoard.score);
+                beta = hashedBoard.score;
             }
             else { //Exact
                 ttRet = true;
@@ -120,6 +120,50 @@ bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int dept
             }
 
         }
+    }
+
+    return ret;
+
+}
+
+
+
+// Probe the transposition table
+// Currently using: Always Replace
+bool TranspositionTable::probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, bool &ttRet, int alpha, int beta, int ply) {
+
+    ttCalls++;
+    bool ret = false;
+    if (hashTable[key % numHashes].posKey == key) {
+
+        ret = true;
+        ttHits++;
+        // Store the hash table value
+        hashedBoard = hashTable[key % numHashes];
+
+        if (std::abs(hashedBoard.score) > MATE_VALUE_MAX) {
+            if (hashedBoard.score > MATE_VALUE_MAX) {
+                hashedBoard.score -= ply;
+            }
+        	else if (hashedBoard.score < -MATE_VALUE_MAX) {
+                hashedBoard.score += ply;
+            }
+        }
+
+        if (hashedBoard.flag == 1) { // Low bound
+            alpha = hashedBoard.score;
+        }
+        else if (hashedBoard.flag == 2) { // Upper bound
+            beta = hashedBoard.score;
+        }
+        else { //Exact
+            ttRet = true;
+        }
+
+        if (alpha >= beta) {
+            ttRet = true;
+        }
+
     }
 
     return ret;

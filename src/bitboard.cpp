@@ -764,6 +764,13 @@ bool Bitboard::probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool
 
 
 
+// Probe the transposition table for duplicate positions qsearch
+bool Bitboard::probeTTQsearch(uint64_t posKey, ZobristVal &hashedBoard, bool &ttRet, int &alpha, int &beta, int ply) {
+    return tt->probeTTQsearch(posKey, hashedBoard, ttRet, alpha, beta, ply);
+}
+
+
+
 // Save the current searched position into the transposition table
 void Bitboard::saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply) {
     assert (move != 0);

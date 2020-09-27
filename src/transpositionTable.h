@@ -18,6 +18,7 @@ public:
 
     void saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply);
     bool probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, int alpha, int beta, int ply);
+    bool probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, bool &ttRet, int alpha, int beta, int ply);
     int getHashFull();
     void clearHashStats();
     void clearHashTable();

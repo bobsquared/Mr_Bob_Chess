@@ -56,7 +56,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
+    b.probeTTQsearch(posKey, hashedBoard, ttRet, alpha, beta, ply);
 
     if (ttRet) {
         return hashedBoard.score;
