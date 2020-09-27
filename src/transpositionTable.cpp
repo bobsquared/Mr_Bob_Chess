@@ -61,11 +61,11 @@ void TranspositionTable::setTTAge(int age) {
 void TranspositionTable::saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply) {
     uint64_t posKey = key % numHashes;
 
-    if (std::abs(score) > 9500) {
-        if (score > 9500) {
+    if (std::abs(score) > MATE_VALUE_MAX) {
+        if (score > MATE_VALUE_MAX) {
             score += ply;
         }
-        else if (score < -9500) {
+        else if (score < -MATE_VALUE_MAX) {
             score -= ply;
         }
     }
@@ -93,11 +93,11 @@ bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int dept
         // Store the hash table value
         hashedBoard = hashTable[key % numHashes];
 
-        if (std::abs(hashedBoard.score) > 9500) {
-            if (hashedBoard.score > 9500) {
+        if (std::abs(hashedBoard.score) > MATE_VALUE_MAX) {
+            if (hashedBoard.score > MATE_VALUE_MAX) {
                 hashedBoard.score -= ply;
             }
-        	else if (hashedBoard.score < -9500) {
+        	else if (hashedBoard.score < -MATE_VALUE_MAX) {
                 hashedBoard.score += ply;
             }
         }
