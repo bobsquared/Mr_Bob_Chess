@@ -19,6 +19,7 @@ typedef uint16_t MOVE;
 #define NO_MOVE 0
 #define INFINITY_VAL 99999
 #define MATE_VALUE 10000
+#define MATE_VALUE_MAX (MATE_VALUE - 500)
 
 #define QUIET_MOVES_FLAG 0
 #define DOUBLE_PAWN_PUSH_FLAG 1

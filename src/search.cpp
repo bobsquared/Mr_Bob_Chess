@@ -216,7 +216,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
 
     // Reverse futility pruning
-    if (!isPv && !isCheck && depth <= 6 && staticEval - 220 * depth + (55 * depth * improving) >= beta && staticEval < 9000) {
+    if (!isPv && !isCheck && depth <= 6 && staticEval - 220 * depth + (55 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
         return staticEval;
     }
 
@@ -228,7 +228,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         int nullRet = -pvSearch(b, depth - R - 1, -beta, -beta + 1, false, ply + 1);
         b.undo_null_move();
 
-        if (nullRet >= beta && std::abs(nullRet) < 9500) {
+        if (nullRet >= beta && std::abs(nullRet) < MATE_VALUE_MAX) {
 
             if (depth >= 8) {
                 nullMoveTree = false;
@@ -272,11 +272,11 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
         int extension = 0;
         bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
 
-        if (!isPv && ret > -9500) {
+        if (!isPv && ret > -MATE_VALUE_MAX) {
             if (isQuiet) {
 
                 // Futility pruning
-                if (depth <= 6 && numMoves > 0 && staticEval + 215 * depth <= alpha && alpha < 9000) {
+                if (depth <= 6 && numMoves > 0 && staticEval + 215 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
                     continue;
                 }
 
@@ -625,7 +625,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
 
             cpScore = " score cp ";
             score = hashedBoard.score;
-            if (std::abs(hashedBoard.score) >= MATE_VALUE - 500) {
+            if (std::abs(hashedBoard.score) >= MATE_VALUE_MAX) {
                 score = (MATE_VALUE - std::abs(hashedBoard.score) + 1) / 2;
                 if (hashedBoard.score < 0) {
                     score = -score;
