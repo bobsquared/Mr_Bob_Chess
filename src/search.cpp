@@ -384,12 +384,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
     // Check for checkmates and stalemates
     if (numMoves == 0) {
-        if (isCheck) {
-            return -MATE_VALUE + ply;
-        }
-        else {
-            return 0;
-        }
+        return isCheck? -MATE_VALUE + ply : 0;
     }
 
     // Stop the search
