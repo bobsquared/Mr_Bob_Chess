@@ -197,7 +197,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     bool ttRet = false;
     bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
 
-    if (ttRet) {
+    if (ttRet && !isPv) {
         return hashedBoard.score;
     }
 
