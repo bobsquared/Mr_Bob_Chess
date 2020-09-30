@@ -1,6 +1,6 @@
 #include "bitboard.h"
 
-std::regex fenNumbers(".*(\\d+)\\s+(\\d+)");
+std::regex fenNumbers(".*\\s+(\\d+)\\s+(\\d+)");
 extern Magics *magics;
 extern int pieceValues[6];
 
