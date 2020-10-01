@@ -62,7 +62,7 @@ uint64_t Zobrist::hashBoard(uint64_t *pieces, uint8_t castleFlag, int enpassantS
     hashBoard_castle(ret, 15);
     hashBoard_castle(ret, castleFlag);
     if (enpassantSq) {
-        hashBoard_enpassant(ret, enpassantSq);
+        hashBoard_enpassant(ret, enpassantSq % 8);
     }
 
 
@@ -150,7 +150,7 @@ void Zobrist::hashBoard_promotion(uint64_t &board, int from, int to, int pieceFr
 // Iterative way to determine hash key:
 // Update enpassant square
 void Zobrist::hashBoard_enpassant(uint64_t &board, int square) {
-    board ^= enpassant[square];
+    board ^= enpassant[square % 8];
 }
 
 
