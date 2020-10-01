@@ -132,6 +132,8 @@ private:
     uint64_t isAttackedSee(int index);
     uint64_t getLeastValuablePiece(uint64_t attadef, bool col, int &piece);
 
+    const std::string pieceIndex = "PpNnBbRrQqKk";
+
 
 
 };
