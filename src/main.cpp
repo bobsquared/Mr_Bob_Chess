@@ -43,7 +43,7 @@ void Bench(Bitboard &b) {
     }
     printInfo = true;
 
-    printf("OVERALL: %53d nodes %8d nps\n", 1, (int) (1000.0f * nn / (time + 1)));
+    printf("OVERALL: %53d nodes %8d nps\n", nn, (int) (1000.0f * nn / (time + 1)));
 }
 
 
