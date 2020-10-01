@@ -51,19 +51,19 @@ int knightCheckVal = 102;
 int KSOffset = 91;
 
 
-int kingPawnFront = S(32, -11);
-int kingPawnFrontN = S(5, -1);
+int kingPawnFront = S(27, -15);
+int kingPawnFrontN = S(18, -9);
 
-int kingPawnAdj = S(17, -12);
-int kingPawnAdjN = S(9, -9);
+int kingPawnAdj = S(15, -18);
+int kingPawnAdjN = S(10, -2);
 
-int rookOnOpen = S(27, -13);
-int rookOnSemiOpen = S(24, 3);
-int rookOnQueen = S(-20, 22);
+int rookOnOpen = S(29, -15);
+int rookOnSemiOpen = S(27, 12);
+int rookOnQueen = S(-24, 18);
 
-int knightPair = S(14, 9);
-int rookPair = S(17, 17);
-int noPawns = S(0, 22);
+int knightPair = S(9, -2);
+int rookPair = S(22, 18);
+int noPawns = S(15, 35);
 
 int trappedRook = S(-8, 48);
 
