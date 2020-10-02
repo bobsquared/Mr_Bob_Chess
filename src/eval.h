@@ -1,6 +1,5 @@
 #pragma once
 #include "defs.h"
-#include "piecesquaretable.h"
 #include "magic_bitboards.h"
 #include "bitboard.h"
 
