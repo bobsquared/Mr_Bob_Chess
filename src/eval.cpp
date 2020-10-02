@@ -145,18 +145,18 @@ void Eval::InitPieceBoards() {
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 8; j++) {
 
-            pieceSquare[0][i * 8 + j] = S(WHITE_PAWN_TABLE[(7 - i) * 8 + j], WHITE_PAWN_TABLE[(7 - i) * 8 + j]);
-            pieceSquare[1][i * 8 + j] = S(BLACK_PAWN_TABLE[(7 - i) * 8 + j], BLACK_PAWN_TABLE[(7 - i) * 8 + j]);
-            pieceSquare[2][i * 8 + j] = S(WHITE_KNIGHT_TABLE[(7 - i) * 8 + j], WHITE_KNIGHT_TABLE[(7 - i) * 8 + j]);
-            pieceSquare[3][i * 8 + j] = S(BLACK_KNIGHT_TABLE[(7 - i) * 8 + j], BLACK_KNIGHT_TABLE[(7 - i) * 8 + j]);
-            pieceSquare[4][i * 8 + j] = S(WHITE_BISHOP_TABLE[(7 - i) * 8 + j], WHITE_BISHOP_TABLE[(7 - i) * 8 + j]);
-            pieceSquare[5][i * 8 + j] = S(BLACK_BISHOP_TABLE[(7 - i) * 8 + j], BLACK_BISHOP_TABLE[(7 - i) * 8 + j]);
-            pieceSquare[6][i * 8 + j] = S(WHITE_ROOK_TABLE[(7 - i) * 8 + j], WHITE_ROOK_TABLE[(7 - i) * 8 + j]);
-            pieceSquare[7][i * 8 + j] = S(BLACK_ROOK_TABLE[(7 - i) * 8 + j], BLACK_ROOK_TABLE[(7 - i) * 8 + j]);
-            pieceSquare[8][i * 8 + j] = S(WHITE_QUEEN_TABLE[(7 - i) * 8 + j], WHITE_QUEEN_TABLE[(7 - i) * 8 + j]);
-            pieceSquare[9][i * 8 + j] = S(BLACK_QUEEN_TABLE[(7 - i) * 8 + j], BLACK_QUEEN_TABLE[(7 - i) * 8 + j]);
-            pieceSquare[10][i * 8 + j] = S(WHITE_KING_TABLE[(7 - i) * 8 + j], WHITE_KING_TABLE_EG[(7 - i) * 8 + j]);
-            pieceSquare[11][i * 8 + j] = S(BLACK_KING_TABLE[(7 - i) * 8 + j], BLACK_KING_TABLE_EG[(7 - i) * 8 + j]);
+            pieceSquare[0][i * 8 + j] = S(PAWN_TABLE[(7 - i) * 8 + j], PAWN_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[1][i * 8 + j] = S(PAWN_TABLE[j + 8 * i], PAWN_TABLE[j + 8 * i]);
+            pieceSquare[2][i * 8 + j] = S(KNIGHT_TABLE[(7 - i) * 8 + j], KNIGHT_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[3][i * 8 + j] = S(KNIGHT_TABLE[j + 8 * i], KNIGHT_TABLE[j + 8 * i]);
+            pieceSquare[4][i * 8 + j] = S(BISHOP_TABLE[(7 - i) * 8 + j], BISHOP_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[5][i * 8 + j] = S(BISHOP_TABLE[j + 8 * i], BISHOP_TABLE[j + 8 * i]);
+            pieceSquare[6][i * 8 + j] = S(ROOK_TABLE[(7 - i) * 8 + j], ROOK_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[7][i * 8 + j] = S(ROOK_TABLE[j + 8 * i], ROOK_TABLE[j + 8 * i]);
+            pieceSquare[8][i * 8 + j] = S(QUEEN_TABLE[(7 - i) * 8 + j], QUEEN_TABLE[(7 - i) * 8 + j]);
+            pieceSquare[9][i * 8 + j] = S(QUEEN_TABLE[j + 8 * i], QUEEN_TABLE[j + 8 * i]);
+            pieceSquare[10][i * 8 + j] = S(KING_TABLE[(7 - i) * 8 + j], KING_TABLE_EG[(7 - i) * 8 + j]);
+            pieceSquare[11][i * 8 + j] = S(KING_TABLE[j + 8 * i], KING_TABLE_EG[j + 8 * i]);
 
         }
     }
