@@ -124,14 +124,23 @@ const int BISHOP_TABLE_EG[64] = {-8, -12,  12,  10,  8,  1, -7, -25,
 
 
 // -----------------------Rook attack tables----------------------------------//
-const int ROOK_TABLE[64] = {  0,   0,   0,   0,   0,   0,   0,   0,
-                              5,  10,  10,  10,  10,  10,  10,   5,
-                             -5,   0,   0,   0,   0,   0,   0,  -5,
-                             -5,   0,   0,   0,   0,   0,   0,  -5,
-                             -5,   0,   0,   0,   0,   0,   0,  -5,
-                             -5,   0,   0,   0,   0,   0,   0,  -5,
-                             -5,   0,   0,   0,   0,   0,   0,  -5,
-                              0,   0,   3,   5,   5,   0,   0,   0};
+const int ROOK_TABLE[64] = { -9,  30, -44,  19,   7, -51,   2, -20,
+                             -4,   0,  28,  10,  50,  28, -18,   4,
+                            -26,  -4,   2,  14, -14,  28,  62,  -3,
+                            -38, -22,   4,   6,  14,  40, -16, -16,
+                            -32, -26, -24, -10,  -4,  -9,  20, -14,
+                            -33, -12, -10, -20,  -4,   8,  16,  -8,
+                            -20,  -7, -16,  -4,   9,  20,   2, -47,
+                             -4,  -4,   0,   4,  16,  22, -16,  16};
+
+const int ROOK_TABLE_EG[64] = { 12,   2,  24,   8,  16,  22,  10,  12,
+                                12,  16,   6,  10, -12,   6,  20,   8,
+                                14,  16,   4,   4,   4,  -6, -11,  -6,
+                                16,   8,  16,  -2,   0,  -6,   0,   4,
+                                 8,  10,  16,   4,  -4,   1, -10, -10,
+                                 0,   0,  -6,   0, -10, -16, -16, -16,
+                                -6,  -8,  -4,  -4, -17, -22, -20,  -6,
+                                -6,  -2,   0,  -4, -12, -18,  -8, -28};
 // ---------------------------------------------------------------------------//
 
 
@@ -253,8 +262,8 @@ void Eval::InitPieceBoards() {
             pieceSquare[3][i * 8 + j] = S(KNIGHT_TABLE[j + 8 * i], KNIGHT_TABLE_EG[j + 8 * i]);
             pieceSquare[4][i * 8 + j] = S(BISHOP_TABLE[(7 - i) * 8 + j], BISHOP_TABLE_EG[(7 - i) * 8 + j]);
             pieceSquare[5][i * 8 + j] = S(BISHOP_TABLE[j + 8 * i], BISHOP_TABLE_EG[j + 8 * i]);
-            pieceSquare[6][i * 8 + j] = S(ROOK_TABLE[(7 - i) * 8 + j], ROOK_TABLE[(7 - i) * 8 + j]);
-            pieceSquare[7][i * 8 + j] = S(ROOK_TABLE[j + 8 * i], ROOK_TABLE[j + 8 * i]);
+            pieceSquare[6][i * 8 + j] = S(ROOK_TABLE[(7 - i) * 8 + j], ROOK_TABLE_EG[(7 - i) * 8 + j]);
+            pieceSquare[7][i * 8 + j] = S(ROOK_TABLE[j + 8 * i], ROOK_TABLE_EG[j + 8 * i]);
             pieceSquare[8][i * 8 + j] = S(QUEEN_TABLE[(7 - i) * 8 + j], QUEEN_TABLE[(7 - i) * 8 + j]);
             pieceSquare[9][i * 8 + j] = S(QUEEN_TABLE[j + 8 * i], QUEEN_TABLE[j + 8 * i]);
             pieceSquare[10][i * 8 + j] = S(KING_TABLE[(7 - i) * 8 + j], KING_TABLE_EG[(7 - i) * 8 + j]);
