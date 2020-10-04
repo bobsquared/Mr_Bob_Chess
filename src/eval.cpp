@@ -188,6 +188,28 @@ const int KING_TABLE_EG[64] =  {-109, -51, -32, -33, -23,  -3, -18, -38,
 
 
 
+// ---------------------------Knight Outpost----------------------------------//
+int outpostPotential[64] = { 0,  0,  0,  0,  0,  0,  0,  0,
+                                0,  0,  0,  0,  0,  0,  0,  0,
+                                0,  0,  0,  0,  0,  0,  0,  0,
+                                0,  0,  5,  8,  8,  5,  0,  0,
+                                0,  5,  7, 10, 10,  7,  5,  0,
+                                0,  5,  8, 10, 10,  8,  5,  0,
+                                0,  2,  2,  5,  5,  2,  2,  0,
+                                0,  0,  0,  0,  0,  0,  0,  0};
+
+int outpostPotentialEG[64] = { 0,  0,  0,  0,  0,  0,  0,  0,
+                                0,  0,  0,  0,  0,  0,  0,  0,
+                                0,  0,  0,  0,  0,  0,  0,  0,
+                                0,  0,  5,  8,  8,  5,  0,  0,
+                                0,  5,  7, 10, 10,  7,  5,  0,
+                                0,  5,  8, 10, 10,  8,  5,  0,
+                                0,  2,  2,  5,  5,  2,  2,  0,
+                                0,  0,  0,  0,  0,  0,  0,  0};
+// ---------------------------------------------------------------------------//
+
+
+
 
 Eval::Eval() {
     InitPieceBoards();
@@ -424,10 +446,16 @@ void Eval::InitIsolatedPawnsMask() {
 void Eval::InitOutpostMask() {
 
   for (int i = 0; i < 64; i++) {
-    outpostMask[0][i] = isolatedPawnMask[i] & passedPawnMask[0][i];
-    outpostMask[1][i] = isolatedPawnMask[i] & passedPawnMask[1][i];
+        outpostMask[0][i] = isolatedPawnMask[i] & passedPawnMask[0][i];
+        outpostMask[1][i] = isolatedPawnMask[i] & passedPawnMask[1][i];
   }
 
+  for (int i = 0; i < 8; i++) {
+      for (int j = 0; j < 8; j++) {
+        knightOutpost[0][i * 8 + j] = S(outpostPotential[(7 - i) * 8 + j], 0);
+        knightOutpost[1][i * 8 + j] = S(outpostPotential[j + 8 * i], 0);
+      }
+  }
 }
 
 
@@ -443,7 +471,7 @@ uint64_t Eval::adjacentMask(uint64_t pawns) {
 // Initialize variables in evaluation
 void Eval::InitializeEval(Bitboard &board) {
     pawnScore = 0;
-
+    // InitOutpostMask();
     // King safety
     for (int i = 0; i < 2; i++) {
         unsafeSquares[i] = 0;
@@ -821,8 +849,8 @@ int Eval::evaluateKnights(Bitboard &board, bool col) {
         }
 
         // Outposts
-        if (defendedKnight & (1ULL << bscan) && (outpostMask[col][bscan] & board.pieces[!col]) == 0) {
-            ret += S(outpostPotential[col][bscan], 0);
+        if ((defendedKnight & (1ULL << bscan)) && (outpostMask[col][bscan] & board.pieces[!col]) == 0) {
+            ret += knightOutpost[col][bscan];
         }
 
         piece &= piece - 1;
