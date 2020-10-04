@@ -56,8 +56,9 @@ int rookPair = S(22, 18);
 int noPawns = S(15, 35);
 
 int trappedRook = S(-8, 48);
-
-
+int pawnShield = S(2400, 0);
+int rookBehindPasser = S(6, 12);
+int tempoBonus = S(16, 16);
 
 
 // -----------------------Pawn attack tables----------------------------------//
@@ -537,7 +538,7 @@ int Eval::evaluate(Bitboard &board) {
     InitializeEval(board);
 
     int ret = 0;
-    ret += board.toMove? S(-16, -16) : S(16, 16);
+    ret += board.toMove? -tempoBonus : tempoBonus;
     ret += board.material[0] - board.material[1];
     ret += evaluateImbalance(board, false) - evaluateImbalance(board, true);
     ret += evaluatePawnShield(board, false) - evaluatePawnShield(board, true);
@@ -774,7 +775,7 @@ int Eval::evaluatePawns(Bitboard &board, bool col) {
         if ((passedPawnMask[col][bscan] & board.pieces[!col]) == 0 && (forwardMask[col][bscan] & board.pieces[col]) == 0) {
             ret += col? passedPawnWeight[(7 - (bscan / 8))] : passedPawnWeight[(bscan / 8)];
             if (columnMask[bscan] & board.pieces[6 + col]) {
-                ret += S(6, 12);
+                ret += rookBehindPasser;
             }
             dist *= 3;
         }
@@ -1001,8 +1002,9 @@ int Eval::evaluatePawnShield(Bitboard &board, bool col) {
     uint64_t piece = board.pieces[10 + col];
     int bscan = bitScan(piece);
     uint64_t shield = passedPawnMask[col][bscan] & (rowMask[col? std::max(bscan - 8, 0) : std::min(bscan + 8, 63)] | rowMask[col? std::max(bscan - 16, 0) : std::min(bscan + 16, 63)]);
+    int shieldCount = count_population(shield & board.pieces[col]);
 
-    ret += S(count_population(shield & board.pieces[col]) * 24, 0);
+    ret += S(shieldCount * MGVAL(pawnShield) / 100, shieldCount * EGVAL(pawnShield) / 100);
 
     if ((forwardMask[col][bscan] & board.pieces[col]) != 0) {
         ret += kingPawnFront;
