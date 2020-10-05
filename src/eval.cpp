@@ -189,23 +189,23 @@ const int KING_TABLE_EG[64] =  {-109, -51, -32, -33, -23,  -3, -18, -38,
 
 
 // ---------------------------Knight Outpost----------------------------------//
-int outpostPotential[64] = { 0,  0,  0,  0,  0,  0,  0,  0,
-                                0,  0,  0,  0,  0,  0,  0,  0,
-                                0,  0,  0,  0,  0,  0,  0,  0,
-                                0,  0,  5,  8,  8,  5,  0,  0,
-                                0,  5,  7, 10, 10,  7,  5,  0,
-                                0,  5,  8, 10, 10,  8,  5,  0,
-                                0,  2,  2,  5,  5,  2,  2,  0,
-                                0,  0,  0,  0,  0,  0,  0,  0};
+const int outpostPotential[64] = { 0,  0,  0,  0,  0,  0,  0,  0,
+                                 -75, 59,-34,-31, 16, 66, 64, 23,
+                                  75, 51, 24, 25, 87, 34, 21, 64,
+                                  18, 26, 20, 48, 52, 64, 66, 63,
+                                  25, 26, 44, 52, 49, 66, 36, 30,
+                                   6,  0,  8, 16, 16,  0,-56, 32,
+                                   0,  0,  0,  0,  0,  0,  0,  0,
+                                   0,  0,  0,  0,  0,  0,  0,  0};
 
-int outpostPotentialEG[64] = { 0,  0,  0,  0,  0,  0,  0,  0,
-                                0,  0,  0,  0,  0,  0,  0,  0,
-                                0,  0,  0,  0,  0,  0,  0,  0,
-                                0,  0,  5,  8,  8,  5,  0,  0,
-                                0,  5,  7, 10, 10,  7,  5,  0,
-                                0,  5,  8, 10, 10,  8,  5,  0,
-                                0,  2,  2,  5,  5,  2,  2,  0,
-                                0,  0,  0,  0,  0,  0,  0,  0};
+const int outpostPotentialEG[64] = { 0,  0,  0,  0,  0,  0,  0,  0,
+                                   -71,  1,-26,-26, 50,-31, 56, 63,
+                                     4, 12, 14, 33, 15, 30, 47, 32,
+                                    15,  0, 14, 22, 18, 21, -6,  6,
+                                    26, 14, 24, 13, 22, -8,-14,  6,
+                                   -72,  9, -6, 24, 18,  0, 46, -4,
+                                     0,  0,  0,  0,  0,  0,  0,  0,
+                                     0,  0,  0,  0,  0,  0,  0,  0};
 // ---------------------------------------------------------------------------//
 
 
@@ -452,8 +452,8 @@ void Eval::InitOutpostMask() {
 
   for (int i = 0; i < 8; i++) {
       for (int j = 0; j < 8; j++) {
-        knightOutpost[0][i * 8 + j] = S(outpostPotential[(7 - i) * 8 + j], 0);
-        knightOutpost[1][i * 8 + j] = S(outpostPotential[j + 8 * i], 0);
+        knightOutpost[0][i * 8 + j] = S(outpostPotential[(7 - i) * 8 + j], outpostPotentialEG[(7 - i) * 8 + j]);
+        knightOutpost[1][i * 8 + j] = S(outpostPotential[j + 8 * i], outpostPotentialEG[j + 8 * i]);
       }
   }
 }
@@ -471,7 +471,7 @@ uint64_t Eval::adjacentMask(uint64_t pawns) {
 // Initialize variables in evaluation
 void Eval::InitializeEval(Bitboard &board) {
     pawnScore = 0;
-    // InitOutpostMask();
+
     // King safety
     for (int i = 0; i < 2; i++) {
         unsafeSquares[i] = 0;
