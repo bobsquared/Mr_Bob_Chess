@@ -653,8 +653,14 @@ bool Bitboard::isLegal(MOVE move) {
 
     // If the moving piece is a king
     if (pieceAt[from] / 2 == 5) {
+        if ((MOVE_FLAGS & move) == KING_CASTLE_FLAG || (MOVE_FLAGS & move) == QUEEN_CASTLE_FLAG) {
+            if (from != 4 && from != 60) {
+                return false;
+            }
+        }
         kingMove = true;
         pieces[kingSide] ^= tofrom;
+
     }
 
     // If it is a capture
@@ -705,6 +711,7 @@ bool Bitboard::isDraw(int ply) {
             repetition = true;
         }
     }
+
 
     // Material draw.
     if (pieceCount[0] + pieceCount[1] + pieceCount[6] + pieceCount[7] + pieceCount[8] + pieceCount[9] > 0) {
@@ -1370,6 +1377,7 @@ void Bitboard::setPosFen(std::string fen) {
 //
 //     halfMoves = 0;
 //     fullMoves = 1;
+//     enpassantSq = 0;
 //     toMove = false;
 //
 //     for (int i = 0; i < 12; i++) {
