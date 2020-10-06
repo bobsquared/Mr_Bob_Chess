@@ -43,9 +43,11 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
     seldepth = std::max(ply, seldepth); // update seldepth
 
     // stop the search
+    #ifndef TUNER
     if (exit_thread_flag || tm.outOfTime()) {
         return 0;
     }
+    #endif
 
     // determine if it is a draw
     if (b.isDraw(ply)) {
@@ -56,11 +58,14 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
+
+    #ifndef TUNER
     b.probeTTQsearch(posKey, hashedBoard, ttRet, alpha, beta, ply);
 
     if (ttRet) {
         return hashedBoard.score;
     }
+    #endif
 
 
     bool inCheck = b.InCheck();
@@ -119,7 +124,9 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
             if (score > alpha) {
                 alpha = score;
                 if (score >= beta) {
+                    #ifndef TUNER
                     b.saveTT(move, score, depth, 1, posKey, ply);
+                    #endif
                     return score;
                 }
             }
@@ -127,6 +134,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
 
     }
 
+    #ifndef TUNER
     if (numMoves > 0) {
         if (prevAlpha >= stand_pat) {
             assert (bestMove != 0);
@@ -137,6 +145,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
             b.saveTT(bestMove, stand_pat, depth, 0, posKey, ply);
         }
     }
+    #endif
 
     return stand_pat;
 
