@@ -225,7 +225,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
 
     // Reverse futility pruning
-    if (!isPv && !isCheck && depth <= 6 && staticEval - 220 * depth + (55 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
+    if (!isPv && !isCheck && depth <= 6 && staticEval - 185 * depth + (55 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
         return staticEval;
     }
 
@@ -285,7 +285,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             if (isQuiet) {
 
                 // Futility pruning
-                if (depth <= 6 && numMoves > 0 && staticEval + 215 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
+                if (depth <= 6 && numMoves > 0 && staticEval + 135 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
                     continue;
                 }
 
