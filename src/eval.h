@@ -45,6 +45,7 @@ private:
     int evaluateQueens(Bitboard &board, bool col);
     int evaluateKing(Bitboard &board, bool col);
     int evaluatePawnShield(Bitboard &board, bool col);
+    int evaluateThreats(Bitboard &board, bool col);
 
     void savePawnHash(uint64_t key, int score);
     int probePawnHash(uint64_t key, bool &hit);

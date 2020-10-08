@@ -60,6 +60,8 @@ int pawnShield = S(2400, 0);
 int rookBehindPasser = S(6, 12);
 int tempoBonus = S(16, 16);
 
+int pawnThreat = S(64, 24);
+
 
 // -----------------------Pawn attack tables----------------------------------//
 const int PAWN_TABLE[64] = {  0,   0,   0,   0,   0,   0,   0,   0,
@@ -578,6 +580,7 @@ int Eval::evaluate(Bitboard &board) {
     ret += evaluateRooks(board, false) - evaluateRooks(board, true);
     ret += evaluateQueens(board, false) - evaluateQueens(board, true);
     ret += evaluateKing(board, false) - evaluateKing(board, true);
+    ret += evaluateThreats(board, false) - evaluateThreats(board, true);
 
     if (!hit) {
         savePawnHash(board.getPawnKey(), pawnScore);
@@ -593,6 +596,7 @@ int Eval::evaluate(Bitboard &board) {
 // Evaluate the position with debugging
 int Eval::evaluate_debug(Bitboard &board) {
 
+    // Asserts for debugging mode
     #ifndef NDEBUG
     int debugMaterialCount = 0;
     int pawnCount = count_population(board.pieces[0]);
@@ -637,76 +641,33 @@ int Eval::evaluate_debug(Bitboard &board) {
     #endif
 
 
-    int ret = MGVAL(board.material[0] - board.material[1]);
 
-    int evalMidgame = ret;
-    int evalEndgame = ret;
+    InitializeEval(board);
 
-    for (int i = 0; i < 2; i++) {
-        unsafeSquares[i] = 0;
-        KSAttackersWeight[i] = 0;
-        KSAttacks[i] = 0;
-        KSAttackersCount[i] = 0;
-        attacksKnight[i] = 0;
-        attacksBishop[i] = 0;
-        attacksRook[i] = 0;
-        attacksQueen[i] = 0;
-    }
+    int ret = 0;
+    ret += board.toMove? -tempoBonus : tempoBonus;
+    ret += board.material[0] - board.material[1];
+    ret += evaluateImbalance(board, false) - evaluateImbalance(board, true);
+    ret += evaluatePawnShield(board, false) - evaluatePawnShield(board, true);
 
-    uint64_t pawnAttacksW = pawnAttacksAll(board.pieces[0], 0);
-    uint64_t pawnAttacksB = pawnAttacksAll(board.pieces[1], 1);
-
-    uint64_t knightAttacksW = knightAttacks(board.pieces[2]);
-    uint64_t knightAttacksB = knightAttacks(board.pieces[3]);
-
-    // Mobility
-    mobilityUnsafeSquares[0] = pawnAttacksB | board.pieces[0] | board.pieces[10];
-    mobilityUnsafeSquares[1] = pawnAttacksW | board.pieces[1] | board.pieces[11];
-
-    minorUnsafe[0] = mobilityUnsafeSquares[0] | board.pieces[8];
-    minorUnsafe[1] = mobilityUnsafeSquares[1] | board.pieces[9];
-
-    queenUnsafe[0] = mobilityUnsafeSquares[0] | knightAttacksB;
-    queenUnsafe[1] = mobilityUnsafeSquares[1] | knightAttacksW;
-
-    tempUnsafe[0] = ~(pawnAttacksB | knightAttacksB | board.pieces[0]) & kingZoneMask[0][bitScan(board.pieces[11])];
-    tempUnsafe[1] = ~(pawnAttacksW | knightAttacksW | board.pieces[1]) & kingZoneMask[1][bitScan(board.pieces[10])];
-
+    ret += probePawnHash(board.getPawnKey(), hit);
+    ret += evaluatePawns(board, false) - evaluatePawns(board, true);
     ret += evaluateKnights(board, false) - evaluateKnights(board, true);
     ret += evaluateBishops(board, false) - evaluateBishops(board, true);
     ret += evaluateRooks(board, false) - evaluateRooks(board, true);
     ret += evaluateQueens(board, false) - evaluateQueens(board, true);
-    ret += evaluatePawns(board, false) - evaluatePawns(board, true);
+    ret += evaluateKing(board, false) - evaluateKing(board, true);
+    ret += evaluateThreats(board, false) - evaluateThreats(board, true);
 
-    std::cout << "----------------------------------------------------------" << std::endl;
-    std::cout << "White imbalance: " << evaluateImbalance(board, false) << std::endl;
-    std::cout << "White pawns: " << evaluatePawns(board, false) << std::endl;
-    std::cout << "White Kings: " << MGVAL(evaluateKing(board, false)) << std::endl;
-    std::cout << "----------------------------------------------------------" << std::endl;
-    std::cout << std::endl;
-    std::cout << "----------------------------------------------------------" << std::endl;
-    std::cout << "Black imbalance: " << evaluateImbalance(board, true) << std::endl;
-    std::cout << "Black pawns: " << evaluatePawns(board, true) << std::endl;
-    std::cout << "Black Kings: " << MGVAL(evaluateKing(board, true)) << std::endl;
-    std::cout << "----------------------------------------------------------" << std::endl;
-    std::cout << std::endl;
-    std::cout << "----------------------------------------------------------" << std::endl;
-    std::cout << "All imbalance: " << evaluateImbalance(board, false) - evaluateImbalance(board, true) << std::endl;
-    std::cout << "All pawns: " << evaluatePawns(board, false) - evaluatePawns(board, true) << std::endl;
-    std::cout << "All Kings: " << MGVAL(evaluateKing(board, false) - evaluateKing(board, true)) << std::endl;
-    std::cout << "----------------------------------------------------------" << std::endl;
+    if (!hit) {
+        savePawnHash(board.getPawnKey(), pawnScore);
+    }
 
-    int phase = TOTALPHASE;
-    phase -= (board.pieceCount[0] + board.pieceCount[1]) * PAWNPHASE;
-    phase -= (board.pieceCount[2] + board.pieceCount[3]) * KNIGHTPHASE;
-    phase -= (board.pieceCount[4] + board.pieceCount[5]) * BISHOPPHASE;
-    phase -= (board.pieceCount[6] + board.pieceCount[7]) * ROOKPHASE;
-    phase -= (board.pieceCount[8] + board.pieceCount[9]) * QUEENPHASE;
+    std::cout << MGVAL(evaluateThreats(board, false)) << " " << MGVAL(evaluateThreats(board, true)) << " " << EGVAL(evaluateThreats(board, false)) << " " << EGVAL(evaluateThreats(board, true)) << std::endl;
 
-    phase = (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
-    ret = ((evalMidgame * (256 - phase)) + (evalEndgame * phase)) / 256;
-
-    return ret;
+    int phase = getPhase(board);
+    ret = ((MGVAL(ret) * (256 - phase)) + (EGVAL(ret) * phase)) / 256;
+    return board.toMove? -ret : ret;
 }
 
 
@@ -1058,3 +1019,33 @@ int Eval::evaluatePawnShield(Bitboard &board, bool col) {
     return ret;
 
 }
+
+
+
+
+int Eval::evaluateThreats(Bitboard &board, bool col) {
+
+    int ret = 0;
+
+    // Pawn threats
+    uint64_t pAttacks = pawnAttacksAll((~unsafeSquares[col] | unsafeSquares[!col]) & board.pieces[col], col);
+    int numPawnAttacks = count_population(pAttacks & (board.pieces[2 + !col] | board.pieces[4 + !col] | board.pieces[6 + !col] | board.pieces[8 + !col]));
+
+    ret += pawnThreat * numPawnAttacks;
+
+    return ret;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+//
