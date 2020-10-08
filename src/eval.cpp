@@ -64,6 +64,7 @@ int pawnThreat = S(64, 24);
 int knightThreat = S(2, 12);
 int knightThreatPiece[5] = {S(-6, 12), S(0, 0), S(40, 32), S(65, 16), S(47, 5)};
 int bishopThreatPiece[5] = {S(-4, 7), S(14, 25), S(0, 0), S(33, 20), S(45, 47)};
+int rookThreatPiece[5] = {S(-12, 12), S(15, 8), S(16, 27), S(0, 0), S(65, 25)};
 
 
 // -----------------------Pawn attack tables----------------------------------//
@@ -488,6 +489,7 @@ void Eval::InitializeEval(Bitboard &board) {
         attacksRook[i] = 0;
         attacksQueen[i] = 0;
         bishopAttacksAll[i] = 0;
+        rookAttacksAll[i] = 0;
     }
 
     // Mobility
@@ -870,6 +872,7 @@ int Eval::evaluateRooks(Bitboard &board, bool col) {
     while (piece) {
         int bscan = bitScan(piece);
         uint64_t rookAttacks = magics->rookAttacksMask(board.occupied ^ board.pieces[8 + col], bscan);
+        rookAttacksAll[col] |= rookAttacks;
 
         // PST
         ret += pieceSquare[6 + col][bscan];
@@ -1050,6 +1053,13 @@ int Eval::evaluateThreats(Bitboard &board, bool col) {
     ret += (bishopThreatPiece[1] * count_population(attacks & board.pieces[2 + !col]));
     ret += (bishopThreatPiece[3] * count_population(attacks & board.pieces[6 + !col]));
     ret += (bishopThreatPiece[4] * count_population(attacks & board.pieces[8 + !col]));
+
+    // Rook threats
+    attacks = rookAttacksAll[col];
+    ret += (rookThreatPiece[0] * count_population(attacks & board.pieces[!col]));
+    ret += (rookThreatPiece[1] * count_population(attacks & board.pieces[2 + !col]));
+    ret += (rookThreatPiece[2] * count_population(attacks & board.pieces[4 + !col]));
+    ret += (rookThreatPiece[4] * count_population(attacks & board.pieces[8 + !col]));
 
     return ret;
 
