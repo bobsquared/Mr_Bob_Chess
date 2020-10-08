@@ -62,7 +62,7 @@ int tempoBonus = S(16, 16);
 
 int pawnThreat = S(64, 24);
 int pawnPushThreat = S(6, 6);
-int knightThreat = S(2, 12);
+
 int knightThreatPiece[5] = {S(-6, 12), S(0, 0), S(40, 32), S(65, 16), S(47, 5)};
 int bishopThreatPiece[5] = {S(-4, 7), S(14, 25), S(0, 0), S(33, 20), S(45, 47)};
 int rookThreatPiece[5] = {S(-12, 12), S(15, 8), S(16, 27), S(0, 0), S(65, 25)};
