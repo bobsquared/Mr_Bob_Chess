@@ -61,6 +61,8 @@ int rookBehindPasser = S(6, 12);
 int tempoBonus = S(16, 16);
 
 int pawnThreat = S(64, 24);
+int knightThreat = S(2, 12);
+int knightThreatPiece[5] = {S(-6, 12), S(0, 0), S(40, 32), S(65, 16), S(47, 5)};
 
 
 // -----------------------Pawn attack tables----------------------------------//
@@ -1029,9 +1031,15 @@ int Eval::evaluateThreats(Bitboard &board, bool col) {
 
     // Pawn threats
     uint64_t pAttacks = pawnAttacksAll((~unsafeSquares[col] | unsafeSquares[!col]) & board.pieces[col], col);
-    int numPawnAttacks = count_population(pAttacks & (board.pieces[2 + !col] | board.pieces[4 + !col] | board.pieces[6 + !col] | board.pieces[8 + !col]));
+    int numAttacks = count_population(pAttacks & (board.pieces[2 + !col] | board.pieces[4 + !col] | board.pieces[6 + !col] | board.pieces[8 + !col]));
+    ret += pawnThreat * numAttacks;
 
-    ret += pawnThreat * numPawnAttacks;
+    // Knight threats
+    uint64_t nAttacks = knightAttacks(board.pieces[2 + col]);
+    ret += (knightThreatPiece[0] * count_population(nAttacks & board.pieces[!col]));
+    ret += (knightThreatPiece[2] * count_population(nAttacks & board.pieces[4 + !col]));
+    ret += (knightThreatPiece[3] * count_population(nAttacks & board.pieces[6 + !col]));
+    ret += (knightThreatPiece[4] * count_population(nAttacks & board.pieces[8 + !col]));
 
     return ret;
 
