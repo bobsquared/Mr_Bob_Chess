@@ -63,6 +63,7 @@ int tempoBonus = S(16, 16);
 int pawnThreat = S(64, 24);
 int knightThreat = S(2, 12);
 int knightThreatPiece[5] = {S(-6, 12), S(0, 0), S(40, 32), S(65, 16), S(47, 5)};
+int bishopThreatPiece[5] = {S(-4, 7), S(14, 25), S(0, 0), S(33, 20), S(45, 47)};
 
 
 // -----------------------Pawn attack tables----------------------------------//
@@ -486,6 +487,7 @@ void Eval::InitializeEval(Bitboard &board) {
         attacksBishop[i] = 0;
         attacksRook[i] = 0;
         attacksQueen[i] = 0;
+        bishopAttacksAll[i] = 0;
     }
 
     // Mobility
@@ -833,6 +835,7 @@ int Eval::evaluateBishops(Bitboard &board, bool col) {
     while (piece) {
         int bscan = bitScan(piece);
         uint64_t bishopAttacks = magics->bishopAttacksMask(board.occupied ^ board.pieces[8 + col], bscan);
+        bishopAttacksAll[col] |= bishopAttacks;
 
         // PST
         ret += pieceSquare[4 + col][bscan];
@@ -1030,16 +1033,23 @@ int Eval::evaluateThreats(Bitboard &board, bool col) {
     int ret = 0;
 
     // Pawn threats
-    uint64_t pAttacks = pawnAttacksAll((~unsafeSquares[col] | unsafeSquares[!col]) & board.pieces[col], col);
-    int numAttacks = count_population(pAttacks & (board.pieces[2 + !col] | board.pieces[4 + !col] | board.pieces[6 + !col] | board.pieces[8 + !col]));
+    uint64_t attacks = pawnAttacksAll((~unsafeSquares[col] | unsafeSquares[!col]) & board.pieces[col], col);
+    int numAttacks = count_population(attacks & (board.pieces[2 + !col] | board.pieces[4 + !col] | board.pieces[6 + !col] | board.pieces[8 + !col]));
     ret += pawnThreat * numAttacks;
 
     // Knight threats
-    uint64_t nAttacks = knightAttacks(board.pieces[2 + col]);
-    ret += (knightThreatPiece[0] * count_population(nAttacks & board.pieces[!col]));
-    ret += (knightThreatPiece[2] * count_population(nAttacks & board.pieces[4 + !col]));
-    ret += (knightThreatPiece[3] * count_population(nAttacks & board.pieces[6 + !col]));
-    ret += (knightThreatPiece[4] * count_population(nAttacks & board.pieces[8 + !col]));
+    attacks = knightAttacks(board.pieces[2 + col]);
+    ret += (knightThreatPiece[0] * count_population(attacks & board.pieces[!col]));
+    ret += (knightThreatPiece[2] * count_population(attacks & board.pieces[4 + !col]));
+    ret += (knightThreatPiece[3] * count_population(attacks & board.pieces[6 + !col]));
+    ret += (knightThreatPiece[4] * count_population(attacks & board.pieces[8 + !col]));
+
+    // Bishop threats
+    attacks = bishopAttacksAll[col];
+    ret += (bishopThreatPiece[0] * count_population(attacks & board.pieces[!col]));
+    ret += (bishopThreatPiece[1] * count_population(attacks & board.pieces[2 + !col]));
+    ret += (bishopThreatPiece[3] * count_population(attacks & board.pieces[6 + !col]));
+    ret += (bishopThreatPiece[4] * count_population(attacks & board.pieces[8 + !col]));
 
     return ret;
 

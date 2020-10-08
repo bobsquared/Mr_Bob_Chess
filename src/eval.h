@@ -62,6 +62,7 @@ private:
     uint64_t isolatedPawnMask[64];
     uint64_t outpostMask[2][64];
     uint64_t knightOutpost[2][64];
+    uint64_t bishopAttacksAll[2];
 
 
     // King safety
