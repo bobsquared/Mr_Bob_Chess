@@ -328,6 +328,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
             lmr -= b.isKiller(ply, move); // Don't reduce as much for killer moves
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= 2 * isPv; // Don't reduce as much for PV nodes
+            lmr -= history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] / 1750;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
