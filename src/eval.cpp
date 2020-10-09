@@ -13,13 +13,13 @@ int bishopWeight[9] = {S(81, 78), S(40, 77), S(37, 74), S(35, 72), S(35, 70), S(
 // int queenWeight[7] = {S(37, 20), S(45, 10), S(35, 24), S(18, 10), S(-5, 10), S(11, 19), S(54, 48)};
 
 // Supported and adjacent pawn weights
-int supportedPawnWeight[7] = {S(0, 0), S(0, 0), S(18, 18), S(19, 12), S(20, 16), S(43, 45), S(48, -8)};
-int adjacentPawnWeight[7]  = {S(80, 0), S(6, 5), S(8, 5), S(15, 10), S(25, 33), S(48, 100), S(116, 304)};
+int supportedPawnWeight[7] = {S(0, 0), S(0, 0), S(19, 18), S(16, 13), S(14, 18), S(37, 46), S(180, -24)};
+int adjacentPawnWeight[7]  = {S(0, 0), S(8, 4), S(7, 5), S(13, 11), S(18, 35), S(50, 100), S(-96, 408)};
 
 // Passed Pawn weights
-int passedPawnWeight[7] = {S(0, 0), S(6, -1), S(11, 1), S(-1, 30), S(21, 58), S(23, 142), S(56, 208)};
+int passedPawnWeight[7] = {S(0, 0), S(5, -1), S(7, 4), S(-4, 32), S(14, 60), S(12, 146), S(32, 216)};
 
-// Doubled pawns and isolated pawns
+// Doubled pawns and isolated pawns and backward pawns
 int doublePawnValue = S(18, 12);
 int isolatedPawnValue = S(10, 2);
 
@@ -736,7 +736,8 @@ int Eval::evaluatePawns(Bitboard &board, bool col) {
         ret -= doublePawnValue * count_population(doubledPawns);
 
         while (isolatedPawns) {
-            if ((isolatedPawnMask[bitScan(isolatedPawns)] & board.pieces[col]) == 0) {
+            int bscan = bitScan(isolatedPawns);
+            if ((isolatedPawnMask[bscan] & board.pieces[col]) == 0) {
                 ret -= isolatedPawnValue;
             }
             isolatedPawns &= isolatedPawns - 1;
