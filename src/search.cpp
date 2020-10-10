@@ -475,8 +475,10 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
         // Late move reductions
         else if (depth >= 3 && !inCheck && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
+            lmr -= history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] / 1500;
+            lmr -= 2;
 
-            lmr = std::min(depth - 1, std::max(lmr, 0));
+            lmr = std::min(depth - 2, std::max(lmr, 0));
             tempRet = -pvSearch(b, depth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
             if (tempRet > alpha) {
                 if (lmr > 0) {
