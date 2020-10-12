@@ -15,9 +15,6 @@ void MovePick::InitMvvLva() {
     for (int i = 0; i < 6; i++) {
         for (int j = 5; j >= 0; j--) {
             mvvlva[i][j] = 100 + j * 100 + (6 - i) * 10;
-            if (j >= i) {
-                mvvlva[i][j] *= 10;
-            }
         }
     }
 
@@ -49,7 +46,7 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, int depth, MOVE pvMov
                 moveList.set_score_index(i, 1000000 + mvvlva[from][0]);
             }
             else {
-                int score = mvvlva[from][to] >= 1000? 1000000 : 950000;
+                int score = to > from? 1000000 : (to == from? 975000 : 950000);
                 moveList.set_score_index(i, score + mvvlva[from][to]);
             }
 
