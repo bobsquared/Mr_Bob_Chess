@@ -687,6 +687,187 @@ bool Bitboard::isLegal(MOVE move) {
 }
 
 
+
+// Determines if a move is pseudo legal
+bool Bitboard::isPseudoLegal(MOVE move) {
+
+    int from = get_move_from(move);
+    int to = get_move_to(move);
+    int pieceMoved = pieceAt[from];
+
+    // who to move and is there piece
+    if (pieceMoved == -1 || pieceMoved % 2 != toMove || move == NULL_MOVE || move == NO_MOVE) {
+        return false;
+    }
+
+    // Enpassant
+    if ((MOVE_FLAGS & move) == ENPASSANT_FLAG && pieceMoved / 2 == 0 && (pawnAttacks[from][toMove] & (1ULL << enpassantSq))) {
+        return true;
+    }
+
+    if (move & CAPTURE_FLAG) {
+        if (((1ULL << to) & color[!toMove]) == 0 || ((1ULL << to) & color[toMove])) {
+            return false;
+        }
+
+        switch (pieceMoved / 2) {
+            case 0:
+                return (pawnAttacks[from][toMove] & (1ULL << to)) != 0;
+            case 1:
+                return (knightMoves[from] & (1ULL << to)) != 0;
+            case 2:
+                return (magics->bishopAttacksMask(occupied, from) & (1ULL << to)) != 0;
+            case 3:
+                return (magics->rookAttacksMask(occupied, from) & (1ULL << to)) != 0;
+            case 4:
+                return (magics->queenAttacksMask(occupied, from) & (1ULL << to)) != 0;
+            case 5:
+                return (kingMoves[from] & (1ULL << to)) != 0;
+        }
+    }
+
+    if (pieceMoved / 2 == 0) {
+        if (((toMove? (1ULL << (from - 8)) : (1ULL << (from + 8))) & occupied)) {
+            return false;
+        }
+
+        if ((move & MOVE_FLAGS) == DOUBLE_PAWN_PUSH_FLAG) {
+            if ((rowMask[8 + toMove * 40] & (1ULL << from)) && ((toMove? (1ULL << (from - 16)) : (1ULL << (from + 16))) & occupied)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
+
+    if (pieceMoved / 2 == 5) {
+        if ((MOVE_FLAGS & move) == KING_CASTLE_FLAG || (MOVE_FLAGS & move) == QUEEN_CASTLE_FLAG) {
+            if (from != 4 && from != 60) {
+                return false;
+            }
+
+            if ((MOVE_FLAGS & move) == KING_CASTLE_FLAG && can_castle_king()) {
+                return true;
+            }
+
+            if ((MOVE_FLAGS & move) == QUEEN_CASTLE_FLAG && can_castle_queen()) {
+                return true;
+            }
+        }
+    }
+
+
+    if ((move & MOVE_FLAGS) == QUIET_MOVES_FLAG) {
+
+        if (((1ULL << to) & occupied) != 0) {
+            return false;
+        }
+
+        assert (pieceMoved / 2 != 0);
+        switch (pieceMoved / 2) {
+            case 1:
+                return (knightMoves[from] & (1ULL << to)) != 0;
+            case 2:
+                return (magics->bishopAttacksMask(occupied, from) & (1ULL << to)) != 0;
+            case 3:
+                return (magics->rookAttacksMask(occupied, from) & (1ULL << to)) != 0;
+            case 4:
+                return (magics->queenAttacksMask(occupied, from) & (1ULL << to)) != 0;
+            case 5:
+                return (kingMoves[from] & (1ULL << to)) != 0;
+        }
+    }
+
+
+    return false;
+}
+
+
+
+// Determine if player can castle kingside
+bool Bitboard::can_castle_king() {
+
+    if (!(castleRights & (toMove? KING_CASTLE_RIGHTS_BLACK : KING_CASTLE_RIGHTS_WHITE))) {
+        return false;
+    }
+
+    if (occupied & (toMove? KING_CASTLE_OCCUPIED_BLACK_MASK : KING_CASTLE_OCCUPIED_WHITE_MASK)) {
+        return false;
+    }
+
+    if (isAttackedCastleMask(toMove? KING_CASTLE_BLACK_MASK : KING_CASTLE_WHITE_MASK)) {
+        return false;
+    }
+
+    return true;
+}
+
+
+
+// Determine if player can castle queenside
+bool Bitboard::can_castle_queen() {
+
+    if (!(castleRights & (toMove? QUEEN_CASTLE_RIGHTS_BLACK : QUEEN_CASTLE_RIGHTS_WHITE))) {
+        return false;
+    }
+
+    if (occupied & (toMove? QUEEN_CASTLE_OCCUPIED_BLACK_MASK : QUEEN_CASTLE_OCCUPIED_WHITE_MASK)) {
+        return false;
+    }
+
+    if (isAttackedCastleMask(toMove? QUEEN_CASTLE_BLACK_MASK : QUEEN_CASTLE_WHITE_MASK)) {
+        return false;
+    }
+
+    return true;
+}
+
+
+
+// Determine if playr can castle
+bool Bitboard::isAttackedCastleMask(uint64_t bitboard) {
+
+    uint64_t ret = 0;
+
+    ret = kingMoves[bitScan(pieces[10 + !toMove])];
+    ret |= knightAttacks(pieces[2 + !toMove]);
+    ret |= pawnAttacksAll(pieces[!toMove], !toMove);
+
+    if (ret & bitboard) {
+        return true;
+    }
+
+    uint64_t piece = pieces[4 + !toMove];
+    while (piece) {
+        if (magics->bishopAttacksMask(occupied, bitScan(piece)) & bitboard) {
+            return true;
+        }
+        piece &= piece - 1;
+    }
+
+    piece = pieces[6 + !toMove];
+    while (piece) {
+        if (magics->rookAttacksMask(occupied, bitScan(piece)) & bitboard) {
+            return true;
+        }
+        piece &= piece - 1;
+    }
+
+    piece = pieces[8 + !toMove];
+    while (piece) {
+        if (magics->queenAttacksMask(occupied, bitScan(piece)) & bitboard) {
+            return true;
+        }
+        piece &= piece - 1;
+    }
+
+    return false;
+
+}
+
+
 /************************************************************************************************
 **  Draws and Repetition section
 **  Used for determining draws.
@@ -946,7 +1127,6 @@ int Bitboard::seeCapture(MOVE capture) {
     int gain[32];
     int d = 0;
     uint64_t mayXray = pieces[0] | pieces[1] | pieces[4] | pieces[5] | pieces[6] | pieces[7] | pieces[8] | pieces[9];
-    const int pvals[6] = {100, 350, 350, 500, 900, 5000};
 
     int from = get_move_from(capture);
     int to = get_move_to(capture);

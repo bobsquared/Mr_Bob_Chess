@@ -83,6 +83,10 @@ public:
     void removeKiller(int depth);
     bool isLegal(MOVE move);
 
+    bool can_castle_king();
+    bool can_castle_queen();
+    bool isPseudoLegal(MOVE move);
+
 
 private:
 
@@ -132,7 +136,10 @@ private:
     uint64_t isAttackedSee(int index);
     uint64_t getLeastValuablePiece(uint64_t attadef, bool col, int &piece);
 
+    bool isAttackedCastleMask(uint64_t bitboard);
+
     const std::string pieceIndex = "PpNnBbRrQqKk";
+    const int pvals[6] = {100, 350, 350, 500, 900, 5000};
 
 
 
