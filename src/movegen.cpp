@@ -289,11 +289,11 @@ void MoveGen::generate_king_moves_quiet(MoveList &moveList, Bitboard &b) {
         nonCaptures &= nonCaptures - 1;
     }
 
-    if (can_castle_king(b)) {
+    if (b.can_castle_king()) {
         create_move(moveList, locIndex, b.toMove? 62 : 6, KING_CASTLE_FLAG);
     }
 
-    if (can_castle_queen(b)) {
+    if (b.can_castle_queen()) {
         create_move(moveList, locIndex, b.toMove? 58 : 2, QUEEN_CASTLE_FLAG);
     }
 
@@ -311,88 +311,6 @@ void MoveGen::generate_king_moves_noisy(MoveList &moveList, Bitboard &b) {
         create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
         captures &= captures - 1;
     }
-
-}
-
-
-
-bool MoveGen::can_castle_king(Bitboard &b) {
-
-    if (!(b.castleRights & (b.toMove? KING_CASTLE_RIGHTS_BLACK : KING_CASTLE_RIGHTS_WHITE))) {
-        return false;
-    }
-
-    if (b.occupied & (b.toMove? KING_CASTLE_OCCUPIED_BLACK_MASK : KING_CASTLE_OCCUPIED_WHITE_MASK)) {
-        return false;
-    }
-
-    if (isAttackedCastleMask(b, b.toMove? KING_CASTLE_BLACK_MASK : KING_CASTLE_WHITE_MASK)) {
-        return false;
-    }
-
-    return true;
-}
-
-
-
-// Determine if player can castle queenside
-bool MoveGen::can_castle_queen(Bitboard &b) {
-
-    if (!(b.castleRights & (b.toMove? QUEEN_CASTLE_RIGHTS_BLACK : QUEEN_CASTLE_RIGHTS_WHITE))) {
-        return false;
-    }
-
-    if (b.occupied & (b.toMove? QUEEN_CASTLE_OCCUPIED_BLACK_MASK : QUEEN_CASTLE_OCCUPIED_WHITE_MASK)) {
-        return false;
-    }
-
-    if (isAttackedCastleMask(b, b.toMove? QUEEN_CASTLE_BLACK_MASK : QUEEN_CASTLE_WHITE_MASK)) {
-        return false;
-    }
-
-    return true;
-}
-
-
-
-// Determine if player can castle kingside
-bool MoveGen::isAttackedCastleMask(Bitboard &b, uint64_t bitboard) {
-
-    uint64_t ret = 0;
-
-    ret = b.kingMoves[bitScan(b.pieces[10 + !b.toMove])];
-    ret |= knightAttacks(b.pieces[2 + !b.toMove]);
-    ret |= pawnAttacksAll(b.pieces[!b.toMove], !b.toMove);
-
-    if (ret & bitboard) {
-        return true;
-    }
-
-    uint64_t piece = b.pieces[4 + !b.toMove];
-    while (piece) {
-        if (magics->bishopAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
-            return true;
-        }
-        piece &= piece - 1;
-    }
-
-    piece = b.pieces[6 + !b.toMove];
-    while (piece) {
-        if (magics->rookAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
-            return true;
-        }
-        piece &= piece - 1;
-    }
-
-    piece = b.pieces[8 + !b.toMove];
-    while (piece) {
-        if (magics->queenAttacksMask(b.occupied, bitScan(piece)) & bitboard) {
-            return true;
-        }
-        piece &= piece - 1;
-    }
-
-    return false;
 
 }
 

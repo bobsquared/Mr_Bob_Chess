@@ -38,9 +38,4 @@ private:
     void create_all_promotions_captures(MoveList &moveList, int from, int to);
     void create_all_promotions(MoveList &moveList, int from, int to);
 
-    bool can_castle_king(Bitboard &b);
-    bool can_castle_queen(Bitboard &b);
-    bool isAttackedCastleMask(Bitboard &b, uint64_t attackedMask);
-
-
 };
