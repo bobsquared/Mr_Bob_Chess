@@ -227,7 +227,7 @@ Eval::Eval() {
     InitIsolatedPawnsMask();
     InitOutpostMask();
 
-    numPawnHashes = (4 * 0xFFFFF / sizeof(PawnHash));
+    numPawnHashes = (8 * 0xFFFFF / sizeof(PawnHash));
     pawnHash = new PawnHash [numPawnHashes];
 }
 
