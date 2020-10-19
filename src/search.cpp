@@ -124,10 +124,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
             if (score > alpha) {
                 alpha = score;
                 if (score >= beta) {
-                    #ifndef TUNER
-                    b.saveTT(move, score, depth, LOWER_BOUND, posKey, ply);
-                    #endif
-                    return score;
+                    break;
                 }
             }
         }
@@ -136,12 +133,14 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
 
     #ifndef TUNER
     if (numMoves > 0) {
+        assert (bestMove != 0);
         if (prevAlpha >= stand_pat) {
-            assert (bestMove != 0);
             b.saveTT(bestMove, stand_pat, depth, UPPER_BOUND, posKey, ply);
         }
+        else if (stand_pat >= beta) {
+            b.saveTT(bestMove, stand_pat, depth, LOWER_BOUND, posKey, ply);
+        }
         else {
-            assert (bestMove != 0);
             b.saveTT(bestMove, stand_pat, depth, EXACT, posKey, ply);
         }
     }
