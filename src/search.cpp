@@ -134,15 +134,8 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
     #ifndef TUNER
     if (numMoves > 0) {
         assert (bestMove != 0);
-        if (prevAlpha >= stand_pat) {
-            b.saveTT(bestMove, stand_pat, depth, UPPER_BOUND, posKey, ply);
-        }
-        else if (stand_pat >= beta) {
-            b.saveTT(bestMove, stand_pat, depth, LOWER_BOUND, posKey, ply);
-        }
-        else {
-            b.saveTT(bestMove, stand_pat, depth, EXACT, posKey, ply);
-        }
+        int bound = prevAlpha >= stand_pat? UPPER_BOUND : (stand_pat >= beta? LOWER_BOUND : EXACT);
+        b.saveTT(bestMove, stand_pat, depth, bound, posKey, ply);
     }
     #endif
 
@@ -403,18 +396,9 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
     // Update Transposition tables
     assert(alpha >= prevAlpha);
-    if (alpha >= beta) {
-        assert(move != 0);
-        b.saveTT(bestMove, ret, depth, LOWER_BOUND, posKey, ply);
-    }
-    else if (prevAlpha >= ret) {
-        assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, UPPER_BOUND, posKey, ply);
-    }
-    else {
-        assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, EXACT, posKey, ply);
-    }
+    assert (bestMove != 0);
+    int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
+    b.saveTT(bestMove, ret, depth, bound, posKey, ply);
 
     return ret;
 
