@@ -652,7 +652,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
             }
 
             aspNum++;
-            delta += delta / 3 + 3;
+            delta += delta / 3 + hashedBoard.score <= alpha? 5 : 3;
 
         }
 
