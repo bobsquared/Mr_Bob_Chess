@@ -343,14 +343,9 @@ void Bitboard::make_move(MOVE move) {
         castleRights &= rookCastleFlagMask[from];
     }
     else if (fromPiece == 10 + toMove) {
-        if (toMove) {
-            zobrist->hashBoard_castle(posKey, castleRights & CASTLE_FLAG_BLACK);
-            castleRights &= ~CASTLE_FLAG_BLACK;
-        }
-        else {
-            zobrist->hashBoard_castle(posKey, castleRights & CASTLE_FLAG_WHITE);
-            castleRights &= ~CASTLE_FLAG_WHITE;
-        }
+        uint8_t cflag = toMove? CASTLE_FLAG_BLACK : CASTLE_FLAG_WHITE;
+        zobrist->hashBoard_castle(posKey, castleRights & cflag);
+        castleRights &= ~cflag;
     }
 
     assert(fromPiece != -1);
