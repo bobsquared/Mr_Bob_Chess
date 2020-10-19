@@ -108,10 +108,10 @@ bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int dept
         // Ensure hashedBoard depth >= current depth
         if (hashedBoard.depth >= depth) {
 
-            if (hashedBoard.flag == 1) { // Low bound
+            if (hashedBoard.flag == LOWER_BOUND) { // Low bound
                 alpha = hashedBoard.score;
             }
-            else if (hashedBoard.flag == 2) { // Upper bound
+            else if (hashedBoard.flag == UPPER_BOUND) { // Upper bound
                 beta = hashedBoard.score;
             }
             else { //Exact
@@ -153,10 +153,10 @@ bool TranspositionTable::probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, b
             }
         }
 
-        if (hashedBoard.flag == 1) { // Low bound
+        if (hashedBoard.flag == LOWER_BOUND) { // Low bound
             alpha = hashedBoard.score;
         }
-        else if (hashedBoard.flag == 2) { // Upper bound
+        else if (hashedBoard.flag == UPPER_BOUND) { // Upper bound
             beta = hashedBoard.score;
         }
         else { //Exact

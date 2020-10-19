@@ -125,7 +125,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
                 alpha = score;
                 if (score >= beta) {
                     #ifndef TUNER
-                    b.saveTT(move, score, depth, 1, posKey, ply);
+                    b.saveTT(move, score, depth, LOWER_BOUND, posKey, ply);
                     #endif
                     return score;
                 }
@@ -138,11 +138,11 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
     if (numMoves > 0) {
         if (prevAlpha >= stand_pat) {
             assert (bestMove != 0);
-            b.saveTT(bestMove, stand_pat, depth, 2, posKey, ply);
+            b.saveTT(bestMove, stand_pat, depth, UPPER_BOUND, posKey, ply);
         }
         else {
             assert (bestMove != 0);
-            b.saveTT(bestMove, stand_pat, depth, 0, posKey, ply);
+            b.saveTT(bestMove, stand_pat, depth, EXACT, posKey, ply);
         }
     }
     #endif
@@ -406,15 +406,15 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     assert(alpha >= prevAlpha);
     if (alpha >= beta) {
         assert(move != 0);
-        b.saveTT(bestMove, ret, depth, 1, posKey, ply);
+        b.saveTT(bestMove, ret, depth, LOWER_BOUND, posKey, ply);
     }
     else if (prevAlpha >= ret) {
         assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, 2, posKey, ply);
+        b.saveTT(bestMove, ret, depth, UPPER_BOUND, posKey, ply);
     }
     else {
         assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, 0, posKey, ply);
+        b.saveTT(bestMove, ret, depth, EXACT, posKey, ply);
     }
 
     return ret;
@@ -527,7 +527,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     // Update transposition table
     if (!exit_thread_flag && !tm.outOfTime()) {
         assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, 0, posKey, ply);
+        b.saveTT(bestMove, ret, depth, EXACT, posKey, ply);
     }
 
     return BestMoveInfo(bestMove, ret);

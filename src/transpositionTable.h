@@ -7,6 +7,10 @@
 #include "defs.h"
 
 
+#define EXACT 0
+#define LOWER_BOUND 1
+#define UPPER_BOUND 2
+
 
 class TranspositionTable{
 
