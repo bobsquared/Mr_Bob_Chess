@@ -207,12 +207,6 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        // Debug the evaluation
-        if (command == "evaluate debug") {
-            eval->evaluate_debug(pos);
-            continue;
-        }
-
         // Test static SEE function
         if (command == "see") {
             SeeTest(pos, "1k1r4/1pp4p/p7/4p3/8/P5P1/1PP4P/2K1R3 w - -", 4, 36, EGVAL(pieceValues[0]));

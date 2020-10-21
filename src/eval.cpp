@@ -477,7 +477,6 @@ uint64_t Eval::adjacentMask(uint64_t pawns) {
 
 // Initialize variables in evaluation
 void Eval::InitializeEval(Bitboard &board) {
-    pawnScore = 0;
 
     // King safety
     for (int i = 0; i < 2; i++) {
@@ -575,13 +574,17 @@ int Eval::evaluate(Bitboard &board) {
     InitializeEval(board);
 
     int ret = 0;
+    int pawnScore = 0;
+    bool hit = false;
+
     ret += board.toMove? -tempoBonus : tempoBonus;
     ret += board.material[0] - board.material[1];
     ret += evaluateImbalance(board, false) - evaluateImbalance(board, true);
     ret += evaluatePawnShield(board, false) - evaluatePawnShield(board, true);
 
+
     ret += probePawnHash(board.getPawnKey(), hit);
-    ret += evaluatePawns(board, false) - evaluatePawns(board, true);
+    ret += evaluatePawns(board, false, hit, pawnScore) - evaluatePawns(board, true, hit, pawnScore);
     ret += evaluateKnights(board, false) - evaluateKnights(board, true);
     ret += evaluateBishops(board, false) - evaluateBishops(board, true);
     ret += evaluateRooks(board, false) - evaluateRooks(board, true);
@@ -592,85 +595,6 @@ int Eval::evaluate(Bitboard &board) {
     if (!hit) {
         savePawnHash(board.getPawnKey(), pawnScore);
     }
-
-    int phase = getPhase(board);
-    ret = ((MGVAL(ret) * (256 - phase)) + (EGVAL(ret) * phase)) / 256;
-    return board.toMove? -ret : ret;
-}
-
-
-
-// Evaluate the position with debugging
-int Eval::evaluate_debug(Bitboard &board) {
-
-    // Asserts for debugging mode
-    #ifndef NDEBUG
-    int debugMaterialCount = 0;
-    int pawnCount = count_population(board.pieces[0]);
-    int knightCount = count_population(board.pieces[2]);
-    int bishopCount = count_population(board.pieces[4]);
-    int rookCount = count_population(board.pieces[6]);
-    int queenCount = count_population(board.pieces[8]);
-    int kingCount = count_population(board.pieces[10]);
-    debugMaterialCount += pawnCount * MGVAL(pieceValues[0]);
-    debugMaterialCount += knightCount * MGVAL(pieceValues[1]);
-    debugMaterialCount += bishopCount * MGVAL(pieceValues[2]);
-    debugMaterialCount += rookCount * MGVAL(pieceValues[3]);
-    debugMaterialCount += queenCount * MGVAL(pieceValues[4]);
-    debugMaterialCount += kingCount * MGVAL(pieceValues[5]);
-    assert(debugMaterialCount == MGVAL(board.material[0]));
-    assert(pawnCount == board.pieceCount[0]);
-    assert(knightCount == board.pieceCount[2]);
-    assert(bishopCount == board.pieceCount[4]);
-    assert(rookCount == board.pieceCount[6]);
-    assert(queenCount == board.pieceCount[8]);
-    assert(kingCount == board.pieceCount[10]);
-
-    pawnCount = count_population(board.pieces[1]);
-    knightCount = count_population(board.pieces[3]);
-    bishopCount = count_population(board.pieces[5]);
-    rookCount = count_population(board.pieces[7]);
-    queenCount = count_population(board.pieces[9]);
-    kingCount = count_population(board.pieces[11]);
-    debugMaterialCount = pawnCount * EGVAL(pieceValues[0]);
-    debugMaterialCount += knightCount * EGVAL(pieceValues[1]);
-    debugMaterialCount += bishopCount * EGVAL(pieceValues[2]);
-    debugMaterialCount += rookCount * EGVAL(pieceValues[3]);
-    debugMaterialCount += queenCount * EGVAL(pieceValues[4]);
-    debugMaterialCount += kingCount * EGVAL(pieceValues[5]);
-    assert(debugMaterialCount == EGVAL(board.material[1]));
-    assert(pawnCount == board.pieceCount[1]);
-    assert(knightCount == board.pieceCount[3]);
-    assert(bishopCount == board.pieceCount[5]);
-    assert(rookCount == board.pieceCount[7]);
-    assert(queenCount == board.pieceCount[9]);
-    assert(kingCount == board.pieceCount[11]);
-    #endif
-
-
-
-    InitializeEval(board);
-
-    int ret = 0;
-    ret += board.toMove? -tempoBonus : tempoBonus;
-    ret += board.material[0] - board.material[1];
-    ret += evaluateImbalance(board, false) - evaluateImbalance(board, true);
-    ret += evaluatePawnShield(board, false) - evaluatePawnShield(board, true);
-
-    ret += probePawnHash(board.getPawnKey(), hit);
-    ret += evaluatePawns(board, false) - evaluatePawns(board, true);
-    ret += evaluateKnights(board, false) - evaluateKnights(board, true);
-    ret += evaluateBishops(board, false) - evaluateBishops(board, true);
-    ret += evaluateRooks(board, false) - evaluateRooks(board, true);
-    ret += evaluateQueens(board, false) - evaluateQueens(board, true);
-    ret += evaluateKing(board, false) - evaluateKing(board, true);
-    ret += evaluateThreats(board, false) - evaluateThreats(board, true);
-
-    if (!hit) {
-        savePawnHash(board.getPawnKey(), pawnScore);
-    }
-
-    std::cout << MGVAL(evaluateThreats(board, false)) << " " << MGVAL(evaluateThreats(board, true)) << " " << EGVAL(evaluateThreats(board, false)) << " " << EGVAL(evaluateThreats(board, true)) << std::endl;
 
     int phase = getPhase(board);
     ret = ((MGVAL(ret) * (256 - phase)) + (EGVAL(ret) * phase)) / 256;
@@ -707,14 +631,13 @@ int Eval::evaluateImbalance(Bitboard &board, bool col) {
 
     ret += knightWeight[board.pieceCount[col]] * board.pieceCount[2 + col];
     ret += rookWeight[board.pieceCount[col]] * board.pieceCount[6 + col];
-    // ret += queenWeight[std::min(board.pieceCount[2 + col] + board.pieceCount[4 + col] + board.pieceCount[6 + col], 6)] * board.pieceCount[8 + col];
 
     return ret;
 }
 
 
 
-int Eval::evaluatePawns(Bitboard &board, bool col) {
+int Eval::evaluatePawns(Bitboard &board, bool col, bool hit, int &pawnScore) {
 
     int ret = 0;
     int dist = 0;

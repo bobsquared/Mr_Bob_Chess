@@ -23,7 +23,6 @@ class Eval {
 public:
     Eval();
     int evaluate(Bitboard &board);
-    int evaluate_debug(Bitboard &board);
 
 private:
 
@@ -38,7 +37,7 @@ private:
     void InitOutpostMask();
     uint64_t adjacentMask(uint64_t pawns);
     int evaluateImbalance(Bitboard &board, bool col);
-    int evaluatePawns(Bitboard &board, bool col);
+    int evaluatePawns(Bitboard &board, bool col, bool hit, int &pawnScore);
     int evaluateKnights(Bitboard &board, bool col);
     int evaluateBishops(Bitboard &board, bool col);
     int evaluateRooks(Bitboard &board, bool col);
@@ -100,8 +99,5 @@ private:
 
     uint64_t numPawnHashes;
     PawnHash *pawnHash;
-
-    bool hit;
-    int pawnScore;
 
 };
