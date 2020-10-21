@@ -478,8 +478,10 @@ uint64_t Eval::adjacentMask(uint64_t pawns) {
 // Initialize variables in evaluation
 void Eval::InitializeEval(Bitboard &board) {
 
-    // King safety
+
     for (int i = 0; i < 2; i++) {
+
+        // King safety
         unsafeSquares[i] = 0;
         KSAttackersWeight[i] = 0;
         KSAttacks[i] = 0;
@@ -488,22 +490,20 @@ void Eval::InitializeEval(Bitboard &board) {
         attacksBishop[i] = 0;
         attacksRook[i] = 0;
         attacksQueen[i] = 0;
+
+        // Threats
         bishopAttacksAll[i] = 0;
         rookAttacksAll[i] = 0;
+
+        // Mobility
+        mobilityUnsafeSquares[i] = pawnAttacksAll(board.pieces[1 - i], 1 - i) | board.pieces[i] | board.pieces[10 + i];
+
+        minorUnsafe[i] = mobilityUnsafeSquares[i] | board.pieces[8 + i];
+        queenUnsafe[i] = mobilityUnsafeSquares[i] | knightAttacks(board.pieces[3 - i]);
+        tempUnsafe[i] = ~(pawnAttacksAll(board.pieces[1 - i], 1 - i) | knightAttacks(board.pieces[3 - i]) | board.pieces[i]) & kingZoneMask[i][bitScan(board.pieces[11 - i])];
+
     }
 
-    // Mobility
-    mobilityUnsafeSquares[0] = pawnAttacksAll(board.pieces[1], 1) | board.pieces[0] | board.pieces[10];
-    mobilityUnsafeSquares[1] = pawnAttacksAll(board.pieces[0], 0) | board.pieces[1] | board.pieces[11];
-
-    minorUnsafe[0] = mobilityUnsafeSquares[0] | board.pieces[8];
-    minorUnsafe[1] = mobilityUnsafeSquares[1] | board.pieces[9];
-
-    queenUnsafe[0] = mobilityUnsafeSquares[0] | knightAttacks(board.pieces[3]);
-    queenUnsafe[1] = mobilityUnsafeSquares[1] | knightAttacks(board.pieces[2]);
-
-    tempUnsafe[0] = ~(pawnAttacksAll(board.pieces[1], 1) | knightAttacks(board.pieces[3]) | board.pieces[0]) & kingZoneMask[0][bitScan(board.pieces[11])];
-    tempUnsafe[1] = ~(pawnAttacksAll(board.pieces[0], 0) | knightAttacks(board.pieces[2]) | board.pieces[1]) & kingZoneMask[1][bitScan(board.pieces[10])];
 }
 
 
