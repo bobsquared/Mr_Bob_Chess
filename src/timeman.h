@@ -9,10 +9,11 @@ class TimeManager {
 public:
 
     TimeManager();
-    TimeManager(bool col, int wtime, int btime, int winc, int binc, int movesToGo, int numMoves);
+    TimeManager(bool col, int wtime, int btime, int winc, int binc, int movesToGo);
 
     int getTimePassed();
     bool outOfTime();
+    void setTimer(int numMoves);
 
 
 private:

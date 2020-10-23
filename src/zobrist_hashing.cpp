@@ -35,15 +35,6 @@ Zobrist::Zobrist() {
 
     // Flags for castling, and black turn
     blackTurn = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
-    whiteKingCastle = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
-    blackKingCastle = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
-    whiteQueenCastle = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
-    blackQueenCastle = (uint64_t)((rng() & 0xffff) | ((rng() & 0xffff) << 16) | (((uint64_t)rng() & 0xffff) << 32) | (((uint64_t)rng() & 0xffff) << 48));
-
-    whiteKingCastleFlag = false;
-    blackKingCastleFlag = false;
-    whiteQueenCastleFlag = false;
-    blackQueenCastleFlag = false;
 
 }
 

@@ -1,17 +1,13 @@
 #include "search.h"
 
 
-
-uint64_t nodes;
 int totalTime;
-int seldepth;
-int ply;
 std::atomic<bool> exit_thread_flag;
 TimeManager tm;
-bool nullMoveTree;
 bool printInfo = true;
-SearchStack searchStack[128] = {};
+ThreadSearch thread[256] = {};
 
+int nThreads = 1;
 const int seePruningMargin[4] = {0, 0, -350, -500};
 const int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}};
 
@@ -20,6 +16,7 @@ extern int pieceValues[6];
 extern MovePick *movePick;
 extern MoveGen *moveGen;
 extern Eval *eval;
+extern TranspositionTable *tt;
 
 
 int lmrReduction[64][64];
@@ -33,14 +30,14 @@ void InitLateMoveArray() {
 
 
 
-int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
+int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int ply) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
     #endif
 
-    nodes++; // update nodes searched
-    seldepth = std::max(ply, seldepth); // update seldepth
+    th->nodes++; // update nodes searched
+    th->seldepth = std::max(ply, th->seldepth); // update seldepth
 
     // stop the search
     #ifndef TUNER
@@ -72,7 +69,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
     int prevAlpha = alpha;
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
     if (!inCheck) {
-        stand_pat = eval->evaluate(b);
+        stand_pat = eval->evaluate(b, th);
 
         // standing pat
         if (stand_pat >= beta) {
@@ -95,7 +92,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
     int numMoves = 0;
 
     inCheck? moveGen->generate_all_moves(moveList, b) : moveGen->generate_captures_promotions(moveList, b);
-    movePick->scoreMoves(moveList, b, 0, hashedBoard.move);
+    movePick->scoreMoves(moveList, b, th, 0, hashedBoard.move);
     while (moveList.get_next_move(move)) {
 
         // Prune negative SEE
@@ -111,7 +108,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
         // Search more captures
         numMoves++;
         b.make_move(move);
-        int score = -qsearch(b, depth - 1, -beta, -alpha, ply + 1);
+        int score = -qsearch(b, th, depth - 1, -beta, -alpha, ply + 1);
         b.undo_move(move);
 
         if (bestMove == NO_MOVE) {
@@ -135,7 +132,7 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
     if (numMoves > 0) {
         assert (bestMove != 0);
         int bound = prevAlpha >= stand_pat? UPPER_BOUND : (stand_pat >= beta? LOWER_BOUND : EXACT);
-        b.saveTT(bestMove, stand_pat, depth, bound, posKey, ply);
+        b.saveTT(th, bestMove, stand_pat, depth, bound, posKey, ply);
     }
     #endif
 
@@ -147,28 +144,28 @@ int qsearch(Bitboard &b, int depth, int alpha, int beta, int ply) {
 
 
 
-int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int ply) {
+int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
     #endif
 
-    seldepth = std::max(ply, seldepth); // update seldepth
+    th->seldepth = std::max(ply, th->seldepth); // update seldepth
 
     // Check if there are any potential wins that don't require help mate.
     if (beta > 0 && b.noPotentialWin()) {
         if (alpha >= 0) {
-            nodes++;
+            th->nodes++;
             return 0;
         }
     }
 
     // Dive into Quiesence search
     if (depth <= 0) {
-        return qsearch(b, depth - 1, alpha, beta, ply);
+        return qsearch(b, th, depth - 1, alpha, beta, ply);
     }
 
-    nodes++; // Increment number of nodes
+    th->nodes++; // Increment number of nodes
 
     // Stop the search
     if (exit_thread_flag || tm.outOfTime()) {
@@ -203,16 +200,16 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     }
 
 
-    int staticEval = hashed? hashedBoard.score : eval->evaluate(b);
-    searchStack[ply].eval = staticEval;
-    bool improving = ply >= 2? staticEval > searchStack[ply - 2].eval : false;
+    int staticEval = hashed? hashedBoard.score : eval->evaluate(b, th);
+    th->searchStack[ply].eval = staticEval;
+    bool improving = ply >= 2? staticEval > th->searchStack[ply - 2].eval : false;
     bool isCheck = b.InCheck();
-    b.removeKiller(ply + 1);
+    b.removeKiller(th, ply + 1);
 
 
     // Razoring
     if (!isPv && !isCheck && depth <= 1 && staticEval <= alpha - 350) {
-        return qsearch(b, -1, alpha, beta, ply);
+        return qsearch(b, th, -1, alpha, beta, ply);
     }
 
 
@@ -223,18 +220,18 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
 
     // Null move pruning
-    if (!isPv && canNullMove && !isCheck && staticEval >= beta && depth >= 2 && nullMoveTree && b.nullMoveable()) {
+    if (!isPv && canNullMove && !isCheck && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
         int R = 3 + depth / 8;
         b.make_null_move();
-        int nullRet = -pvSearch(b, depth - R - 1, -beta, -beta + 1, false, ply + 1);
+        int nullRet = -pvSearch(b, th, depth - R - 1, -beta, -beta + 1, false, ply + 1);
         b.undo_null_move();
 
         if (nullRet >= beta && std::abs(nullRet) < MATE_VALUE_MAX) {
 
             if (depth >= 8) {
-                nullMoveTree = false;
-                nullRet = pvSearch(b, depth - R - 1, beta - 1, beta, false, ply + 1);
-                nullMoveTree = true;
+                th->nullMoveTree = false;
+                nullRet = pvSearch(b, th, depth - R - 1, beta - 1, beta, false, ply + 1);
+                th->nullMoveTree = true;
             }
 
             if (nullRet >= beta) {
@@ -267,7 +264,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     int quietsSearched = 0;
     MOVE quiets[MAX_NUM_MOVES];
     moveGen->generate_all_moves(moveList, b); // Generate moves
-    movePick->scoreMoves(moveList, b, ply, hashedBoard.move);
+    movePick->scoreMoves(moveList, b, th, ply, hashedBoard.move);
     while (moveList.get_next_move(move)) {
         int score;
         int extension = 0;
@@ -311,33 +308,33 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
         // First move search at full depth and full window
         if (numMoves == 0) {
-            score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, ply + 1);
+            score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
         }
         // Late move reductions
         else if (depth >= 3 && isQuiet && !isCheck) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)]; // Base reduction
 
-            lmr -= b.isKiller(ply, move); // Don't reduce as much for killer moves
+            lmr -= b.isKiller(th, ply, move); // Don't reduce as much for killer moves
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= 2 * isPv; // Don't reduce as much for PV nodes
-            lmr -= history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] / 1350;
+            lmr -= th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] / 1350;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
-            score = -pvSearch(b, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
+            score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
             if (score > alpha) {
                 if (lmr > 0) {
-                    score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
+                    score = -pvSearch(b, th, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
                 }
                 if (score > alpha && score < beta) {
-                    score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, ply + 1);
+                    score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
                 }
             }
         }
         // Null window search
         else {
-            score = -pvSearch(b, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
+            score = -pvSearch(b, th, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
             if (score > alpha && score < beta) {
-                score = -pvSearch(b, newDepth - 1, -beta, -alpha, true, ply + 1);
+                score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
             }
         }
 
@@ -371,15 +368,15 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
     // Update Histories
     if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
-        b.insertKiller(ply, bestMove);
-        b.insertCounterMove(bestMove);
+        b.insertKiller(th, ply, bestMove);
+        b.insertCounterMove(th, bestMove);
 
-        int hist = history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;
-        history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
+        int hist = th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;
+        th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
 
         for (int i = 0; i < quietsSearched; i++) {
-            int hist2 = history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
-            history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 30 * (-depth * depth) - hist2;
+            int hist2 = th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
+            th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 30 * (-depth * depth) - hist2;
         }
     }
 
@@ -398,7 +395,7 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
     assert(alpha >= prevAlpha);
     assert (bestMove != 0);
     int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
-    b.saveTT(bestMove, ret, depth, bound, posKey, ply);
+    b.saveTT(th, bestMove, ret, depth, bound, posKey, ply);
 
     return ret;
 
@@ -406,9 +403,9 @@ int pvSearch(Bitboard &b, int depth, int alpha, int beta, bool canNullMove, int 
 
 
 
-BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, int beta, bool analysis) {
+BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id) {
 
-    nodes++;
+    th->nodes++;
     MOVE move;
     MOVE bestMove = 0;
     int numMoves = 0;
@@ -424,7 +421,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
 
 
     // Initialize evaluation stack
-    searchStack[ply].eval = hashed? hashedBoard.score : eval->evaluate(b);
+    th->searchStack[ply].eval = hashed? hashedBoard.score : eval->evaluate(b, th);
 
 
     while (moveList.get_next_move(move)) {
@@ -437,7 +434,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
         }
 
         // UCI information
-        if (totalTime > 3000 && printInfo) {
+        if (totalTime > 3000 && printInfo && id == 0) {
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
@@ -446,7 +443,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
 
         // First move search at full depth and full window
         if (numMoves == 0) {
-            tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, ply + 1);
+            tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
             if (tempRet <= alpha) {
                 numMoves++;
                 bestMove = move;
@@ -458,25 +455,25 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
         // Late move reductions
         else if (depth >= 3 && !inCheck && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
-            lmr -= history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] / 1500;
+            lmr -= th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] / 1500;
             lmr -= 2;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
-            tempRet = -pvSearch(b, depth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
+            tempRet = -pvSearch(b, th, depth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
             if (tempRet > alpha) {
                 if (lmr > 0) {
-                    tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, ply + 1);
+                    tempRet = -pvSearch(b, th, depth - 1, -alpha - 1, -alpha, true, ply + 1);
                 }
                 if (tempRet > alpha && tempRet < beta) {
-                    tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, ply + 1);
+                    tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
                 }
             }
         }
         // Null window search
         else {
-            tempRet = -pvSearch(b, depth - 1, -alpha - 1, -alpha, true, ply + 1);
+            tempRet = -pvSearch(b, th, depth - 1, -alpha - 1, -alpha, true, ply + 1);
             if (tempRet > alpha && tempRet < beta) {
-                tempRet = -pvSearch(b, depth - 1, -beta, -alpha, true, ply + 1);
+                tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
             }
         }
 
@@ -510,7 +507,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
     // Update transposition table
     if (!exit_thread_flag && !tm.outOfTime()) {
         assert (bestMove != 0);
-        b.saveTT(bestMove, ret, depth, EXACT, posKey, ply);
+        b.saveTT(th, bestMove, ret, depth, EXACT, posKey, ply);
     }
 
     return BestMoveInfo(bestMove, ret);
@@ -519,44 +516,69 @@ BestMoveInfo pvSearchRoot(Bitboard &b, int depth, MoveList moveList, int alpha, 
 
 
 
-void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
+int getSeldepth() {
+    int ret = 0;
+    for (int id = 0; id < nThreads; id++) {
+        ret = std::max(ret, thread[id].seldepth);
+    }
+    return ret;
+}
+
+
+
+uint64_t getTotalNodesSearched() {
+    uint64_t ret = 0;
+    for (int id = 0; id < nThreads; id++) {
+        ret += thread[id].nodes;
+    }
+    return ret;
+}
+
+
+
+uint64_t getHashFullTotal(Bitboard &b) {
+    uint64_t writes = 0;
+    for (int id = 0; id < nThreads; id++) {
+        writes += thread[id].ttWrites;
+    }
+    return b.getHashFull(writes);
+}
+
+
+
+void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
     MOVE bestMove;
     MoveList moveList;
     std::string algMove;
     uint64_t nps;
-    nodes = 0;
-    totalTime = 0;
-    nullMoveTree = true;
+    uint64_t nodes;
 
-    ZobristVal hashedBoard;
-    uint64_t posKey = b.getPosKey();
-    bool ttRet = false;
 
     int alpha;
     int beta;
-    int tempAlpha;
-    int tempBeta;
     int score = 0;
+    int compareScore = 0;
     std::string cpScore;
 
-    b.clearHashStats();
-    b.setTTAge();
     moveGen->generate_all_moves(moveList, b);
-    movePick->scoreMoves(moveList, b, 0, NO_MOVE);
+    movePick->scoreMoves(moveList, b, th, 0, NO_MOVE);
 
-    tm = TimeManager(b.getSideToMove(), wtime, btime, winc, binc, movesToGo, moveList.count);
+    if (id == 0) {
+        tm.setTimer(moveList.count);
+    }
+
     for (int i = 1; i <= depth; i++) {
 
         int delta = ASPIRATION_DELTA;
         int aspNum = 0;
 
-        seldepth = 1;
+        th->seldepth = 1;
 
         // Use aspiration window with depth >= 4
         if (i >= 4) {
-            alpha = hashedBoard.score - delta;
-            beta = hashedBoard.score + delta;
+            alpha = compareScore - delta;
+            beta = compareScore + delta;
         }
         else {
             alpha = -INFINITY_VAL;
@@ -566,22 +588,16 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
 
         while (true) {
 
-            pvSearchRoot(b, i, moveList, alpha, beta, analysis);
-            bool hashed = b.probeTT(posKey, hashedBoard, i, ttRet, tempAlpha, tempBeta, 0);
-
-            if (i > 1 && !exit_thread_flag && !tm.outOfTime()) {
-                assert(hashed);
-                (void) hashed;
-            }
-
-            moveList.set_score_move(hashedBoard.move, 1400000 + (i * 100) + aspNum);
+            BestMoveInfo bm = pvSearchRoot(b, th, i, moveList, alpha, beta, analysis, id);
+            compareScore = bm.eval;
+            moveList.set_score_move(bm.move, 1400000 + (i * 100) + aspNum);
 
             if (exit_thread_flag || tm.outOfTime()) {
                 break;
             }
 
-            if (hashedBoard.score > alpha) {
-                bestMove = hashedBoard.move;
+            if (compareScore > alpha) {
+                bestMove = bm.move;
                 algMove = TO_ALG[get_move_from(bestMove)] + TO_ALG[get_move_to(bestMove)];
 
                 switch (bestMove & MOVE_FLAGS) {
@@ -614,36 +630,41 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
 
 
             cpScore = " score cp ";
-            score = hashedBoard.score;
-            if (std::abs(hashedBoard.score) >= MATE_VALUE_MAX) {
-                score = (MATE_VALUE - std::abs(hashedBoard.score) + 1) / 2;
-                if (hashedBoard.score < 0) {
+            score = compareScore;
+            if (std::abs(compareScore) >= MATE_VALUE_MAX) {
+                score = (MATE_VALUE - std::abs(compareScore) + 1) / 2;
+                if (compareScore < 0) {
                     score = -score;
                 }
                 cpScore = " score mate ";
             }
 
-            totalTime = tm.getTimePassed();
-            nps = (uint64_t) ((double) nodes * 1000.0) / ((double) totalTime + 1);
+
+
+            if (id == 0) {
+                totalTime = tm.getTimePassed();
+                nodes = getTotalNodesSearched();
+                nps = (uint64_t) ((double) nodes * 1000.0) / ((double) totalTime + 1);
+            }
 
             // Update the aspiration score
             // Fail high
-            if (hashedBoard.score >= beta) {
-                beta = hashedBoard.score + delta;
+            if (compareScore >= beta) {
+                beta = compareScore + delta;
 
-                if (totalTime > 3000 && printInfo) {
-                    std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score << " lowerbound"
-                        " nodes " << nodes << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                if (id == 0 && totalTime > 3000 && printInfo) {
+                    std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score << " lowerbound"
+                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal(b) << " time " << totalTime << " pv" << b.getPv() << std::endl;
                 }
             }
             // Fail low
-            else if (hashedBoard.score <= alpha) {
+            else if (compareScore <= alpha) {
                 beta = (alpha + beta) / 2;
-                alpha = hashedBoard.score - delta;
+                alpha = compareScore - delta;
 
-                if (totalTime > 3000 && printInfo) {
-                    std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score << " upperbound"
-                        " nodes " << nodes << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                if (id == 0 && totalTime > 3000 && printInfo) {
+                    std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score << " upperbound"
+                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal(b) << " time " << totalTime << " pv" << b.getPv() << std::endl;
                 }
             }
             // exact
@@ -652,7 +673,7 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
             }
 
             aspNum++;
-            delta += delta / 3 + hashedBoard.score <= alpha? 5 : 3;
+            delta += delta / 3 + compareScore <= alpha? 5 : 3;
 
         }
 
@@ -660,14 +681,39 @@ void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, in
             break;
         }
 
-        if (printInfo) {
-            std::cout << "info depth " << i << " seldepth " << seldepth << cpScore << score <<
-                " nodes " << nodes << " nps " << nps << " hashfull " << b.getHashFull() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+        if (id == 0 && printInfo) {
+            std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score <<
+                " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal(b) << " time " << totalTime << " pv" << b.getPv() << std::endl;
         }
 
 
     }
 
-    std::cout << "bestmove " << algMove << std::endl;
+    if (id == 0) {
+        std::cout << "bestmove " << algMove << std::endl;
+    }
 
+
+
+}
+
+
+
+void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
+    tm = TimeManager(b.getSideToMove(), wtime, btime, winc, binc, movesToGo);
+    b.setTTAge();
+
+    totalTime = 0;
+    std::deque<std::thread> threads;
+    for (int id = 0; id < nThreads; id++) {
+        thread[id].nodes = 0;
+        thread[id].seldepth = 0;
+        thread[id].nullMoveTree = true;
+        threads.push_back(std::thread(search, id, &thread[id], depth, analysis, b));
+    }
+
+    for (int i = 0; i < nThreads; i++) {
+        threads.back().join();
+        threads.pop_back();
+    }
 }

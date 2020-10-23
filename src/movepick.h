@@ -8,7 +8,7 @@ class MovePick {
 
 public:
     MovePick();
-    void scoreMoves(MoveList &moveList, Bitboard &b, int depth, MOVE pvMove);
+    void scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int depth, MOVE pvMove);
 
 private:
 

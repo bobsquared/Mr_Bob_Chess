@@ -198,6 +198,49 @@ struct MoveInfoStack {
 };
 
 
+// Information for search
+struct SearchStack {
+    int eval;
+
+    SearchStack() : eval(0) {};
+};
+
+
+
+// Info each thread has
+struct ThreadSearch {
+    int history[2][64][64] = {};
+    MOVE killers[128][2] = {};
+    MOVE counterMove[2][64][64] = {};
+    SearchStack searchStack[128] = {};
+
+    uint64_t nodes;
+    int seldepth;
+    bool nullMoveTree;
+    uint64_t ttWrites;
+
+    uint64_t unsafeSquares[2] = {};
+    int KSAttackersWeight[2] = {};
+    int KSAttacks[2] = {};
+    int KSAttackersCount[2] = {};
+    uint64_t attacksKnight[2] = {};
+    uint64_t attacksBishop[2] = {};
+    uint64_t attacksRook[2] = {};
+    uint64_t attacksQueen[2] = {};
+
+    uint64_t bishopAttacksAll[2] = {};
+    uint64_t rookAttacksAll[2] = {};
+
+    uint64_t mobilityUnsafeSquares[2] = {};
+    uint64_t minorUnsafe[2] = {};
+    uint64_t queenUnsafe[2] = {};
+    uint64_t tempUnsafe[2] = {};
+
+
+    ThreadSearch() : nodes(0), seldepth(0), nullMoveTree(false), ttWrites(0) {};
+};
+
+
 
 // For Bitscanning
 const int MSB_TABLE[64] = {
@@ -230,19 +273,15 @@ const std::string TO_ALG[64] = {
 // Algebra to number
 extern std::unordered_map<std::string, uint8_t> TO_NUM;
 
-extern int evalStack[128];
-extern int history[2][64][64];
-extern MOVE killers[128][2];
-extern MOVE counterMove[2][64][64];
 extern uint64_t columnMask[64];
 extern uint64_t rowMask[64];
 
 extern int bitScan(const uint64_t bitboard);
-extern void InitHistory();
+extern void InitHistory(ThreadSearch *th);
 extern void InitColumnsMask();
 extern void InitRowsMask();
-extern void InitKillers();
-extern void InitCounterMoves();
+extern void InitKillers(ThreadSearch *th);
+extern void InitCounterMoves(ThreadSearch *th);
 extern uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag);
 extern uint64_t knightAttacks(uint64_t knights);
 extern int count_population(uint64_t bitboard);

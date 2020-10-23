@@ -16,10 +16,12 @@
 
 
 
+Zobrist *zobrist = new Zobrist();
 MovePick *movePick = new MovePick();
 MoveGen *moveGen = new MoveGen();
 Magics *magics = new Magics();
 Eval *eval = new Eval();
+TranspositionTable *tt = new TranspositionTable();
 extern int pieceValues[6];
 
 
@@ -29,13 +31,15 @@ void Bench(Bitboard &b) {
     #include "bench.csv"
         ""};
 
+    int nodes = 0;
     int nn = 0;
     int time  = 0;
 
     printInfo = false;
     for (int i = 0; strcmp(Benchmarks[i], ""); i++) {
         b.setPosFen(Benchmarks[i]);
-        search(b, 13, INT_MAX, INT_MAX, 0, 0, 0, true);
+        beginSearch(b, 13, INT_MAX, INT_MAX, 0, 0, 0, true);
+        nodes = getTotalNodesSearched();
         printf("Bench [# %2d] %12d nodes %8d nps\n", i + 1, (int) nodes, (int) (1000.0f * nodes / (totalTime + 1)));
         nn += nodes;
         time += totalTime;
@@ -54,11 +58,11 @@ int main(int argc, char* argv[]) {
 
     InitColumnsMask();
     InitRowsMask();
-    InitHistory();
     InitLateMoveArray();
-    InitCounterMoves();
+
     Bitboard pos = Bitboard();
     UCI uci = UCI();
+    uci.newGameCommand(pos);
 
     if (argc > 1 && strcmp(argv[1], "bench") == 0) {
         Bench(pos);
@@ -66,6 +70,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::regex setHash("setoption\\sname\\shash\\svalue\\s(\\d+)");
+    std::regex setThreads("setoption\\sname\\sthreads\\svalue\\s(\\d+)");
     std::regex wtime(".*wtime\\s(\\d+).*");
     std::regex btime(".*btime\\s(\\d+).*");
 
@@ -117,7 +122,15 @@ int main(int argc, char* argv[]) {
 
         // set hash
         if (std::regex_search(lowerCommand, m, setHash)) {
-            pos.replaceHash(std::stoi(m[1]));
+            exit_thread_flag = true;
+            uci.setHash(pos, std::stoi(m[1]));
+            continue;
+        }
+
+        // set hash
+        if (std::regex_search(lowerCommand, m, setThreads)) {
+            exit_thread_flag = true;
+            nThreads = std::stoi(m[1]);
             continue;
         }
 
@@ -130,7 +143,7 @@ int main(int argc, char* argv[]) {
         // Search (virtually) forever.
         if (command == "go infinite") {
             exit_thread_flag = false;
-            thr = std::thread(search, std::ref(pos), 255, INT_MAX, INT_MAX, 0, 0, 0, true);
+            thr = std::thread(beginSearch, std::ref(pos), 255, INT_MAX, INT_MAX, 0, 0, 0, true);
             thr.detach();
             continue;
         }
@@ -166,7 +179,7 @@ int main(int argc, char* argv[]) {
 
 
 
-            thr = std::thread(search, std::ref(pos), 99, whitetime, blacktime, whiteInc, blackInc, movestogo, false);
+            thr = std::thread(beginSearch, std::ref(pos), 99, whitetime, blacktime, whiteInc, blackInc, movestogo, false);
             thr.detach();
             continue;
         }
@@ -247,6 +260,8 @@ int main(int argc, char* argv[]) {
     delete movePick;
     delete moveGen;
     delete magics;
+    delete tt;
+    delete zobrist;
 
     return 0;
 }

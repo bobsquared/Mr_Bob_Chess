@@ -1,6 +1,7 @@
 #pragma once
 #include <atomic>
 #include <chrono>
+#include <deque>
 #include "defs.h"
 #include "eval.h"
 #include "bitboard.h"
@@ -8,6 +9,7 @@
 #include "movegen.h"
 #include "timeman.h"
 #include <cmath>
+#include <thread>
 
 
 
@@ -15,27 +17,21 @@
 
 
 struct BestMoveInfo {
-    uint16_t move;
+    MOVE move;
     int eval;
 
     BestMoveInfo(uint16_t move, int eval) : move(move), eval(eval) {}
 };
 
 
-struct SearchStack {
-    int eval;
-
-    SearchStack() : eval(0) {};
-};
-
-
 extern std::atomic<bool> exit_thread_flag;
-extern uint64_t nodes;
+
 extern int totalTime;
 extern bool printInfo;
+extern ThreadSearch thread[256];
+extern int nThreads;
 
-int pvSearch(Bitboard &b, int depth, int alpha, int beta);
-extern BestMoveInfo pvSearchRoot(Bitboard &b, int depth, int alpha, int beta);
-extern void search(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
+extern void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
 extern void InitLateMoveArray();
+extern uint64_t getTotalNodesSearched();
 extern int qsearch(Bitboard &b, int depth, int alpha, int beta, int height);

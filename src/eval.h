@@ -22,11 +22,11 @@ class Eval {
 
 public:
     Eval();
-    int evaluate(Bitboard &board);
+    int evaluate(Bitboard &board, ThreadSearch *th);
 
 private:
 
-    void InitializeEval(Bitboard &board);
+    void InitializeEval(Bitboard &board, ThreadSearch *th);
     void InitPieceBoards();
     void InitKingZoneMask();
     void InitPassedPawnsMask();
@@ -37,14 +37,14 @@ private:
     void InitOutpostMask();
     uint64_t adjacentMask(uint64_t pawns);
     int evaluateImbalance(Bitboard &board, bool col);
-    int evaluatePawns(Bitboard &board, bool col, bool hit, int &pawnScore);
-    int evaluateKnights(Bitboard &board, bool col);
-    int evaluateBishops(Bitboard &board, bool col);
-    int evaluateRooks(Bitboard &board, bool col);
-    int evaluateQueens(Bitboard &board, bool col);
-    int evaluateKing(Bitboard &board, bool col);
+    int evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, int &pawnScore);
+    int evaluateKnights(Bitboard &board, ThreadSearch *th, bool col);
+    int evaluateBishops(Bitboard &board, ThreadSearch *th, bool col);
+    int evaluateRooks(Bitboard &board, ThreadSearch *th, bool col);
+    int evaluateQueens(Bitboard &board, ThreadSearch *th, bool col);
+    int evaluateKing(Bitboard &board, ThreadSearch *th, bool col);
     int evaluatePawnShield(Bitboard &board, bool col);
-    int evaluateThreats(Bitboard &board, bool col);
+    int evaluateThreats(Bitboard &board, ThreadSearch *th, bool col);
 
     void savePawnHash(uint64_t key, int score);
     int probePawnHash(uint64_t key, bool &hit);
@@ -61,28 +61,10 @@ private:
     uint64_t isolatedPawnMask[64];
     uint64_t outpostMask[2][64];
     uint64_t knightOutpost[2][64];
-    uint64_t bishopAttacksAll[2];
-    uint64_t rookAttacksAll[2];
 
 
     // King safety
     const int pieceAttackWeight[8] = {0, 0, 50, 75, 88, 94, 97, 100};
-
-    uint64_t attacksKnight[2];
-    uint64_t attacksBishop[2];
-    uint64_t attacksRook[2];
-    uint64_t attacksQueen[2];
-
-    uint64_t unsafeSquares[2];
-    int KSAttackersCount[2];
-    int KSAttackersWeight[2];
-    int KSAttacks[2];
-
-    uint64_t mobilityUnsafeSquares[2];
-    uint64_t minorUnsafe[2];
-    uint64_t queenUnsafe[2];
-    uint64_t tempUnsafe[2];
-
 
 
     struct PawnHash{

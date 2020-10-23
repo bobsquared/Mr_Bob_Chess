@@ -3,6 +3,8 @@
 std::regex fenNumbers(".*\\s+(\\d+)\\s+(\\d+)");
 extern Magics *magics;
 extern int pieceValues[6];
+extern TranspositionTable *tt;
+extern Zobrist *zobrist;
 
 
 
@@ -20,18 +22,43 @@ Bitboard::Bitboard() {
     InitRookMoves();
     InitKingMoves();
 
-    zobrist = new Zobrist();
-    tt = new TranspositionTable();
-
     reset();
     InitRookCastleFlags(pieces[6], pieces[7]);
 }
 
 
 
-Bitboard::~Bitboard() {
-    delete zobrist;
-    delete tt;
+Bitboard::Bitboard(const Bitboard &b) {
+
+    whitePawns = (1ULL << 8) | (1ULL << 9) | (1ULL << 10) | (1ULL << 11) | (1ULL << 12) | (1ULL << 13) | (1ULL << 14) | (1ULL << 15);
+    blackPawns = (1ULL << 48) | (1ULL << 49) | (1ULL << 50) | (1ULL << 51) | (1ULL << 52) | (1ULL << 53) | (1ULL << 54) | (1ULL << 55);
+    whiteQueens = 1ULL << 3;
+    blackQueens = 1ULL << 59;
+    InitBlackPawnAttacks();
+    InitWhitePawnAttacks();
+    InitKnightMoves();
+    InitBishopMoves();
+    InitRookMoves();
+    InitKingMoves();
+
+    std::copy(b.pieceAt, b.pieceAt + 64, pieceAt);
+    std::copy(b.pieces, b.pieces + 12, pieces);
+    std::copy(b.color, b.color + 2, color);
+    std::copy(b.material, b.material + 2, material);
+    std::copy(b.pieceCount, b.pieceCount + 12, pieceCount);
+
+    std::copy(b.moveHistory.move, b.moveHistory.move + b.moveHistory.count, moveHistory.move);
+    enpassantSq = b.enpassantSq;
+    occupied = b.occupied;
+    toMove = b.toMove;
+    castleRights = b.castleRights;
+    halfMoves = b.halfMoves;
+    fullMoves = b.fullMoves;
+
+    posKey = b.getPosKey();
+    pawnKey = b.getPawnKey();
+
+    InitRookCastleFlags(whiteRooks, blackRooks);
 }
 
 
@@ -927,14 +954,14 @@ bool Bitboard::noPotentialWin() {
 
 
 // Return the current position key
-uint64_t Bitboard::getPosKey() {
+uint64_t Bitboard::getPosKey() const {
     return posKey;
 }
 
 
 
 // Return the current pawn key
-uint64_t Bitboard::getPawnKey() {
+uint64_t Bitboard::getPawnKey() const {
     return pawnKey;
 }
 
@@ -955,9 +982,9 @@ bool Bitboard::probeTTQsearch(uint64_t posKey, ZobristVal &hashedBoard, bool &tt
 
 
 // Save the current searched position into the transposition table
-void Bitboard::saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply) {
+void Bitboard::saveTT(ThreadSearch *th, MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply) {
     assert (move != 0);
-    tt->saveTT(move, score, depth, flag, key, ply);
+    tt->saveTT(th, move, score, depth, flag, key, ply);
 }
 
 
@@ -970,15 +997,8 @@ void Bitboard::setTTAge() {
 
 
 // Save the current searched position into the transposition table
-int Bitboard::getHashFull() {
-    return tt->getHashFull();
-}
-
-
-
-// Save the current searched position into the transposition table
-void Bitboard::clearHashStats() {
-    tt->clearHashStats();
+int Bitboard::getHashFull(uint64_t writes) {
+    return tt->getHashFull(writes);
 }
 
 
@@ -1186,38 +1206,38 @@ bool Bitboard::getSideToMove() {
 
 
 // Insert killer moves into array
-void Bitboard::insertKiller(int depth, MOVE move) {
-    if (killers[depth][0] == move) {
+void Bitboard::insertKiller(ThreadSearch *th, int depth, MOVE move) {
+    if (th->killers[depth][0] == move) {
         return;
     }
-    killers[depth][1] = killers[depth][0];
-    killers[depth][0] = move;
+    th->killers[depth][1] = th->killers[depth][0];
+    th->killers[depth][0] = move;
 }
 
 
 
 // remove killer moves
-void Bitboard::removeKiller(int depth) {
-    killers[depth][1] = NO_MOVE;
-    killers[depth][0] = NO_MOVE;
+void Bitboard::removeKiller(ThreadSearch *th, int depth) {
+    th->killers[depth][1] = NO_MOVE;
+    th->killers[depth][0] = NO_MOVE;
 }
 
 
 
 // Insert counter move into array
-void Bitboard::insertCounterMove(MOVE move) {
+void Bitboard::insertCounterMove(ThreadSearch *th, MOVE move) {
     MOVE prevMove = moveHistory.move[moveHistory.count - 1].move;
 
     if (prevMove != NULL_MOVE) {
-        counterMove[toMove][get_move_from(prevMove)][get_move_to(prevMove)] = move;
+        th->counterMove[toMove][get_move_from(prevMove)][get_move_to(prevMove)] = move;
     }
 }
 
 
 
 // Checks to see if a move (opposite side) is a killer move
-bool Bitboard::isKiller(int depth, MOVE move) {
-    return killers[depth][0] == move || killers[depth][1] == move;
+bool Bitboard::isKiller(ThreadSearch *th, int depth, MOVE move) {
+    return th->killers[depth][0] == move || th->killers[depth][1] == move;
 }
 
 

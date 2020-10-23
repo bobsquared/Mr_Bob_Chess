@@ -6,9 +6,6 @@
 
 uint64_t columnMask[64];
 uint64_t rowMask[64];
-int history[2][64][64];
-MOVE killers[128][2];
-MOVE counterMove[2][64][64];
 
 
 // Algebra to number
@@ -89,12 +86,12 @@ void InitRowsMask() {
 
 
 // Initialize the history
-void InitHistory() {
+void InitHistory(ThreadSearch *th) {
 
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 64; j++) {
             for (int k = 0; k < 64; k++) {
-                history[i][j][k] = 0;
+                th->history[i][j][k] = 0;
             }
         }
     }
@@ -104,11 +101,11 @@ void InitHistory() {
 
 
 // Initialize the history
-void InitKillers() {
+void InitKillers(ThreadSearch *th) {
 
     for (int i = 0; i < 128; i++) {
         for (int j = 0; j < 2; j++) {
-            killers[i][j] = 0;
+            th->killers[i][j] = 0;
         }
     }
 
@@ -117,12 +114,12 @@ void InitKillers() {
 
 
 // Initialize the counter moves
-void InitCounterMoves() {
+void InitCounterMoves(ThreadSearch *th) {
 
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 64; j++) {
             for (int k = 0; k < 64; k++) {
-                counterMove[i][j][k] = 0;
+                th->counterMove[i][j][k] = 0;
             }
         }
     }

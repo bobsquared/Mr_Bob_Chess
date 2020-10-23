@@ -34,14 +34,5 @@ private:
     uint64_t enpassant[8];
     uint64_t castle[4];
     uint64_t blackTurn;
-    uint64_t whiteKingCastle;
-    uint64_t blackKingCastle;
-    uint64_t whiteQueenCastle;
-    uint64_t blackQueenCastle;
-
-    bool whiteKingCastleFlag;
-    bool blackKingCastleFlag;
-    bool whiteQueenCastleFlag;
-    bool blackQueenCastleFlag;
 
 };

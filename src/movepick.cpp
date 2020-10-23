@@ -24,7 +24,7 @@ void MovePick::InitMvvLva() {
 
 // Set a score to all the moves in the movelist.
 // Higher score moves are picked first
-void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, int depth, MOVE pvMove) {
+void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int depth, MOVE pvMove) {
 
     MOVE move;
     int from;
@@ -62,17 +62,17 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, int depth, MOVE pvMov
                 moveList.set_score_index(i, 0);
             }
         }
-        else if (killers[depth][0] == move) {
+        else if (th->killers[depth][0] == move) {
             moveList.set_score_index(i, 900000);
         }
-        else if (killers[depth][1] == move) {
+        else if (th->killers[depth][1] == move) {
             moveList.set_score_index(i, 800000);
         }
-        else if (counterMove[b.toMove][get_move_from(prevMove)][get_move_to(prevMove)] == move) {
+        else if (th->counterMove[b.toMove][get_move_from(prevMove)][get_move_to(prevMove)] == move) {
             moveList.set_score_index(i, 700000);
         }
         else {
-            moveList.set_score_index(i, history[b.toMove][get_move_from(move)][get_move_to(move)]);
+            moveList.set_score_index(i, th->history[b.toMove][get_move_from(move)][get_move_to(move)]);
         }
     }
 

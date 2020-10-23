@@ -35,12 +35,14 @@ public:
     uint64_t occupied;
     bool toMove;
     uint8_t castleRights;
+    int fullMoves;
+    int halfMoves;
 
     int material[2];
     int pieceCount[12];
 
     Bitboard();
-    ~Bitboard();
+    Bitboard(const Bitboard &b);
 
     void printPretty();
     std::string getPv();
@@ -61,26 +63,25 @@ public:
 
     void reset();
     bool getSideToMove();
-    void insertKiller(int depth, MOVE move);
-    void insertCounterMove(MOVE move);
+    void insertKiller(ThreadSearch *th, int depth, MOVE move);
+    void insertCounterMove(ThreadSearch *th, MOVE move);
 
-    uint64_t getPosKey();
-    uint64_t getPawnKey();
+    uint64_t getPosKey() const;
+    uint64_t getPawnKey() const;
     bool probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta, int ply);
     bool probeTTQsearch(uint64_t posKey, ZobristVal &hashedBoard, bool &ttRet, int &alpha, int &beta, int ply);
-    void saveTT(MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply);
+    void saveTT(ThreadSearch *th, MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply);
     void debugZobristHash();
-    void clearHashStats();
     void clearHashTable();
-    int getHashFull();
+    int getHashFull(uint64_t writes);
     void replaceHash(int hashSize);
     void setTTAge();
 
     bool nullMoveable();
     int seeCapture(MOVE capture);
     bool isRepetition();
-    bool isKiller(int depth, MOVE move);
-    void removeKiller(int depth);
+    bool isKiller(ThreadSearch *th, int depth, MOVE move);
+    void removeKiller(ThreadSearch *th, int depth);
     bool isLegal(MOVE move);
 
     bool can_castle_king();
@@ -110,12 +111,6 @@ private:
     // Move info
     uint64_t posKey;
     uint64_t pawnKey;
-    int fullMoves;
-    int halfMoves;
-
-    // Additional objects
-    Zobrist *zobrist;
-    TranspositionTable *tt;
 
     // Initialization functions
     void InitBlackPawnAttacks();

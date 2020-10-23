@@ -18,7 +18,18 @@ void UCI::uciCommand() {
     std::cout << std::endl;
 
     std::cout << "option name Hash type spin default 256 min 1 max 2054" << std::endl;
+    std::cout << "option name Threads type spin default 1 min 1 max 256" << std::endl;
     std::cout << "uciok" << std::endl;
+}
+
+
+
+// Set Hash
+void UCI::setHash(Bitboard &b, int hashSize) {
+    b.replaceHash(hashSize);
+    for (int id = 0; id < nThreads; id++) {
+        thread[id].ttWrites = 0;
+    }
 }
 
 
@@ -32,10 +43,15 @@ void UCI::readyCommand() {
 
 // New game has started, clear hash, killers, histories, etc.
 void UCI::newGameCommand(Bitboard &b) {
-    InitHistory();
-    InitKillers();
-    InitCounterMoves();
+
+    for (int id = 0; id < nThreads; id++) {
+        InitHistory(&thread[id]);
+        InitKillers(&thread[id]);
+        InitCounterMoves(&thread[id]);
+        thread[id].ttWrites = 0;
+    }
     b.clearHashTable();
+
 }
 
 
