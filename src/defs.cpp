@@ -128,6 +128,41 @@ void InitCounterMoves(ThreadSearch *th) {
 
 
 
+std::string moveToString(MOVE move) {
+    std::string algMove = TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)];
+
+    switch (move & MOVE_FLAGS) {
+        case QUEEN_PROMOTION_FLAG:
+            algMove += "q";
+            break;
+        case QUEEN_PROMOTION_CAPTURE_FLAG:
+            algMove += "q";
+            break;
+        case ROOK_PROMOTION_FLAG:
+            algMove += "r";
+            break;
+        case ROOK_PROMOTION_CAPTURE_FLAG:
+            algMove += "r";
+            break;
+        case BISHOP_PROMOTION_FLAG:
+            algMove += "b";
+            break;
+        case BISHOP_PROMOTION_CAPTURE_FLAG:
+            algMove += "b";
+            break;
+        case KNIGHT_PROMOTION_FLAG:
+            algMove += "n";
+            break;
+        case KNIGHT_PROMOTION_CAPTURE_FLAG:
+            algMove += "n";
+            break;
+    }
+
+    return algMove;
+}
+
+
+
 // All pawn attacks
 // Useful for obtaining bitboard for multiple pawn attacks
 uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag) {

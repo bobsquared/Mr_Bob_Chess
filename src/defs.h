@@ -236,8 +236,10 @@ struct ThreadSearch {
     uint64_t queenUnsafe[2] = {};
     uint64_t tempUnsafe[2] = {};
 
+    MOVE bestMove;
 
-    ThreadSearch() : nodes(0), seldepth(0), nullMoveTree(false), ttWrites(0) {};
+
+    ThreadSearch() : nodes(0), seldepth(0), nullMoveTree(false), ttWrites(0), bestMove(NO_MOVE) {};
 };
 
 
@@ -289,3 +291,4 @@ extern void printBoard(const uint64_t board);
 
 extern int get_move_from(MOVE move);
 extern int get_move_to(MOVE move);
+extern std::string moveToString(MOVE move);

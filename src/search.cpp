@@ -548,9 +548,8 @@ uint64_t getHashFullTotal(Bitboard &b) {
 
 void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
-    MOVE bestMove;
+    MOVE bestMove = NO_MOVE;
     MoveList moveList;
-    std::string algMove;
     uint64_t nps;
     uint64_t nodes;
 
@@ -596,39 +595,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
                 break;
             }
 
-            if (compareScore > alpha) {
-                bestMove = bm.move;
-                algMove = TO_ALG[get_move_from(bestMove)] + TO_ALG[get_move_to(bestMove)];
-
-                switch (bestMove & MOVE_FLAGS) {
-                    case QUEEN_PROMOTION_FLAG:
-                        algMove += "q";
-                        break;
-                    case QUEEN_PROMOTION_CAPTURE_FLAG:
-                        algMove += "q";
-                        break;
-                    case ROOK_PROMOTION_FLAG:
-                        algMove += "r";
-                        break;
-                    case ROOK_PROMOTION_CAPTURE_FLAG:
-                        algMove += "r";
-                        break;
-                    case BISHOP_PROMOTION_FLAG:
-                        algMove += "b";
-                        break;
-                    case BISHOP_PROMOTION_CAPTURE_FLAG:
-                        algMove += "b";
-                        break;
-                    case KNIGHT_PROMOTION_FLAG:
-                        algMove += "n";
-                        break;
-                    case KNIGHT_PROMOTION_CAPTURE_FLAG:
-                        algMove += "n";
-                        break;
-                }
-            }
-
-
+            bestMove = bm.move;
             cpScore = " score cp ";
             score = compareScore;
             if (std::abs(compareScore) >= MATE_VALUE_MAX) {
@@ -686,14 +653,9 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
                 " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal(b) << " time " << totalTime << " pv" << b.getPv() << std::endl;
         }
 
-
     }
 
-    if (id == 0) {
-        std::cout << "bestmove " << algMove << std::endl;
-    }
-
-
+    th->bestMove = bestMove;
 
 }
 
@@ -709,6 +671,7 @@ void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int bin
         thread[id].nodes = 0;
         thread[id].seldepth = 0;
         thread[id].nullMoveTree = true;
+        thread[id].bestMove = NO_MOVE;
         threads.push_back(std::thread(search, id, &thread[id], depth, analysis, b));
     }
 
@@ -716,4 +679,8 @@ void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int bin
         threads.back().join();
         threads.pop_back();
     }
+
+    MOVE bestMove = thread[0].bestMove;
+    assert(bestMove != NO_MOVE && bestMove != NULL_MOVE);
+    std::cout << "bestmove " << moveToString(bestMove) << std::endl;
 }
