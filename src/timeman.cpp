@@ -24,7 +24,6 @@ TimeManager::TimeManager(bool col, int wtime, int btime, int winc, int binc, int
     this->winc = winc;
     this->binc = binc;
     this->movesToGo = movesToGo;
-    initTime = std::chrono::high_resolution_clock::now();
 
 }
 
@@ -39,7 +38,7 @@ void TimeManager::setTimer(int numMoves) {
     else {
         this->timeLeft = wtime / (timeDivisor - (winc >= 100? std::min(5, (winc / 200)) : -1)) - (wtime < 15000 && winc < 100 && movesToGo == 0? wtime / 32: 0);
     }
-
+    initTime = std::chrono::high_resolution_clock::now();
 }
 
 
