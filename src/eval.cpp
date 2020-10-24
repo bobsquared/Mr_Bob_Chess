@@ -867,7 +867,7 @@ int Eval::evaluateQueens(Bitboard &board, ThreadSearch *th, bool col) {
         ret += pieceSquare[8 + col][bscan];
 
         // Mobility
-        ret += queenMobilityBonus[count_population(queenAttacks & ~th->queenUnsafe[col])];
+        ret += queenMobilityBonus[std::min(26, count_population(queenAttacks & ~th->queenUnsafe[col]))];
 
         // King safety
         th->unsafeSquares[!col] |= queenAttacks;
