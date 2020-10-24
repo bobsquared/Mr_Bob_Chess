@@ -657,6 +657,10 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
     th->bestMove = bestMove;
 
+    if (id == 0) {
+        exit_thread_flag = true;
+    }
+
 }
 
 
@@ -667,7 +671,7 @@ void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int bin
 
     totalTime = 0;
     std::deque<std::thread> threads;
-    for (int id = 0; id < nThreads; id++) {
+    for (int id = 1; id < nThreads; id++) {
         thread[id].nodes = 0;
         thread[id].seldepth = 0;
         thread[id].nullMoveTree = true;
@@ -675,7 +679,13 @@ void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int bin
         threads.push_back(std::thread(search, id, &thread[id], depth, analysis, b));
     }
 
-    for (int i = 0; i < nThreads; i++) {
+    thread[0].nodes = 0;
+    thread[0].seldepth = 0;
+    thread[0].nullMoveTree = true;
+    thread[0].bestMove = NO_MOVE;
+    search(0, &thread[0], depth, analysis, b);
+
+    for (int i = 1; i < nThreads; i++) {
         threads.back().join();
         threads.pop_back();
     }
