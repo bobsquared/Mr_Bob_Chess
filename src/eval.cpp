@@ -233,6 +233,12 @@ Eval::Eval() {
 
 
 
+Eval::~Eval() {
+    delete []pawnHash;
+}
+
+
+
 void Eval::savePawnHash(uint64_t key, int score) {
     pawnHash[key % numPawnHashes] = PawnHash(key, score);
 }

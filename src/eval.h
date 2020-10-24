@@ -22,6 +22,7 @@ class Eval {
 
 public:
     Eval();
+    ~Eval();
     int evaluate(Bitboard &board, ThreadSearch *th);
 
 private:
