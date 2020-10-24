@@ -8,6 +8,7 @@ bool printInfo = true;
 ThreadSearch thread[256] = {};
 
 int nThreads = 1;
+bool stopable = false;
 const int seePruningMargin[4] = {0, 0, -350, -500};
 const int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}};
 
@@ -41,7 +42,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
 
     // stop the search
     #ifndef TUNER
-    if (exit_thread_flag || tm.outOfTime()) {
+    if (stopable && (exit_thread_flag || tm.outOfTime())) {
         return 0;
     }
     #endif
@@ -168,7 +169,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     th->nodes++; // Increment number of nodes
 
     // Stop the search
-    if (exit_thread_flag || tm.outOfTime()) {
+    if (stopable && (exit_thread_flag || tm.outOfTime())) {
         return 0;
     }
 
@@ -341,7 +342,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         b.undo_move(move); // Undo move
 
         // Stop the search
-        if (exit_thread_flag || tm.outOfTime()) {
+        if (stopable && (exit_thread_flag || tm.outOfTime())) {
             return 0;
         }
 
@@ -387,7 +388,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     // Stop the search
-    if (exit_thread_flag || tm.outOfTime()) {
+    if (stopable && (exit_thread_flag || tm.outOfTime())) {
         return 0;
     }
 
@@ -482,7 +483,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
         numMoves++;
 
         // Stop the search
-        if (exit_thread_flag || tm.outOfTime()) {
+        if (stopable && (exit_thread_flag || tm.outOfTime())) {
             break;
         }
 
@@ -584,6 +585,10 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
             beta = INFINITY_VAL;
         }
 
+        if (id == 0 && i > 1) {
+            stopable = true;
+        }
+
 
         while (true) {
 
@@ -591,7 +596,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
             compareScore = bm.eval;
             moveList.set_score_move(bm.move, 1400000 + (i * 100) + aspNum);
 
-            if (exit_thread_flag || tm.outOfTime()) {
+            if (stopable && (exit_thread_flag || tm.outOfTime())) {
                 break;
             }
 
@@ -644,7 +649,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
         }
 
-        if (exit_thread_flag || tm.outOfTime()) {
+        if (stopable && (exit_thread_flag || tm.outOfTime())) {
             break;
         }
 
@@ -669,6 +674,7 @@ void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int bin
     tm = TimeManager(b.getSideToMove(), wtime, btime, winc, binc, movesToGo);
     b.setTTAge();
 
+    stopable = false;
     totalTime = 0;
     std::deque<std::thread> threads;
     for (int id = 1; id < nThreads; id++) {
