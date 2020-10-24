@@ -500,7 +500,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
     }
 
     // Stop the search
-    if (numMoves == 0 || (depth == 2 && numMoves == 1 && !analysis)) {
+    if (numMoves == 0 || (id == 0 && depth == 2 && numMoves == 1 && !analysis)) {
         exit_thread_flag = true;
     }
 
