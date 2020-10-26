@@ -27,9 +27,9 @@ int isolatedPawnValue = S(10, 2);
 int knightMobilityBonus[9] =  {S(-39, -108), S(-26, -40), S(-16, -8), S(-15, 6), S(-11, 7), S(-5, 14), S(3, 15), S(9, 16), S(31, 17)};
 int bishopMobilityBonus[14] = {S(-35, -12), S(-26, -10), S(-4, 5), S(4, 20), S(17, 22), S(22, 30), S(26, 36), S(27, 38), S(30, 41), S(32, 41), S(46, 41), S(64, 42), S(82, 42), S(83, 43)};
 int rookMobilityBonus[15] =   {S(-108, -64), S(-18, -44), S(-10, 2), S(-7, 18), S(-5, 25), S(-1, 31), S(1, 39), S(10, 41), S(20, 42), S(32, 42), S(37, 46), S(46, 50), S(52, 51), S(55, 51), S(70, 52)};
-int queenMobilityBonus[27] =  {S(-164, -313), S(-29, -107), S(-27, -70), S(-22, -63), S(-15, -60), S(-15, -44), S(-5, -42), S(-2, -27), S(3, -8),
+int queenMobilityBonus[28] =  {S(-164, -313), S(-29, -107), S(-27, -70), S(-22, -63), S(-15, -60), S(-15, -44), S(-5, -42), S(-2, -27), S(3, -8),
                               S(3, -2), S(2, 4), S(2, 19), S(6, 21), S(7, 29), S(7, 51), S(7, 53), S(7, 56), S(7, 59), S(27, 59),
-                              S(44, 60), S(45, 63), S(47, 64), S(63, 64), S(84, 64), S(84, 67), S(90, 85), S(123, 88)};
+                              S(44, 60), S(45, 63), S(47, 64), S(63, 64), S(84, 64), S(84, 67), S(90, 85), S(123, 88), S(135, 90)};
 
 
 int pieceAttackValue[5] = {0, 63, 63, 57, 7};
@@ -867,7 +867,7 @@ int Eval::evaluateQueens(Bitboard &board, ThreadSearch *th, bool col) {
         ret += pieceSquare[8 + col][bscan];
 
         // Mobility
-        ret += queenMobilityBonus[std::min(26, count_population(queenAttacks & ~th->queenUnsafe[col]))];
+        ret += queenMobilityBonus[count_population(queenAttacks & ~th->queenUnsafe[col])];
 
         // King safety
         th->unsafeSquares[!col] |= queenAttacks;
