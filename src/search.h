@@ -34,4 +34,4 @@ extern int nThreads;
 extern void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
 extern void InitLateMoveArray();
 extern uint64_t getTotalNodesSearched();
-extern int qsearch(Bitboard &b, int depth, int alpha, int beta, int height);
+extern int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int ply);
