@@ -341,13 +341,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
         b.undo_move(move); // Undo move
 
-        // Stop the search
-        if (stopable && (exit_thread_flag || tm.outOfTime())) {
-            return 0;
-        }
-
         numMoves++;
-
         if (score > ret) {
             ret = score;
             bestMove = move;
@@ -366,6 +360,10 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     }
 
+    // Stop the search
+    if (stopable && (exit_thread_flag || tm.outOfTime())) {
+        return 0;
+    }
 
     // Update Histories
     if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
@@ -385,11 +383,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     // Check for checkmates and stalemates
     if (numMoves == 0) {
         return isCheck? -MATE_VALUE + ply : 0;
-    }
-
-    // Stop the search
-    if (stopable && (exit_thread_flag || tm.outOfTime())) {
-        return 0;
     }
 
     // Update Transposition tables
