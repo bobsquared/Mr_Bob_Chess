@@ -130,6 +130,12 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     }
 
     #ifndef TUNER
+    if (stopable && (exit_thread_flag || tm.outOfTime())) {
+        return 0;
+    }
+    #endif
+
+    #ifndef TUNER
     if (numMoves > 0) {
         assert (bestMove != 0);
         int bound = prevAlpha >= stand_pat? UPPER_BOUND : (stand_pat >= beta? LOWER_BOUND : EXACT);
