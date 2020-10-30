@@ -142,15 +142,16 @@ struct MoveList {
 struct ZobristVal {
     MOVE move;
     int16_t score;
+    int16_t staticScore;
     int8_t depth;
     uint8_t flag;
     uint64_t posKey;
     uint16_t halfMove;
 
-    ZobristVal() : move(NO_MOVE), score(0), depth(0), flag(0), posKey(0), halfMove(0) {}
+    ZobristVal() : move(NO_MOVE), score(0), staticScore(0), depth(0), flag(0), posKey(0), halfMove(0) {}
 
-    ZobristVal(MOVE move, int16_t score, int8_t depth, uint8_t flag, uint64_t posKey, uint16_t halfMove) :
-        move(move), score(score), depth(depth), flag(flag), posKey(posKey), halfMove(halfMove) {}
+    ZobristVal(MOVE move, int16_t score, int16_t staticScore, int8_t depth, uint8_t flag, uint64_t posKey, uint16_t halfMove) :
+        move(move), score(score), staticScore(staticScore), depth(depth), flag(flag), posKey(posKey), halfMove(halfMove) {}
 };
 
 

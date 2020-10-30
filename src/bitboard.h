@@ -70,7 +70,6 @@ public:
     uint64_t getPawnKey() const;
     bool probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta, int ply);
     bool probeTTQsearch(uint64_t posKey, ZobristVal &hashedBoard, bool &ttRet, int &alpha, int &beta, int ply);
-    void saveTT(ThreadSearch *th, MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply);
     void debugZobristHash();
     void clearHashTable();
     int getHashFull(uint64_t writes);

@@ -47,7 +47,7 @@ void TranspositionTable::setTTAge(int age) {
 
 // Save the position into the transposition table
 // Currently using: Always Replace
-void TranspositionTable::saveTT(ThreadSearch *th, MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply) {
+void TranspositionTable::saveTT(ThreadSearch *th, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply) {
     uint64_t posKey = key % numHashes;
 
     if (std::abs(score) > MATE_VALUE_MAX) {
@@ -61,10 +61,10 @@ void TranspositionTable::saveTT(ThreadSearch *th, MOVE move, int score, int dept
 
     if (hashTable[posKey].posKey == 0) {
         th->ttWrites++;
-        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, halfMove);
+        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, flag, key, halfMove);
     }
     else if (halfMove != hashTable[posKey].halfMove || flag == 0 || depth >= hashTable[posKey].depth - 2) {
-        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int8_t) depth, flag, key, halfMove);
+        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, flag, key, halfMove);
     }
 
 

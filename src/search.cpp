@@ -58,7 +58,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     bool ttRet = false;
 
     #ifndef TUNER
-    b.probeTTQsearch(posKey, hashedBoard, ttRet, alpha, beta, ply);
+    bool hashed = b.probeTTQsearch(posKey, hashedBoard, ttRet, alpha, beta, ply);
 
     if (ttRet) {
         return hashedBoard.score;
@@ -69,8 +69,9 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     bool inCheck = b.InCheck();
     int prevAlpha = alpha;
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
+    int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
     if (!inCheck) {
-        stand_pat = eval->evaluate(b, th);
+        stand_pat = staticEval;
 
         // standing pat
         if (stand_pat >= beta) {
@@ -139,7 +140,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     if (numMoves > 0) {
         assert (bestMove != 0);
         int bound = prevAlpha >= stand_pat? UPPER_BOUND : (stand_pat >= beta? LOWER_BOUND : EXACT);
-        b.saveTT(th, bestMove, stand_pat, depth, bound, posKey, ply);
+        tt->saveTT(th, bestMove, stand_pat, staticEval, depth, bound, posKey, ply);
     }
     #endif
 
@@ -207,7 +208,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
 
-    int staticEval = hashed? hashedBoard.score : eval->evaluate(b, th);
+    int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
     th->searchStack[ply].eval = staticEval;
     bool improving = ply >= 2? staticEval > th->searchStack[ply - 2].eval : false;
     bool isCheck = b.InCheck();
@@ -396,7 +397,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     assert(alpha >= prevAlpha);
     assert (bestMove != 0);
     int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
-    b.saveTT(th, bestMove, ret, depth, bound, posKey, ply);
+    tt->saveTT(th, bestMove, ret, staticEval, depth, bound, posKey, ply);
 
     return ret;
 
@@ -412,6 +413,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
     int numMoves = 0;
     int ret = -INFINITY_VAL;
     int ply = 0;
+    int staticEval = eval->evaluate(b, th);
     bool inCheck = b.InCheck();
 
     // Probe transposition table:
@@ -422,7 +424,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
 
 
     // Initialize evaluation stack
-    th->searchStack[ply].eval = hashed? hashedBoard.score : eval->evaluate(b, th);
+    th->searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
 
 
     while (moveList.get_next_move(move)) {
@@ -508,7 +510,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
     // Update transposition table
     if (!exit_thread_flag && !tm.outOfTime()) {
         assert (bestMove != 0);
-        b.saveTT(th, bestMove, ret, depth, EXACT, posKey, ply);
+        tt->saveTT(th, bestMove, ret, staticEval, depth, EXACT, posKey, ply);
     }
 
     return BestMoveInfo(bestMove, ret);

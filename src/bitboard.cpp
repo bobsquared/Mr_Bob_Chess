@@ -982,14 +982,6 @@ bool Bitboard::probeTTQsearch(uint64_t posKey, ZobristVal &hashedBoard, bool &tt
 
 
 // Save the current searched position into the transposition table
-void Bitboard::saveTT(ThreadSearch *th, MOVE move, int score, int depth, uint8_t flag, uint64_t key, int ply) {
-    assert (move != 0);
-    tt->saveTT(th, move, score, depth, flag, key, ply);
-}
-
-
-
-// Save the current searched position into the transposition table
 void Bitboard::setTTAge() {
     tt->setTTAge(moveHistory.count);
 }
