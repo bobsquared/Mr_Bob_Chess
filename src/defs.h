@@ -174,6 +174,7 @@ struct MoveInfo {
 
     MoveInfo(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey, uint64_t pawnKey, MOVE move) :
         captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), castleRights(castleRights), posKey(posKey), pawnKey(pawnKey), move(move) {}
+
 };
 
 
@@ -182,6 +183,10 @@ struct MoveInfoStack {
     int count;
 
     MoveInfoStack() : count(0) {}
+
+    MoveInfoStack(const MoveInfoStack &moveInfoStack) : count(moveInfoStack.count) {
+        std::copy(moveInfoStack.move, moveInfoStack.move + count, move);
+    }
 
     void insert(MoveInfo moveInfo) {
         move[count] = moveInfo;

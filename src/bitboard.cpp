@@ -47,7 +47,7 @@ Bitboard::Bitboard(const Bitboard &b) {
     std::copy(b.material, b.material + 2, material);
     std::copy(b.pieceCount, b.pieceCount + 12, pieceCount);
 
-    std::copy(b.moveHistory.move, b.moveHistory.move + b.moveHistory.count, moveHistory.move);
+    moveHistory = b.moveHistory;
     enpassantSq = b.enpassantSq;
     occupied = b.occupied;
     toMove = b.toMove;
