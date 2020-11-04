@@ -187,12 +187,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
 
 
-    MOVE move;
-    MOVE bestMove = NO_MOVE;
-    MoveList moveList;
-
-    int ret = -INFINITY_VAL;
-    int numMoves = 0;
     int prevAlpha = alpha;
     bool isPv = alpha == beta - 1? false : true;
 
@@ -209,11 +203,12 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
 
     int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
-    th->searchStack[ply].eval = staticEval;
     bool improving = ply >= 2? staticEval > th->searchStack[ply - 2].eval : false;
     bool failing = ply >= 2? staticEval + 32 * depth < th->searchStack[ply - 2].eval : false;
     bool isCheck = b.InCheck();
+
     b.removeKiller(th, ply + 1);
+    th->searchStack[ply].eval = staticEval;
 
 
     // Razoring
@@ -221,12 +216,10 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         return qsearch(b, th, -1, alpha, beta, ply);
     }
 
-
     // Reverse futility pruning
     if (!isPv && !isCheck && depth <= 6 && staticEval - 185 * depth + (55 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
         return staticEval;
     }
-
 
     // Null move pruning
     if (!isPv && canNullMove && !isCheck && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
@@ -271,13 +264,17 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
 
     // Search
+    int ret = -INFINITY_VAL;
+    MOVE bestMove = NO_MOVE;
+    MOVE move;
     int quietsSearched = 0;
+    int numMoves = 0;
+    MoveList moveList;
     MOVE quiets[MAX_NUM_MOVES];
+
     moveGen->generate_all_moves(moveList, b); // Generate moves
     movePick->scoreMoves(moveList, b, th, ply, hashedBoard.move);
     while (moveList.get_next_move(move)) {
-        int score;
-        int extension = 0;
         bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
 
         if (!isPv && ret > -MATE_VALUE_MAX) {
@@ -306,6 +303,8 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             continue;
         }
 
+        int score;
+        int extension = 0;
 
         // Check extension
         if (isCheck) {
@@ -374,6 +373,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         return 0;
     }
 
+    // Check for checkmates and stalemates
+    if (numMoves == 0) {
+        return isCheck? -MATE_VALUE + ply : 0;
+    }
+
     // Update Histories
     if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
         b.insertKiller(th, ply, bestMove);
@@ -383,15 +387,9 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
 
         for (int i = 0; i < quietsSearched; i++) {
-            int hist2 = th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
-            th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 30 * (-depth * depth) - hist2;
+            hist = th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
+            th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 30 * (-depth * depth) - hist;
         }
-    }
-
-
-    // Check for checkmates and stalemates
-    if (numMoves == 0) {
-        return isCheck? -MATE_VALUE + ply : 0;
     }
 
     // Update Transposition tables
