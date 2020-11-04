@@ -42,7 +42,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
 
     // stop the search
     #ifndef TUNER
-    if (stopable && (exit_thread_flag || tm.outOfTime())) {
+    if (stopable && exit_thread_flag) {
         return 0;
     }
     #endif
@@ -131,7 +131,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     }
 
     #ifndef TUNER
-    if (stopable && (exit_thread_flag || tm.outOfTime())) {
+    if (stopable && exit_thread_flag) {
         return 0;
     }
     #endif
