@@ -50,14 +50,7 @@ void TranspositionTable::setTTAge(int age) {
 void TranspositionTable::saveTT(ThreadSearch *th, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply) {
     uint64_t posKey = key % numHashes;
 
-    if (std::abs(score) > MATE_VALUE_MAX) {
-        if (score > MATE_VALUE_MAX) {
-            score += ply;
-        }
-        else if (score < -MATE_VALUE_MAX) {
-            score -= ply;
-        }
-    }
+    score += score > MATE_VALUE_MAX? ply : (score < -MATE_VALUE_MAX? -ply : 0);
 
     if (hashTable[posKey].posKey == 0) {
         th->ttWrites++;
@@ -83,12 +76,7 @@ bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int dept
         // Store the hash table value
         hashedBoard = hashTable[key % numHashes];
 
-        if (hashedBoard.score > MATE_VALUE_MAX) {
-            hashedBoard.score -= ply;
-        }
-    	else if (hashedBoard.score < -MATE_VALUE_MAX) {
-            hashedBoard.score += ply;
-        }
+        hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
 
         // Ensure hashedBoard depth >= current depth
         if (hashedBoard.depth >= depth) {
@@ -120,12 +108,7 @@ bool TranspositionTable::probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, b
         // Store the hash table value
         hashedBoard = hashTable[key % numHashes];
 
-        if (hashedBoard.score > MATE_VALUE_MAX) {
-            hashedBoard.score -= ply;
-        }
-    	else if (hashedBoard.score < -MATE_VALUE_MAX) {
-            hashedBoard.score += ply;
-        }
+        hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
 
         alpha = hashedBoard.flag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
         beta = hashedBoard.flag == UPPER_BOUND? hashedBoard.score : beta; // upper bound
