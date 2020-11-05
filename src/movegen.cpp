@@ -47,22 +47,26 @@ void MoveGen::create_all_promotions_captures(MoveList &moveList, int from, int t
 
 void MoveGen::generate_pawn_moves_quiet(MoveList &moveList, Bitboard &b) {
 
-    uint64_t bb = (b.toMove? (~b.occupied << 8) & ~rowMask[8] : (~b.occupied >> 8) & ~rowMask[48]) & b.pieces[b.toMove];
+    uint64_t normalPawns = (b.toMove? (~b.occupied << 8) & ~rowMask[8] : (~b.occupied >> 8) & ~rowMask[48]) & b.pieces[b.toMove];
+    uint64_t doublePushablePawns = normalPawns & (b.toMove? (~b.occupied << 16) & rowMask[48] : (~b.occupied >> 16) & rowMask[8]);
 
-    while (bb) {
+    // Pawn pushes
+    while (normalPawns) {
 
-        uint64_t loc = bb & -bb;
-
-        // Pawn pushes and normal promotions
+        uint64_t loc = normalPawns & -normalPawns;
         int locIndex = bitScan(loc);
         create_move(moveList, locIndex, locIndex + (b.toMove? -8 : 8), QUIET_MOVES_FLAG);
+        normalPawns &= normalPawns - 1;
 
-        // Consider double pawn pushes
-        if ((rowMask[8 + b.toMove * 40] & loc) && !((b.toMove? (loc >> 16) : (loc << 16)) & b.occupied)) {
-            create_move(moveList, locIndex, locIndex + (b.toMove? -16 : 16), DOUBLE_PAWN_PUSH_FLAG);
-        }
+    }
 
-        bb &= bb - 1;
+    // Consider double pawn pushes
+    while (doublePushablePawns) {
+
+        uint64_t loc = doublePushablePawns & -doublePushablePawns;
+        int locIndex = bitScan(loc);
+        create_move(moveList, locIndex, locIndex + (b.toMove? -16 : 16), DOUBLE_PAWN_PUSH_FLAG);
+        doublePushablePawns &= doublePushablePawns - 1;
 
     }
 }
@@ -71,43 +75,53 @@ void MoveGen::generate_pawn_moves_quiet(MoveList &moveList, Bitboard &b) {
 
 void MoveGen::generate_pawn_moves_noisy(MoveList &moveList, Bitboard &b) {
 
+    uint64_t pawnAtts = pawnAttacksAll(b.color[!b.toMove], !b.toMove);
+    uint64_t promotionPawns = rowMask[48 - b.toMove * 40] & (b.toMove? (~b.occupied << 8) : (~b.occupied >> 8)) & b.pieces[b.toMove];
+    uint64_t enpassantPawns = b.enpassantSq? b.pawnAttacks[b.enpassantSq][!b.toMove] & b.pieces[b.toMove] : 0;
+    uint64_t promotionCapturePawns = (rowMask[48 - b.toMove * 40] & b.pieces[b.toMove] & pawnAtts);
+    uint64_t capturePawns = pawnAtts & b.pieces[b.toMove] & ~promotionCapturePawns;
 
-    uint64_t enpassantSq = b.enpassantSq? 1ULL << b.enpassantSq : 0;
-    uint64_t bb = (rowMask[48 - b.toMove * 40] | pawnAttacksAll(b.color[!b.toMove] | enpassantSq, !b.toMove)) & b.pieces[b.toMove];
+    while (capturePawns) {
 
-    while (bb) {
-
-        uint64_t loc = bb & -bb;
+        uint64_t loc = capturePawns & -capturePawns;
         int locIndex = bitScan(loc);
 
         // Captures
         uint64_t captures = b.color[!b.toMove] & b.pawnAttacks[locIndex][b.toMove];
         while (captures) {
-
-            if (!(rowMask[48 - b.toMove * 40] & loc)) {
-                create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
-            }
-            else {
-                create_all_promotions_captures(moveList, locIndex, bitScan(captures));
-            }
+            create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
             captures &= captures - 1;
         }
 
+        capturePawns &= capturePawns - 1;
 
-        // Enpassants
-        captures = enpassantSq & b.pawnAttacks[locIndex][b.toMove];
-        if (captures) {
-            create_move(moveList, locIndex, b.enpassantSq, ENPASSANT_FLAG);
+    }
+
+    // capture promotions
+    while (promotionCapturePawns) {
+        int locIndex = bitScan(promotionCapturePawns);
+
+        uint64_t captures = b.color[!b.toMove] & b.pawnAttacks[locIndex][b.toMove];
+        while (captures) {
+            create_all_promotions_captures(moveList, locIndex, bitScan(captures));
+            captures &= captures - 1;
         }
 
+        promotionCapturePawns &= promotionCapturePawns - 1;
+    }
 
-        // Pawn pushes and normal promotions
-        if ((rowMask[48 - b.toMove * 40] & loc) && !((b.toMove? (loc >> 8) : (loc << 8)) & b.occupied)) {
-            create_all_promotions(moveList, locIndex, locIndex + (b.toMove? -8 : 8));
-        }
+    // normal promotions
+    while (promotionPawns) {
+        int locIndex = bitScan(promotionPawns);
+        create_all_promotions(moveList, locIndex, locIndex + (b.toMove? -8 : 8));
+        promotionPawns &= promotionPawns - 1;
+    }
 
-        bb &= bb - 1;
-
+    // enpassants
+    while (enpassantPawns) {
+        int locIndex = bitScan(enpassantPawns);
+        create_move(moveList, locIndex, b.enpassantSq, ENPASSANT_FLAG);
+        enpassantPawns &= enpassantPawns - 1;
     }
 }
 
