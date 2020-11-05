@@ -201,6 +201,13 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         return hashedBoard.score;
     }
 
+    // Mate distance pruning
+    beta = MATE_VALUE - ply < beta? MATE_VALUE - ply : beta;
+    alpha = -MATE_VALUE + ply > alpha? -MATE_VALUE + ply : alpha;
+
+    if (alpha >= beta) {
+        return alpha == -MATE_VALUE + ply? alpha : beta;
+    }
 
     int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
     bool improving = ply >= 2? staticEval > th->searchStack[ply - 2].eval : false;
@@ -241,24 +248,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
                 return nullRet;
             }
 
-        }
-    }
-
-
-    // Mate distance pruning
-    int mateDistance = MATE_VALUE - ply;
-    if (mateDistance < beta) {
-        beta = mateDistance;
-        if (alpha >= mateDistance) {
-            return mateDistance;
-        }
-    }
-
-    mateDistance = -MATE_VALUE + ply;
-    if (mateDistance > alpha) {
-        alpha = mateDistance;
-        if (beta <= mateDistance) {
-            return mateDistance;
         }
     }
 
