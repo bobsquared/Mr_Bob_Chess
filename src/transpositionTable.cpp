@@ -83,29 +83,20 @@ bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int dept
         // Store the hash table value
         hashedBoard = hashTable[key % numHashes];
 
-        if (std::abs(hashedBoard.score) > MATE_VALUE_MAX) {
-            if (hashedBoard.score > MATE_VALUE_MAX) {
-                hashedBoard.score -= ply;
-            }
-        	else if (hashedBoard.score < -MATE_VALUE_MAX) {
-                hashedBoard.score += ply;
-            }
+        if (hashedBoard.score > MATE_VALUE_MAX) {
+            hashedBoard.score -= ply;
+        }
+    	else if (hashedBoard.score < -MATE_VALUE_MAX) {
+            hashedBoard.score += ply;
         }
 
         // Ensure hashedBoard depth >= current depth
         if (hashedBoard.depth >= depth) {
 
-            if (hashedBoard.flag == LOWER_BOUND) { // Low bound
-                alpha = hashedBoard.score;
-            }
-            else if (hashedBoard.flag == UPPER_BOUND) { // Upper bound
-                beta = hashedBoard.score;
-            }
-            else { //Exact
-                ttRet = true;
-            }
+            alpha = hashedBoard.flag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
+            beta = hashedBoard.flag == UPPER_BOUND? hashedBoard.score : beta; // upper bound
 
-            if (alpha >= beta) {
+            if (hashedBoard.flag == EXACT || alpha >= beta) { // exact or alpha >= beta
                 ttRet = true;
             }
 
@@ -129,26 +120,17 @@ bool TranspositionTable::probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, b
         // Store the hash table value
         hashedBoard = hashTable[key % numHashes];
 
-        if (std::abs(hashedBoard.score) > MATE_VALUE_MAX) {
-            if (hashedBoard.score > MATE_VALUE_MAX) {
-                hashedBoard.score -= ply;
-            }
-        	else if (hashedBoard.score < -MATE_VALUE_MAX) {
-                hashedBoard.score += ply;
-            }
+        if (hashedBoard.score > MATE_VALUE_MAX) {
+            hashedBoard.score -= ply;
+        }
+    	else if (hashedBoard.score < -MATE_VALUE_MAX) {
+            hashedBoard.score += ply;
         }
 
-        if (hashedBoard.flag == LOWER_BOUND) { // Low bound
-            alpha = hashedBoard.score;
-        }
-        else if (hashedBoard.flag == UPPER_BOUND) { // Upper bound
-            beta = hashedBoard.score;
-        }
-        else { //Exact
-            ttRet = true;
-        }
+        alpha = hashedBoard.flag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
+        beta = hashedBoard.flag == UPPER_BOUND? hashedBoard.score : beta; // upper bound
 
-        if (alpha >= beta) {
+        if (hashedBoard.flag == EXACT || alpha >= beta) { // exact or alpha >= beta
             ttRet = true;
         }
 
