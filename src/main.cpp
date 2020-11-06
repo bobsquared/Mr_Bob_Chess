@@ -78,6 +78,7 @@ int main(int argc, char* argv[]) {
     std::regex binc(".*binc\\s(\\d+).*");
 
     std::regex movesToGo(".*movestogo\\s(\\d+).*");
+    std::regex number(".*(\\d+).*");
     std::thread thr;
 
     // Initial print
@@ -148,6 +149,15 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
+        if (command.substr(0, 9) == "go perft ") {
+            int depth = 1;
+            if (std::regex_search(command, m, number)) {
+                depth = std::stoi(m[1]);
+            }
+            Perft(pos, depth);
+            continue;
+        }
+
         // go command with time for each side
         if (command.substr(0, 3) == "go ") {
             exit_thread_flag = false;
@@ -181,12 +191,6 @@ int main(int argc, char* argv[]) {
 
             thr = std::thread(beginSearch, std::ref(pos), 99, whitetime, blacktime, whiteInc, blackInc, movestogo, false);
             thr.detach();
-            continue;
-        }
-
-        // Perft.
-        if (command == "perft") {
-            PerftTest(pos);
             continue;
         }
 
