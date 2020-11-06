@@ -209,6 +209,7 @@ int main(int argc, char* argv[]) {
 
         // Set position to FEN position
         if (command.substr(0, 13) == "position fen ") {
+            pos.reset();
             size_t indexMoves = command.find("moves ");
             pos.setPosFen(command.substr(13, indexMoves));
 
