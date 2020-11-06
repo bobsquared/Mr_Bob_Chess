@@ -19,28 +19,8 @@ which has helped tremendously. Special thanks to the [Koivisto team](https://git
 And thanks to many open source engines where I've gained inspiration from, most notably [Ethereal](https://github.com/AndyGrant/Ethereal) and [Stockfish](https://github.com/official-stockfish/Stockfish).
 
 
+
+
 **Techniques Used in Engine:**
 
-*Move Ordering:*
-
-1. Principal variation move
-2. Most valuable victim, least valuable attacker (Mvv Lva) move ordering.
-3. Killer moves heurstic.
-4. History Heuristic.
-
-*Pruning and Reductions:*
-
-- Null Move Pruning.
-- Late moves reduction.
-
-*Pure speed improvements:*
-
-- Transposition table (default 256MB memory allocated).
-- Iterative deepening
-- Principal variation search.
-- Bitboards.
-- Magic bitboards for sliding pieces.
-
-*Accuracy:*
-
-- Quiescence search (Mitigates the horizon effect).
+More information about Mr Bob can be found on chessprogramming wiki [here](https://www.chessprogramming.org/Mr_Bob).
