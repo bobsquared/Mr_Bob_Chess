@@ -189,17 +189,23 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     int prevAlpha = alpha;
     bool isPv = alpha == beta - 1? false : true;
+    MOVE singMove = th->searchStack[ply].singMove;
 
 
     // Probe Transpostion Table:
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
+    bool hashed = false;
 
-    if (ttRet && !isPv) {
-        return hashedBoard.score;
+    if (singMove == NO_MOVE) {
+        hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
+
+        if (ttRet && !isPv) {
+            return hashedBoard.score;
+        }
     }
+
 
     // Mate distance pruning
     beta = MATE_VALUE - ply < beta? MATE_VALUE - ply : beta;
@@ -224,7 +230,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     // Reverse futility pruning
-    if (!isPv && !isCheck && depth <= 8 && staticEval - 185 * depth + (55 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
+    if (!isPv && !isCheck && depth <= 8 && singMove == NO_MOVE && staticEval - 185 * depth + (55 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
         return staticEval;
     }
 
@@ -266,6 +272,10 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     while (moveList.get_next_move(move)) {
         bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
 
+        if (singMove == move) {
+            continue;
+        }
+
         if (!isPv && ret > -MATE_VALUE_MAX) {
             if (isQuiet) {
 
@@ -300,6 +310,18 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             extension = 1;
         }
 
+        if (depth >= 8 && !extension && hashed && hashedBoard.move == move && hashedBoard.flag != UPPER_BOUND && hashedBoard.depth >= depth - 3 && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
+            int singVal = hashedBoard.score - 2 * depth;
+            th->searchStack[ply].singMove = move;
+            score = pvSearch(b, th, depth / 2, singVal - 1, singVal, false, ply);
+            th->searchStack[ply].singMove = NO_MOVE;
+
+            if (score < singVal) {
+                extension = 1;
+            }
+
+        }
+
         int newDepth = depth + extension; // Extend
 
         b.make_move(move); // Make move
@@ -315,7 +337,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr -= b.isKiller(th, ply, move); // Don't reduce as much for killer moves
             lmr += !improving + failing; // Reduce if evaluation is improving (reduce more if evaluation fails)
             lmr -= 2 * isPv; // Don't reduce as much for PV nodes
-            lmr -= th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] / 1350;
+            lmr -= th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] / 2500;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
@@ -364,11 +386,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     // Check for checkmates and stalemates
     if (numMoves == 0) {
-        return isCheck? -MATE_VALUE + ply : 0;
+        return singMove != NO_MOVE? alpha : (isCheck? -MATE_VALUE + ply : 0);
     }
 
     // Update Histories
-    if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
+    if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0) && singMove == NO_MOVE) {
         b.insertKiller(th, ply, bestMove);
         b.insertCounterMove(th, bestMove);
 
@@ -384,8 +406,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     // Update Transposition tables
     assert(alpha >= prevAlpha);
     assert (bestMove != 0);
-    int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
-    tt->saveTT(th, bestMove, ret, staticEval, depth, bound, posKey, ply);
+    if (singMove == NO_MOVE) {
+        int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
+        tt->saveTT(th, bestMove, ret, staticEval, depth, bound, posKey, ply);
+    }
+
 
     return ret;
 

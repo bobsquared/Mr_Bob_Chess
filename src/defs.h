@@ -207,8 +207,9 @@ struct MoveInfoStack {
 // Information for search
 struct SearchStack {
     int eval;
+    MOVE singMove;
 
-    SearchStack() : eval(0) {};
+    SearchStack() : eval(0), singMove(NO_MOVE) {};
 };
 
 
