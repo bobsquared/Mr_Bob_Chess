@@ -166,24 +166,7 @@ std::string moveToString(MOVE move) {
 // All pawn attacks
 // Useful for obtaining bitboard for multiple pawn attacks
 uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag) {
-
-    if (!colorFlag) {
-        uint64_t tempBitBoard1 = (bitboard << 9);
-        uint64_t tempBitBoard2 = (bitboard << 7);
-
-        tempBitBoard1 &= ~columnMask[0];
-        tempBitBoard2 &= ~columnMask[7];
-        return tempBitBoard1 | tempBitBoard2;
-    }
-    else {
-        uint64_t tempBitBoard1 = (bitboard >> 9);
-        uint64_t tempBitBoard2 = (bitboard >> 7);
-
-        tempBitBoard1 &= ~columnMask[7];
-        tempBitBoard2 &= ~columnMask[0];
-        return tempBitBoard1 | tempBitBoard2;
-    }
-
+    return colorFlag? ((bitboard >> 9) & ~columnMask[7]) | ((bitboard >> 7) & ~columnMask[0]) : ((bitboard << 9) & ~columnMask[0]) | ((bitboard << 7) & ~columnMask[7]);
 }
 
 
@@ -191,12 +174,8 @@ uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag) {
 // All knight attacks
 // Useful for obtaining all knight attacks
 uint64_t knightAttacks(uint64_t knights) {
-    uint64_t l1 = (knights >> 1) & 0x7f7f7f7f7f7f7f7f;
-    uint64_t l2 = (knights >> 2) & 0x3f3f3f3f3f3f3f3f;
-    uint64_t r1 = (knights << 1) & 0xfefefefefefefefe;
-    uint64_t r2 = (knights << 2) & 0xfcfcfcfcfcfcfcfc;
-    uint64_t h1 = l1 | r1;
-    uint64_t h2 = l2 | r2;
+    uint64_t h1 = ((knights >> 1) & 0x7f7f7f7f7f7f7f7f) | ((knights << 1) & 0xfefefefefefefefe);
+    uint64_t h2 = ((knights >> 2) & 0x3f3f3f3f3f3f3f3f) | ((knights << 2) & 0xfcfcfcfcfcfcfcfc);
     return (h1 << 16) | (h1 >> 16) | (h2 << 8) | (h2 >> 8);
 }
 
