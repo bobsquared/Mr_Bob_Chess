@@ -9,7 +9,7 @@ ThreadSearch thread[256] = {};
 
 int nThreads = 1;
 bool stopable = false;
-const int seePruningMargin[4] = {0, 0, -350, -500};
+const int seePruningMargin[2][6] = {{0, -100, -175, -275, -425, -750}, {0, -125, -215, -300, -400, -500}};
 const int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}};
 
 
@@ -282,7 +282,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             }
 
             // SEE pruning
-            if (depth <= 3 && numMoves > 0 && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < seePruningMargin[depth]) {
+            if (depth <= 5 && numMoves > 0 && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < seePruningMargin[isQuiet][depth]) {
                 continue;
             }
         }
