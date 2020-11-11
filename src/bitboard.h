@@ -68,8 +68,6 @@ public:
 
     uint64_t getPosKey() const;
     uint64_t getPawnKey() const;
-    bool probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta, int ply);
-    bool probeTTQsearch(uint64_t posKey, ZobristVal &hashedBoard, bool &ttRet, int &alpha, int &beta, int ply);
     void debugZobristHash();
     void clearHashTable();
     int getHashFull(uint64_t writes);

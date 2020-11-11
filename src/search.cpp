@@ -58,7 +58,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     bool ttRet = false;
 
     #ifndef TUNER
-    bool hashed = b.probeTTQsearch(posKey, hashedBoard, ttRet, alpha, beta, ply);
+    bool hashed = tt->probeTTQsearch(posKey, hashedBoard, ttRet, alpha, beta, ply);
 
     if (ttRet) {
         return hashedBoard.score;
@@ -195,7 +195,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
+    bool hashed = tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
 
     if (ttRet && !isPv) {
         return hashedBoard.score;
@@ -408,7 +408,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    bool hashed = b.probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
+    bool hashed = tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
 
 
     // Initialize evaluation stack

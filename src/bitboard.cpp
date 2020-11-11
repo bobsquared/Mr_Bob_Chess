@@ -967,20 +967,6 @@ uint64_t Bitboard::getPawnKey() const {
 
 
 
-// Probe the transposition table for duplicate positions
-bool Bitboard::probeTT(uint64_t posKey, ZobristVal &hashedBoard, int depth, bool &ttRet, int &alpha, int &beta, int ply) {
-    return tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
-}
-
-
-
-// Probe the transposition table for duplicate positions qsearch
-bool Bitboard::probeTTQsearch(uint64_t posKey, ZobristVal &hashedBoard, bool &ttRet, int &alpha, int &beta, int ply) {
-    return tt->probeTTQsearch(posKey, hashedBoard, ttRet, alpha, beta, ply);
-}
-
-
-
 // Save the current searched position into the transposition table
 void Bitboard::setTTAge() {
     tt->setTTAge(moveHistory.count);
