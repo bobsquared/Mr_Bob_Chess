@@ -8,6 +8,7 @@
 #include "movepick.h"
 #include "movegen.h"
 #include "timeman.h"
+#include "transpositionTable.h"
 #include <cmath>
 #include <thread>
 

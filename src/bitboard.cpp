@@ -3,7 +3,6 @@
 std::regex fenNumbers(".*\\s+(\\d+)\\s+(\\d+)");
 extern Magics *magics;
 extern int pieceValues[6];
-extern TranspositionTable *tt;
 extern Zobrist *zobrist;
 
 
@@ -963,42 +962,6 @@ uint64_t Bitboard::getPosKey() const {
 // Return the current pawn key
 uint64_t Bitboard::getPawnKey() const {
     return pawnKey;
-}
-
-
-// Return the principal variation as a string.
-// It returns the string as a list of moves, (ex. 'e2e4 e7e5 d2d4 e5d4')
-std::string Bitboard::getPv() {
-
-    std::string pv = "";
-    std::vector<uint64_t> loopChecker;
-    std::stack<MOVE> movesToUndo;
-
-    while (true) {
-        uint64_t posKey = getPosKey();
-        loopChecker.push_back(posKey);
-
-        if (std::count(loopChecker.begin(), loopChecker.end(), loopChecker.back()) >= 3) {
-            break;
-        }
-
-        ZobristVal hashedBoard = tt->getHashValue(posKey);
-        if (hashedBoard.posKey == posKey) {
-            movesToUndo.push(hashedBoard.move);
-            pv += " " + moveToString(hashedBoard.move);
-            make_move(hashedBoard.move);
-        }
-        else {
-            break;
-        }
-    }
-
-    while (!movesToUndo.empty()) {
-        undo_move(movesToUndo.top());
-        movesToUndo.pop();
-    }
-
-    return pv;
 }
 
 

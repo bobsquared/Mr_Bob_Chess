@@ -3,8 +3,9 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include "zobrist_hashing.h"
+#include "bitboard.h"
 #include "defs.h"
+
 
 
 #define EXACT 0
@@ -29,6 +30,7 @@ public:
     void clearHashTable();
     ZobristVal getHashValue(uint64_t posKey);
     void setTTAge(int age);
+    std::string getPv(Bitboard &b);
 
 
 

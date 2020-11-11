@@ -6,7 +6,6 @@
 #include "defs.h"
 #include "magic_bitboards.h"
 #include "zobrist_hashing.h"
-#include "transpositionTable.h"
 
 
 // Castling flags

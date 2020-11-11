@@ -616,7 +616,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
                 if (id == 0 && totalTime > 3000 && printInfo) {
                     std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score << " lowerbound"
-                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << tt->getPv(b) << std::endl;
                 }
             }
             // Fail low
@@ -626,7 +626,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
                 if (id == 0 && totalTime > 3000 && printInfo) {
                     std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score << " upperbound"
-                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << tt->getPv(b) << std::endl;
                 }
             }
             // exact
@@ -645,7 +645,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
         if (id == 0 && printInfo) {
             std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score <<
-                " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << tt->getPv(b) << std::endl;
         }
 
     }
