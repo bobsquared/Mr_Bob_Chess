@@ -1,8 +1,5 @@
 #include "uci.h"
 
-extern MovePick *movePick;
-extern MoveGen *moveGen;
-extern TranspositionTable *tt;
 
 UCI::UCI() {}
 
@@ -61,13 +58,15 @@ void UCI::newGameCommand() {
 // Moves the pieces on the board according to the command.
 void UCI::startPosMoves(Bitboard & b, std::string moves) {
 
+    MoveGen moveGen = MoveGen();
+
     // Make all the moves.
     while (moves.find(' ') != std::string::npos) {
 
         MOVE move;
         MoveList moveList;
 
-        moveGen->generate_all_moves(moveList, b);
+        moveGen.generate_all_moves(moveList, b);
         while (moveList.get_next_move(move)) {
             if (get_move_from(move) == TO_NUM[moves.substr(0, 2)] && get_move_to(move) == TO_NUM[moves.substr(2, 2)]) {
                 if (moves.substr(4, 1) == "q") {
@@ -102,7 +101,7 @@ void UCI::startPosMoves(Bitboard & b, std::string moves) {
     if (moves.find(' ') == std::string::npos && (moves.size() >= 4)) {
         MOVE move;
         MoveList moveList;
-        moveGen->generate_all_moves(moveList, b);
+        moveGen.generate_all_moves(moveList, b);
         while (moveList.get_next_move(move)) {
             if (get_move_from(move) == TO_NUM[moves.substr(0, 2)] && get_move_to(move) == TO_NUM[moves.substr(2, 2)]) {
                 if (moves.size() >= 5) {
