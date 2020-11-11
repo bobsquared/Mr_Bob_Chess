@@ -662,7 +662,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
 void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
     tm = TimeManager(b.getSideToMove(), wtime, btime, winc, binc, movesToGo);
-    b.setTTAge();
+    tt->setTTAge(b.moveHistory.count);
 
     stopable = false;
     totalTime = 0;

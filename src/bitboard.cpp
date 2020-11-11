@@ -966,14 +966,6 @@ uint64_t Bitboard::getPawnKey() const {
 }
 
 
-
-// Save the current searched position into the transposition table
-void Bitboard::setTTAge() {
-    tt->setTTAge(moveHistory.count);
-}
-
-
-
 // Return the principal variation as a string.
 // It returns the string as a list of moves, (ex. 'e2e4 e7e5 d2d4 e5d4')
 std::string Bitboard::getPv() {
