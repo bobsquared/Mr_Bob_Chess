@@ -31,6 +31,32 @@ void InitLateMoveArray() {
 
 
 
+// Insert killer moves into array
+void insertKiller(ThreadSearch *th, int depth, MOVE move) {
+    if (th->killers[depth][0] == move) {
+        return;
+    }
+    th->killers[depth][1] = th->killers[depth][0];
+    th->killers[depth][0] = move;
+}
+
+
+
+// remove killer moves
+void removeKiller(ThreadSearch *th, int depth) {
+    th->killers[depth][1] = NO_MOVE;
+    th->killers[depth][0] = NO_MOVE;
+}
+
+
+
+// Checks to see if a move (opposite side) is a killer move
+bool isKiller(ThreadSearch *th, int depth, MOVE move) {
+    return th->killers[depth][0] == move || th->killers[depth][1] == move;
+}
+
+
+
 int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int ply) {
 
     #ifdef DEBUGHASH
@@ -214,7 +240,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     bool failing = ply >= 2? staticEval + 32 * depth < th->searchStack[ply - 2].eval : false;
     bool isCheck = b.InCheck();
 
-    b.removeKiller(th, ply + 1);
+    removeKiller(th, ply + 1);
     th->searchStack[ply].eval = staticEval;
 
 
@@ -312,7 +338,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         else if (depth >= 3 && isQuiet && !isCheck) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)]; // Base reduction
 
-            lmr -= b.isKiller(th, ply, move); // Don't reduce as much for killer moves
+            lmr -= isKiller(th, ply, move); // Don't reduce as much for killer moves
             lmr += !improving + failing; // Reduce if evaluation is improving (reduce more if evaluation fails)
             lmr -= 2 * isPv; // Don't reduce as much for PV nodes
             lmr -= th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] / 1350;
@@ -369,7 +395,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     // Update Histories
     if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
-        b.insertKiller(th, ply, bestMove);
+        insertKiller(th, ply, bestMove);
         b.insertCounterMove(th, bestMove);
 
         int hist = th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;

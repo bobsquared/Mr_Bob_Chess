@@ -59,7 +59,6 @@ public:
 
     void reset();
     bool getSideToMove();
-    void insertKiller(ThreadSearch *th, int depth, MOVE move);
     void insertCounterMove(ThreadSearch *th, MOVE move);
 
     uint64_t getPosKey() const;
@@ -69,8 +68,6 @@ public:
     bool nullMoveable();
     int seeCapture(MOVE capture);
     bool isRepetition();
-    bool isKiller(ThreadSearch *th, int depth, MOVE move);
-    void removeKiller(ThreadSearch *th, int depth);
     bool isLegal(MOVE move);
 
     bool can_castle_king();

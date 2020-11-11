@@ -1088,26 +1088,6 @@ bool Bitboard::getSideToMove() {
 }
 
 
-
-// Insert killer moves into array
-void Bitboard::insertKiller(ThreadSearch *th, int depth, MOVE move) {
-    if (th->killers[depth][0] == move) {
-        return;
-    }
-    th->killers[depth][1] = th->killers[depth][0];
-    th->killers[depth][0] = move;
-}
-
-
-
-// remove killer moves
-void Bitboard::removeKiller(ThreadSearch *th, int depth) {
-    th->killers[depth][1] = NO_MOVE;
-    th->killers[depth][0] = NO_MOVE;
-}
-
-
-
 // Insert counter move into array
 void Bitboard::insertCounterMove(ThreadSearch *th, MOVE move) {
     MOVE prevMove = moveHistory.move[moveHistory.count - 1].move;
@@ -1115,13 +1095,6 @@ void Bitboard::insertCounterMove(ThreadSearch *th, MOVE move) {
     if (prevMove != NULL_MOVE) {
         th->counterMove[toMove][get_move_from(prevMove)][get_move_to(prevMove)] = move;
     }
-}
-
-
-
-// Checks to see if a move (opposite side) is a killer move
-bool Bitboard::isKiller(ThreadSearch *th, int depth, MOVE move) {
-    return th->killers[depth][0] == move || th->killers[depth][1] == move;
 }
 
 
