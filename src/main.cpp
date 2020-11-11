@@ -37,6 +37,7 @@ void Bench(Bitboard &b) {
 
     printInfo = false;
     for (int i = 0; strcmp(Benchmarks[i], ""); i++) {
+        exit_thread_flag = false;
         b.setPosFen(Benchmarks[i]);
         beginSearch(b, 13, INT_MAX, INT_MAX, 0, 0, 0, true);
         nodes = getTotalNodesSearched();
