@@ -975,13 +975,6 @@ void Bitboard::setTTAge() {
 
 
 // Save the current searched position into the transposition table
-int Bitboard::getHashFull(uint64_t writes) {
-    return tt->getHashFull(writes);
-}
-
-
-
-// Save the current searched position into the transposition table
 void Bitboard::clearHashTable() {
     tt->clearHashTable();
 }

@@ -527,12 +527,12 @@ uint64_t getTotalNodesSearched() {
 
 
 
-uint64_t getHashFullTotal(Bitboard &b) {
+uint64_t getHashFullTotal() {
     uint64_t writes = 0;
     for (int id = 0; id < nThreads; id++) {
         writes += thread[id].ttWrites;
     }
-    return b.getHashFull(writes);
+    return tt->getHashFull(writes);
 }
 
 
@@ -616,7 +616,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
                 if (id == 0 && totalTime > 3000 && printInfo) {
                     std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score << " lowerbound"
-                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal(b) << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << b.getPv() << std::endl;
                 }
             }
             // Fail low
@@ -626,7 +626,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
                 if (id == 0 && totalTime > 3000 && printInfo) {
                     std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score << " upperbound"
-                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal(b) << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << b.getPv() << std::endl;
                 }
             }
             // exact
@@ -645,7 +645,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
         if (id == 0 && printInfo) {
             std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score <<
-                " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal(b) << " time " << totalTime << " pv" << b.getPv() << std::endl;
+                " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << b.getPv() << std::endl;
         }
 
     }

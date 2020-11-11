@@ -70,7 +70,6 @@ public:
     uint64_t getPawnKey() const;
     void debugZobristHash();
     void clearHashTable();
-    int getHashFull(uint64_t writes);
     void setTTAge();
 
     bool nullMoveable();
