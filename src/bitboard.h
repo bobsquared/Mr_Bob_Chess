@@ -1,7 +1,4 @@
 #pragma once
-#include <iostream>
-#include <bitset>
-#include <string>
 #include <regex>
 #include "defs.h"
 #include "magic_bitboards.h"

@@ -1,5 +1,4 @@
 #pragma once
-#include <iostream>
 #include "magic_bitboards.h"
 #include "defs.h"
 #include "bitboard.h"

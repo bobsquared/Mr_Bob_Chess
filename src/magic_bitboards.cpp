@@ -1,5 +1,4 @@
 #include "magic_bitboards.h"
-#include "dumb7flooding.h"
 
 #undef NDEBUG
 #include <cassert>
@@ -24,7 +23,7 @@ Magics::Magics() {
 
     InitBishopMoves(bishopMoves);
     InitRookMoves(rookMoves);
-    
+
     optimalMagicRook(magicR);
     optimalMagicBishop(magicB);
 

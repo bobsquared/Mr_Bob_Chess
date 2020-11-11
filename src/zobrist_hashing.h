@@ -1,7 +1,7 @@
 
 #pragma once
-#include <unordered_map>
-#include <stdlib.h>
+#include <random>
+#include "defs.h"
 
 
 // Zobrist hashing

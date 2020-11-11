@@ -2,6 +2,8 @@
 #include <atomic>
 #include <chrono>
 #include <deque>
+#include <cmath>
+#include <thread>
 #include "defs.h"
 #include "eval.h"
 #include "bitboard.h"
@@ -9,8 +11,7 @@
 #include "movegen.h"
 #include "timeman.h"
 #include "transpositionTable.h"
-#include <cmath>
-#include <thread>
+
 
 
 
