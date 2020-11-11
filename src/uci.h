@@ -1,5 +1,6 @@
 #include <string>
 #include "bitboard.h"
+#include "transpositionTable.h"
 #include "movepick.h"
 #include "search.h"
 
@@ -12,7 +13,7 @@ public:
     void readyCommand();
     void startPosMoves(Bitboard & b, std::string moves);
     void newGameCommand(Bitboard &b);
-    void setHash(Bitboard &b, int hashSize);
+    void setHash(int hashSize);
 
 private:
 

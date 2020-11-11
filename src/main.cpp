@@ -125,7 +125,7 @@ int main(int argc, char* argv[]) {
         // set hash
         if (std::regex_search(lowerCommand, m, setHash)) {
             exit_thread_flag = true;
-            uci.setHash(pos, std::stoi(m[1]));
+            uci.setHash(std::stoi(m[1]));
             continue;
         }
 

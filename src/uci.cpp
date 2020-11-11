@@ -2,6 +2,7 @@
 
 extern MovePick *movePick;
 extern MoveGen *moveGen;
+extern TranspositionTable *tt;
 
 UCI::UCI() {}
 
@@ -25,8 +26,8 @@ void UCI::uciCommand() {
 
 
 // Set Hash
-void UCI::setHash(Bitboard &b, int hashSize) {
-    b.replaceHash(hashSize);
+void UCI::setHash(int hashSize) {
+    tt->setSize(hashSize);
     for (int id = 0; id < nThreads; id++) {
         thread[id].ttWrites = 0;
     }

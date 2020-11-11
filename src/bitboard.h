@@ -73,7 +73,6 @@ public:
     void debugZobristHash();
     void clearHashTable();
     int getHashFull(uint64_t writes);
-    void replaceHash(int hashSize);
     void setTTAge();
 
     bool nullMoveable();
