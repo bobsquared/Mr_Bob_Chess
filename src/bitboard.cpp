@@ -1003,8 +1003,7 @@ void Bitboard::clearHashTable() {
 
 // Save the current searched position into the transposition table
 void Bitboard::replaceHash(int hashSize) {
-    delete tt;
-    tt = new TranspositionTable(hashSize);
+    tt->setSize(hashSize);
 }
 
 

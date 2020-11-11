@@ -6,27 +6,34 @@
 
 // Initialize transposition table
 TranspositionTable::TranspositionTable() {
-
     numHashes = (double) HASH_SIZE / (double) sizeof(ZobristVal) * 0xFFFFF;
     hashTable = new ZobristVal [numHashes];
     halfMove = 1;
 
     clearHashTable();
-
 }
 
 
 
 // Initialize transposition table
 TranspositionTable::TranspositionTable(int hashSize) {
-
     numHashes = (double) hashSize / (double) sizeof(ZobristVal) * 0xFFFFF;
     hashTable = new ZobristVal [numHashes];
     halfMove = 1;
 
     clearHashTable();
+}
 
 
+
+// set transposition table size
+void TranspositionTable::setSize(int hashSize) {
+    delete [] hashTable;
+
+    numHashes = (double) hashSize / (double) sizeof(ZobristVal) * 0xFFFFF;
+    hashTable = new ZobristVal [numHashes];
+
+    clearHashTable();
 }
 
 
