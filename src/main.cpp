@@ -21,7 +21,6 @@ MovePick *movePick = new MovePick();
 MoveGen *moveGen = new MoveGen();
 Magics *magics = new Magics();
 Eval *eval = new Eval();
-TranspositionTable *tt = new TranspositionTable();
 extern int pieceValues[6];
 
 

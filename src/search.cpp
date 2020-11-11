@@ -17,7 +17,7 @@ extern int pieceValues[6];
 extern MovePick *movePick;
 extern MoveGen *moveGen;
 extern Eval *eval;
-extern TranspositionTable *tt;
+TranspositionTable *tt = new TranspositionTable;
 
 
 int lmrReduction[64][64];
