@@ -18,7 +18,6 @@
 
 Zobrist *zobrist = new Zobrist();
 Magics *magics = new Magics();
-Eval *eval = new Eval();
 extern int pieceValues[6];
 
 
@@ -261,7 +260,6 @@ int main(int argc, char* argv[]) {
 
     cleanUpSearch();
 
-    delete eval;
     delete magics;
     delete zobrist;
 

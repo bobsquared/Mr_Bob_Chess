@@ -24,7 +24,7 @@ void UCI::uciCommand() {
 
 // Set Hash
 void UCI::setHash(int hashSize) {
-    tt->setSize(hashSize);
+    setTTSize(hashSize);
     for (int id = 0; id < nThreads; id++) {
         thread[id].ttWrites = 0;
     }
@@ -48,7 +48,7 @@ void UCI::newGameCommand() {
         InitCounterMoves(&thread[id]);
         thread[id].ttWrites = 0;
     }
-    tt->clearHashTable();
+    clearTT();
 
 }
 

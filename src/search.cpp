@@ -15,7 +15,7 @@ const int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}}
 
 extern int pieceValues[6];
 
-extern Eval *eval;
+Eval *eval = new Eval();
 TranspositionTable *tt = new TranspositionTable;
 MovePick *movePick = new MovePick;
 MoveGen *moveGen = new MoveGen;
@@ -37,6 +37,7 @@ void cleanUpSearch() {
     delete tt;
     delete movePick;
     delete moveGen;
+    delete eval;
 }
 
 
