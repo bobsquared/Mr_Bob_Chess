@@ -2,19 +2,17 @@
 
 
 int totalTime;
-std::atomic<bool> exit_thread_flag;
-TimeManager tm;
 bool printInfo = true;
-ThreadSearch thread[256] = {};
-
 int nThreads = 1;
 bool stopable = false;
+std::atomic<bool> exit_thread_flag;
+ThreadSearch thread[256] = {};
+
 const int seePruningMargin[2][6] = {{0, -100, -175, -275, -425, -750}, {0, -125, -215, -300, -400, -500}};
 const int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}};
-
-
 extern int pieceValues[6];
 
+TimeManager tm;
 Eval *eval = new Eval();
 TranspositionTable *tt = new TranspositionTable;
 MovePick *movePick = new MovePick;
