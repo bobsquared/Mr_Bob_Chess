@@ -43,7 +43,7 @@ void UCI::readyCommand() {
 
 
 // New game has started, clear hash, killers, histories, etc.
-void UCI::newGameCommand(Bitboard &b) {
+void UCI::newGameCommand() {
 
     for (int id = 0; id < nThreads; id++) {
         InitHistory(&thread[id]);
@@ -51,7 +51,7 @@ void UCI::newGameCommand(Bitboard &b) {
         InitCounterMoves(&thread[id]);
         thread[id].ttWrites = 0;
     }
-    b.clearHashTable();
+    tt->clearHashTable();
 
 }
 

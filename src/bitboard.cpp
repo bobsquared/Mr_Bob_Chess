@@ -974,13 +974,6 @@ void Bitboard::setTTAge() {
 
 
 
-// Save the current searched position into the transposition table
-void Bitboard::clearHashTable() {
-    tt->clearHashTable();
-}
-
-
-
 // Return the principal variation as a string.
 // It returns the string as a list of moves, (ex. 'e2e4 e7e5 d2d4 e5d4')
 std::string Bitboard::getPv() {

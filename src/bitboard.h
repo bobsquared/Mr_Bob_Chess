@@ -69,7 +69,6 @@ public:
     uint64_t getPosKey() const;
     uint64_t getPawnKey() const;
     void debugZobristHash();
-    void clearHashTable();
     void setTTAge();
 
     bool nullMoveable();

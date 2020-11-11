@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
 
     Bitboard pos = Bitboard();
     UCI uci = UCI();
-    uci.newGameCommand(pos);
+    uci.newGameCommand();
 
     if (argc > 1 && strcmp(argv[1], "bench") == 0) {
         Bench(pos);
@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (command == "ucinewgame") {
-            uci.newGameCommand(pos);
+            uci.newGameCommand();
             continue;
         }
 
