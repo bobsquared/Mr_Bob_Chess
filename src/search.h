@@ -32,8 +32,10 @@ extern int totalTime;
 extern bool printInfo;
 extern ThreadSearch thread[256];
 extern int nThreads;
-extern TranspositionTable *tt;
 
+extern void cleanUpSearch();
+extern void setTTSize(int hashSize);
+extern void clearTT();
 extern void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
 extern void InitLateMoveArray();
 extern uint64_t getTotalNodesSearched();

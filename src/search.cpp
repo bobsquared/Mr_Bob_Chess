@@ -14,10 +14,11 @@ const int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}}
 
 
 extern int pieceValues[6];
-extern MovePick *movePick;
-extern MoveGen *moveGen;
+
 extern Eval *eval;
 TranspositionTable *tt = new TranspositionTable;
+MovePick *movePick = new MovePick;
+MoveGen *moveGen = new MoveGen;
 
 
 int lmrReduction[64][64];
@@ -27,6 +28,29 @@ void InitLateMoveArray() {
             lmrReduction[i][j] = (exp(2) * log(i) * log(j) + 12) / (exp(exp(1.02)));
         }
     }
+}
+
+
+
+// Clean up allocated memory
+void cleanUpSearch() {
+    delete tt;
+    delete movePick;
+    delete moveGen;
+}
+
+
+
+// Set the TT size
+void setTTSize(int hashSize) {
+    tt->setSize(hashSize);
+}
+
+
+
+// Clear hash table
+void clearTT() {
+    tt->clearHashTable();
 }
 
 

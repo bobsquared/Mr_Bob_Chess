@@ -17,8 +17,6 @@
 
 
 Zobrist *zobrist = new Zobrist();
-MovePick *movePick = new MovePick();
-MoveGen *moveGen = new MoveGen();
 Magics *magics = new Magics();
 Eval *eval = new Eval();
 extern int pieceValues[6];
@@ -261,11 +259,10 @@ int main(int argc, char* argv[]) {
 
     }
 
+    cleanUpSearch();
+
     delete eval;
-    delete movePick;
-    delete moveGen;
     delete magics;
-    delete tt;
     delete zobrist;
 
     return 0;
