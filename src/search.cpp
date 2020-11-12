@@ -1,25 +1,40 @@
+
+
+/** @file search.cpp
+* This file contains the main search for the engine
+*
+* @author Vincent Yu
+*/
+
+
+
 #include "search.h"
 
 
-int totalTime;
-bool printInfo = true;
-int nThreads = 1;
-bool stopable = false;
-std::atomic<bool> exit_thread_flag;
-ThreadSearch thread[256] = {};
+int totalTime;                      /**< Total time used to search an iteration.*/
+bool printInfo = true;              /**< False to turn of info print statements.*/
+int nThreads = 1;                   /**< Number of threads to search, default is 1.*/
+bool stopable = false;              /**< Used to ensure that we search atleast a depth one 1.*/
+std::atomic<bool> exit_thread_flag; /**< True to stop the search.*/
+ThreadSearch thread[256] = {};      /**< An array of thread data up to 256 threads.*/
+int lmrReduction[64][64];           /**< A 2D array of reduction values for LMR given depth and move count.*/
+TimeManager tm;                     /**< The time manager determines when to stop the search given time parameters.*/
 
-const int seePruningMargin[2][6] = {{0, -100, -175, -275, -425, -750}, {0, -125, -215, -300, -400, -500}};
-const int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}};
-extern int pieceValues[6];
-
-TimeManager tm;
-Eval *eval = new Eval();
-TranspositionTable *tt = new TranspositionTable;
-MovePick *movePick = new MovePick;
-MoveGen *moveGen = new MoveGen;
+Eval *eval = new Eval();                         /**< The evaluator to score the positions*/
+TranspositionTable *tt = new TranspositionTable; /**< The transposition table to store info on the position*/
+MovePick *movePick = new MovePick;               /**< The move picker gives a score to each generated move*/
+MoveGen *moveGen = new MoveGen;                  /**< The move generator generates all pseudo legal moves in a given position*/
 
 
-int lmrReduction[64][64];
+const int seePruningMargin[2][6] = {{0, -100, -175, -275, -425, -750}, {0, -125, -215, -300, -400, -500}}; /**< Margins for SEE pruning in pvSearch*/
+const int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}};                          /**< Margins for late move pruning in pvSearch*/
+extern int pieceValues[6];                                                                                 /**< Piece values in the evaluation*/
+
+
+
+/**
+* Initialize the late move reduction array
+*/
 void InitLateMoveArray() {
     for (int i = 0; i < 64; i++) {
         for (int j = 0; j < 64; j++) {
@@ -30,7 +45,9 @@ void InitLateMoveArray() {
 
 
 
-// Clean up allocated memory
+/**
+* Deallocate memory in the search file
+*/
 void cleanUpSearch() {
     delete tt;
     delete movePick;
@@ -40,46 +57,84 @@ void cleanUpSearch() {
 
 
 
-// Set the TT size
+/**
+* Set the transposition table to a given size
+*
+* @param[in] hashSize The size of the transposition table to set in MB
+*/
 void setTTSize(int hashSize) {
     tt->setSize(hashSize);
 }
 
 
 
-// Clear hash table
+/**
+* Clear the transposition table
+*/
 void clearTT() {
     tt->clearHashTable();
 }
 
 
 
-// Insert killer moves into array
-void insertKiller(ThreadSearch *th, int depth, MOVE move) {
-    if (th->killers[depth][0] == move) {
+/**
+* Insert a move into killers array for a given ply
+*
+* @param[in, out] th   A pointer to the thread data that called the function.
+* @param[in]      ply  The current ply/height that the search is at.
+* @param[in]      move The move to be inserted into killers array.
+*/
+void insertKiller(ThreadSearch *th, int ply, MOVE move) {
+    if (th->killers[ply][0] == move) {
         return;
     }
-    th->killers[depth][1] = th->killers[depth][0];
-    th->killers[depth][0] = move;
+    th->killers[ply][1] = th->killers[ply][0];
+    th->killers[ply][0] = move;
 }
 
 
 
-// remove killer moves
-void removeKiller(ThreadSearch *th, int depth) {
-    th->killers[depth][1] = NO_MOVE;
-    th->killers[depth][0] = NO_MOVE;
+/**
+* Removes killer moves for a given ply
+*
+* @param[in, out] th  A pointer to the thread data that called the function.
+* @param[in]      ply The current ply/height that the search is at.
+*/
+void removeKiller(ThreadSearch *th, int ply) {
+    th->killers[ply][1] = NO_MOVE;
+    th->killers[ply][0] = NO_MOVE;
 }
 
 
 
-// Checks to see if a move (opposite side) is a killer move
-bool isKiller(ThreadSearch *th, int depth, MOVE move) {
-    return th->killers[depth][0] == move || th->killers[depth][1] == move;
+/**
+* Checks to see if a move is a killer move
+*
+* @param[in] th   A pointer to the thread data that called the function.
+* @param[in] ply  The current ply/height that the search is at.
+* @param[in] move The move to be determined if it is a killer move.
+*/
+bool isKiller(ThreadSearch *th, int ply, MOVE move) {
+    return th->killers[ply][0] == move || th->killers[ply][1] == move;
 }
 
 
 
+/**
+* The function that searches only noisy moves
+*
+* Qsearch is used to improve the playing strength by evaluating only quiet positions.
+* Therefore we search all noisy moves (captures and promotions and checks) until only a
+* quiet position is left.
+*
+* @param[in, out] b     The board representation.
+* @param[in, out] th    A pointer to the thread data that called the function.
+* @param[in]      depth The current depth to search the current position at.
+* @param[in]      alpha AB pruning alpha value.
+* @param[in]      beta  AB pruning beta value.
+* @param[in]      ply   The current ply/height that the search is at.
+* @return               The score of the best move in the position.
+*/
 int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int ply) {
 
     #ifdef DEBUGHASH
@@ -199,8 +254,20 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
 
 
 
-
-
+/**
+* The function that searches the non root nodes of the current position
+*
+* Uses various techniques such as null move pruning, reverse futility pruning, late move pruning, etc...
+*
+* @param[in, out] b           The board representation.
+* @param[in, out] th          A pointer to the thread data that called the function.
+* @param[in]      depth       The current depth to search the current position at.
+* @param[in]      alpha       AB pruning alpha value.
+* @param[in]      beta        AB pruning beta value.
+* @param[in]      canNullMove True if we use can null move pruning in the current call.
+* @param[in]      ply         The current ply/height that the search is at.
+* @return                     The score of the best move in the position.
+*/
 int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply) {
 
     #ifdef DEBUGHASH
@@ -442,6 +509,22 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
 
 
+/**
+* The function that searches the root nodes of the current position
+*
+* The pvSearch function is separated from the pvSearchRoot function as
+* the two functions are handled slightly differently.
+*
+* @param[in, out] b        The board representation.
+* @param[in, out] th       A pointer to the thread data that called the function.
+* @param[in]      depth    The current depth to search the current position at.
+* @param[in]      moveList A list of all pseudo legal moves in the position.
+* @param[in]      alpha    AB pruning alpha value.
+* @param[in]      beta     AB pruning beta value.
+* @param[in]      analysis True if we are in analysis mode.
+* @param[in]      id       The ID of the thread that calls it.
+* @return                  The info of the best move in the position.
+*/
 BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id) {
 
     th->nodes++;
@@ -556,6 +639,11 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
 
 
 
+/**
+* The function gets the max seldepth across all threads
+*
+* @return Returns the seldepth.
+*/
 int getSeldepth() {
     int ret = 0;
     for (int id = 0; id < nThreads; id++) {
@@ -566,6 +654,11 @@ int getSeldepth() {
 
 
 
+/**
+* The function gets the total nodes searched across all threads
+*
+* @return Returns the total nodes searched.
+*/
 uint64_t getTotalNodesSearched() {
     uint64_t ret = 0;
     for (int id = 0; id < nThreads; id++) {
@@ -576,6 +669,11 @@ uint64_t getTotalNodesSearched() {
 
 
 
+/**
+* The function that gets the hash usage across all threads
+*
+* @return Returns the hash usage in permill.
+*/
 uint64_t getHashFullTotal() {
     uint64_t writes = 0;
     for (int id = 0; id < nThreads; id++) {
@@ -586,6 +684,19 @@ uint64_t getHashFullTotal() {
 
 
 
+/**
+* The function that that prepares and calls the search
+*
+* This includes iterative deepening, generating root moves, and aspiration windows.
+* If SMP is enabled, multiple threads will call this function where ID 0 is the main thread
+* and the other IDs are helper threads.
+*
+* @param[in] id       The ID of the thread that calls it.
+* @param[in] th       A pointer to the thread data that called the function.
+* @param[in] depth    The maximum depth that can be searched.
+* @param[in] analysis True if we are in analysis mode.
+* @param[in] b        The board representation.
+*/
 void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
     MOVE bestMove = NO_MOVE;
@@ -708,7 +819,18 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 }
 
 
-
+/**
+* The function that main calls to get the best move
+*
+* @param[in, out] b         The board representation.
+* @param[in]      depth     The maximum depth that can be searched.
+* @param[in]      wtime     The amount of time white has.
+* @param[in]      btime     The amount of time black has.
+* @param[in]      winc      The increment white has.
+* @param[in]      binc      The increment black has.
+* @param[in]      movesToGo Moves to go until the next time control.
+* @param[in]      analysis  True if we are in analysis mode.
+*/
 void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
     tm = TimeManager(b.getSideToMove(), wtime, btime, winc, binc, movesToGo);
     tt->setTTAge(b.moveHistory.count);
