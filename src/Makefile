@@ -2,7 +2,7 @@
 debug = no
 debug_zobrist = no
 popcount = yes
-EXE = ./bob
+EXE = ../bob
 
 
 CXXFLAGS := -Wall -Wextra -std=c++11 -static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
