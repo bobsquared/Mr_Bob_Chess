@@ -1,15 +1,27 @@
+/**
+* A move picker.
+*
+* Used mainly to give moves a score.
+*/
+
+
 #include "movepick.h"
 
 
-// MovePick is used to score the moves such that the search will pick good moves first.
-// This is move ordering.
+/**
+* A constructor for the move picker.
+*/
 MovePick::MovePick() {
     InitMvvLva();
 }
 
 
 
-// Initialize MVV/LVA
+/**
+* An initializer for MvvLva.
+*
+* Initialize the values for the mvvlva array.
+*/
 void MovePick::InitMvvLva() {
 
     for (int i = 0; i < 6; i++) {
@@ -22,9 +34,18 @@ void MovePick::InitMvvLva() {
 
 
 
-// Set a score to all the moves in the movelist.
-// Higher score moves are picked first
-void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int depth, MOVE pvMove) {
+/**
+* A move scorer.
+*
+* Score the moves from the move list based on implemented heuristics.
+*
+* @param[in, out] moveList The list of moves to be scored.
+* @param[in]      b        The board representation.
+* @param[in]      th       A pointer to the thread data that called the function.
+* @param[in]      ply      The current ply/height that the search is at.
+* @param[in]      pvMove   The principal variation move found in the transposition table.
+*/
+void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int ply, MOVE pvMove) {
 
     MOVE move;
     int from;
@@ -62,10 +83,10 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
                 moveList.set_score_index(i, 0);
             }
         }
-        else if (th->killers[depth][0] == move) {
+        else if (th->killers[ply][0] == move) {
             moveList.set_score_index(i, 900000);
         }
-        else if (th->killers[depth][1] == move) {
+        else if (th->killers[ply][1] == move) {
             moveList.set_score_index(i, 800000);
         }
         else if (th->counterMove[b.toMove][get_move_from(prevMove)][get_move_to(prevMove)] == move) {
