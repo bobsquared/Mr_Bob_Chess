@@ -495,8 +495,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         int hist = th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;
         th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
 
-        hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] * std::min(depth, 20) / 23;
-        th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
+        if (prevMove != NULL_MOVE) {
+            hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] * std::min(depth, 20) / 23;
+            th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
+        }
+
 
         for (int i = 0; i < quietsSearched; i++) {
             piece = b.pieceAt[get_move_from(quiets[i])] / 2;
@@ -504,8 +507,10 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             hist = th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
             th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 30 * (-depth * depth) - hist;
 
-            hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
-            th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] += 30 * (-depth * depth) - hist;
+            if (prevMove != NULL_MOVE) {
+                hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
+                th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] += 30 * (-depth * depth) - hist;
+            }
         }
     }
 
