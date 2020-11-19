@@ -420,6 +420,8 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         int newDepth = depth + extension; // Extend
+        int cmh = prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[get_move_from(move)] / 2][get_move_to(move)] : 0;
+        // std::cout << (th->history[b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) << std::endl;
 
         b.make_move(move); // Make move
 
@@ -434,7 +436,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr -= isKiller(th, ply, move); // Don't reduce as much for killer moves
             lmr += !improving + failing; // Reduce if evaluation is improving (reduce more if evaluation fails)
             lmr -= 2 * isPv; // Don't reduce as much for PV nodes
-            lmr -= (th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)]) / 1350;
+            lmr -= (th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) / 1500;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
@@ -505,11 +507,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             piece = b.pieceAt[get_move_from(quiets[i])] / 2;
 
             hist = th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
-            th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 30 * (-depth * depth) - hist;
+            th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 32 * (-depth * depth) - hist;
 
             if (prevMove != NULL_MOVE) {
                 hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
-                th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] += 30 * (-depth * depth) - hist;
+                th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] += 32 * (-depth * depth) - hist;
             }
         }
     }
