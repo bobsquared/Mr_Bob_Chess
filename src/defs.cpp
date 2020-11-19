@@ -96,6 +96,18 @@ void InitHistory(ThreadSearch *th) {
         }
     }
 
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 6; j++) {
+            for (int k = 0; k < 64; k++) {
+                for (int l = 0; l < 6; l++) {
+                    for (int m = 0; m < 64; m++) {
+                        th->counterHistory[i][j][k][l][m] = 0;
+                    }
+                }
+            }
+        }
+    }
+
 }
 
 

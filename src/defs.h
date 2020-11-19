@@ -216,6 +216,7 @@ struct SearchStack {
 // Info each thread has
 struct ThreadSearch {
     int history[2][64][64] = {};
+    int counterHistory[2][6][64][6][64] = {};
     MOVE killers[128][2] = {};
     MOVE counterMove[2][64][64] = {};
     SearchStack searchStack[128] = {};

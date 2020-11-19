@@ -51,6 +51,7 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
     int from;
     int to;
     MOVE prevMove = b.moveHistory.move[b.moveHistory.count - 1].move;
+    int prevPiece = b.pieceAt[get_move_to(prevMove)] / 2;
 
     for (int i = 0; i < moveList.count; i++) {
         moveList.get_index_move(i, move);
@@ -93,7 +94,8 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
             moveList.set_score_index(i, 700000);
         }
         else {
-            moveList.set_score_index(i, th->history[b.toMove][get_move_from(move)][get_move_to(move)]);
+            int cmh = ply > 0? th->counterHistory[b.toMove][prevPiece][get_move_to(prevMove)][b.pieceAt[get_move_from(move)] / 2][get_move_to(move)] : 0;
+            moveList.set_score_index(i, th->history[b.toMove][get_move_from(move)][get_move_to(move)] + cmh);
         }
     }
 
