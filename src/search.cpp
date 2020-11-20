@@ -561,6 +561,10 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
     bool hashed = tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
 
 
+    MOVE prevMove = b.moveHistory.count > 0? b.moveHistory.move[b.moveHistory.count - 1].move :  NO_MOVE;
+    int prevPiece = b.pieceAt[get_move_to(prevMove)] / 2;
+
+
     // Initialize evaluation stack
     th->searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
 
@@ -579,7 +583,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
-
+        int cmh = prevMove != NO_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[get_move_from(move)] / 2][get_move_to(move)] : 0;
         b.make_move(move); // Make the move
 
         // First move search at full depth and full window
@@ -596,7 +600,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
         // Late move reductions
         else if (depth >= 3 && !inCheck && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
-            lmr -= th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] / 1500;
+            lmr -= (th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) / 1500;
             lmr -= 2;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
