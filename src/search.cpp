@@ -421,7 +421,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
         int newDepth = depth + extension; // Extend
         int cmh = prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[get_move_from(move)] / 2][get_move_to(move)] : 0;
-        // std::cout << (th->history[b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) << std::endl;
 
         b.make_move(move); // Make move
 
