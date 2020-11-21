@@ -125,10 +125,10 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        // set hash
+        // set threads
         if (std::regex_search(lowerCommand, m, setThreads)) {
             exit_thread_flag = true;
-            nThreads = std::stoi(m[1]);
+            setNumThreads(std::stoi(m[1]));
             continue;
         }
 
