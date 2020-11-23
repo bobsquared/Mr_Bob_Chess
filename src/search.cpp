@@ -16,7 +16,6 @@ bool printInfo = true;              /**< False to turn of info print statements.
 int nThreads = 1;                   /**< Number of threads to search, default is 1.*/
 bool stopable = false;              /**< Used to ensure that we search atleast a depth one 1.*/
 std::atomic<bool> exit_thread_flag; /**< True to stop the search.*/
-ThreadSearch thread[256] = {};      /**< An array of thread data up to 256 threads.*/
 int lmrReduction[64][64];           /**< A 2D array of reduction values for LMR given depth and move count.*/
 TimeManager tm;                     /**< The time manager determines when to stop the search given time parameters.*/
 
@@ -24,6 +23,7 @@ Eval *eval = new Eval();                         /**< The evaluator to score the
 TranspositionTable *tt = new TranspositionTable; /**< The transposition table to store info on the position*/
 MovePick *movePick = new MovePick;               /**< The move picker gives a score to each generated move*/
 MoveGen *moveGen = new MoveGen;                  /**< The move generator generates all pseudo legal moves in a given position*/
+ThreadSearch *thread = new ThreadSearch[1];      /**< An array of thread data up to 256 threads.*/
 
 
 const int seePruningMargin[2][6] = {{0, -100, -175, -275, -425, -750}, {0, -125, -215, -300, -400, -500}}; /**< Margins for SEE pruning in pvSearch*/
@@ -53,6 +53,20 @@ void cleanUpSearch() {
     delete movePick;
     delete moveGen;
     delete eval;
+    delete [] thread;
+}
+
+
+
+/**
+* Set the number of threads to search
+*
+* @param[in] numThreads The number of threads to search.
+*/
+void setNumThreads(const int numThreads) {
+    nThreads = numThreads;
+    delete [] thread;
+    thread = new ThreadSearch[numThreads];
 }
 
 
@@ -415,7 +429,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         int extension = 0;
 
         // Check extension
-        if (isCheck) {
+        if (isCheck || (isPv && get_move_to(move) == get_move_to(prevMove) && prevMove != NULL_MOVE)) {
             extension = 1;
         }
 
