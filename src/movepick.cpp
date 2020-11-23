@@ -50,8 +50,9 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
     MOVE move;
     int from;
     int to;
-    MOVE prevMove = b.moveHistory.move[b.moveHistory.count - 1].move;
+    MOVE prevMove = b.moveHistory.count > 0? b.moveHistory.move[b.moveHistory.count - 1].move : NO_MOVE;
     int prevPiece = b.pieceAt[get_move_to(prevMove)] / 2;
+    bool isValidPrevMove = (prevMove != NO_MOVE && prevMove != NULL_MOVE);
 
     for (int i = 0; i < moveList.count; i++) {
         moveList.get_index_move(i, move);
@@ -94,10 +95,7 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
             moveList.set_score_index(i, 700000);
         }
         else {
-            int cmh = 0;
-            if (ply > 0 && prevMove != NULL_MOVE) {
-                cmh = th->counterHistory[b.toMove][prevPiece][get_move_to(prevMove)][b.pieceAt[get_move_from(move)] / 2][get_move_to(move)];
-            }
+            int cmh = isValidPrevMove * th->counterHistory[b.toMove][prevPiece][get_move_to(prevMove)][b.pieceAt[get_move_from(move)] / 2][get_move_to(move)];
             moveList.set_score_index(i, th->history[b.toMove][get_move_from(move)][get_move_to(move)] + cmh);
         }
     }

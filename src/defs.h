@@ -184,10 +184,6 @@ struct MoveInfoStack {
 
     MoveInfoStack() : count(0) {}
 
-    MoveInfoStack(const MoveInfoStack &moveInfoStack) : count(moveInfoStack.count) {
-        std::copy(moveInfoStack.move, moveInfoStack.move + count, move);
-    }
-
     void insert(MoveInfo moveInfo) {
         move[count] = moveInfo;
         count++;

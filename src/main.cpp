@@ -75,6 +75,7 @@ int main(int argc, char* argv[]) {
     std::regex binc(".*binc\\s(\\d+).*");
 
     std::regex movesToGo(".*movestogo\\s(\\d+).*");
+    std::regex searchDepth(".*depth\\s(\\d+).*");
     std::regex number(".*(\\d+).*");
     std::thread thr;
 
@@ -141,7 +142,8 @@ int main(int argc, char* argv[]) {
         // Search (virtually) forever.
         if (command == "go infinite") {
             exit_thread_flag = false;
-            thr = std::thread(beginSearch, std::ref(pos), 255, INT_MAX, INT_MAX, 0, 0, 0, true);
+
+            thr = std::thread(beginSearch, std::ref(pos), 99, INT_MAX, INT_MAX, 0, 0, 0, true);
             thr.detach();
             continue;
         }
@@ -158,11 +160,12 @@ int main(int argc, char* argv[]) {
         // go command with time for each side
         if (command.substr(0, 3) == "go ") {
             exit_thread_flag = false;
-            int whitetime = 0;
-            int blacktime = 0;
+            int whitetime = INT_MAX;
+            int blacktime = INT_MAX;
             int whiteInc = 0;
             int blackInc = 0;
             int movestogo = 0;
+            int depth = 99;
 
             if (std::regex_search(command, m, btime)) {
                 blacktime = std::stoi(m[1]);
@@ -184,9 +187,11 @@ int main(int argc, char* argv[]) {
                 movestogo = std::stoi(m[1]);
             }
 
+            if (std::regex_search(command, m, searchDepth)) {
+                depth = std::stoi(m[1]);
+            }
 
-
-            thr = std::thread(beginSearch, std::ref(pos), 99, whitetime, blacktime, whiteInc, blackInc, movestogo, false);
+            thr = std::thread(beginSearch, std::ref(pos), depth, whitetime, blacktime, whiteInc, blackInc, movestogo, false);
             thr.detach();
             continue;
         }
