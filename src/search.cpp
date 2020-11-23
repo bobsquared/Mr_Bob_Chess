@@ -435,7 +435,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr -= isKiller(th, ply, move); // Don't reduce as much for killer moves
             lmr += !improving + failing; // Reduce if evaluation is improving (reduce more if evaluation fails)
             lmr -= 2 * isPv; // Don't reduce as much for PV nodes
-            lmr -= (th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) / 1500;
+            lmr -= (th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) / 6881;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
@@ -493,11 +493,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         b.insertCounterMove(th, bestMove);
         int piece = b.pieceAt[get_move_from(bestMove)] / 2;
 
-        int hist = th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;
+        int hist = th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * 32 * std::min(depth * depth, 400) / 16384;
         th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
 
         if (prevMove != NULL_MOVE) {
-            hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] * std::min(depth, 20) / 23;
+            hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] * 32 * std::min(depth * depth, 400) / 16384;
             th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
         }
 
@@ -505,12 +505,12 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         for (int i = 0; i < quietsSearched; i++) {
             piece = b.pieceAt[get_move_from(quiets[i])] / 2;
 
-            hist = th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
-            th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 32 * (-depth * depth) - hist;
+            hist = th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * 32 * std::min(depth * depth, 400) / 16384;
+            th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 32 * -(depth * depth) - hist;
 
             if (prevMove != NULL_MOVE) {
-                hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
-                th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] += 32 * (-depth * depth) - hist;
+                hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] * 32 * std::min(depth * depth, 400) / 16384;
+                th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] += 32 * -(depth * depth) - hist;
             }
         }
     }
@@ -600,7 +600,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
         // Late move reductions
         else if (depth >= 3 && !inCheck && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
-            lmr -= (th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) / 1500;
+            lmr -= (th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) / 6881;
             lmr -= 2;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
