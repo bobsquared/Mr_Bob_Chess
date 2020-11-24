@@ -29,7 +29,7 @@ struct BestMoveInfo {
 extern std::atomic<bool> exit_thread_flag;
 extern int totalTime;
 extern bool printInfo;
-extern ThreadSearch thread[256];
+extern ThreadSearch *thread;
 extern int nThreads;
 
 extern void cleanUpSearch();
