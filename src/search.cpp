@@ -27,7 +27,7 @@ ThreadSearch *thread = new ThreadSearch[1];      /**< An array of thread data up
 
 
 const int seePruningMargin[2][6] = {{0, -100, -175, -275, -425, -750}, {0, -125, -215, -300, -400, -500}}; /**< Margins for SEE pruning in pvSearch*/
-const int lateMoveMargin[2][6] = {{0, 5, 8, 13, 23, 34}, {0, 7, 10, 17, 29, 43}};                          /**< Margins for late move pruning in pvSearch*/
+const int lateMoveMargin[2][7] = {{0, 5, 8, 13, 23, 34, 47}, {0, 7, 10, 17, 29, 43, 62}};                  /**< Margins for late move pruning in pvSearch*/
 extern int pieceValues[6];                                                                                 /**< Piece values in the evaluation*/
 
 
@@ -408,7 +408,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
                 }
 
                 // Late move pruning
-                if (depth <= 5 && quietsSearched > lateMoveMargin[improving][depth]) {
+                if (depth <= 6 && quietsSearched > lateMoveMargin[improving][depth]) {
                     break;
                 }
 
