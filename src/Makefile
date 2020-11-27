@@ -2,6 +2,7 @@
 debug = no
 debug_zobrist = no
 popcount = yes
+native = no
 EXE = ../bob
 
 
@@ -17,6 +18,11 @@ endif
 ifeq ($(popcount), yes)
 CXXFLAGS += -msse3 -mpopcnt -DPOPCOUNT
 OBCXXFLAGS += -msse3 -mpopcnt -DPOPCOUNT
+endif
+
+ifeq ($(native), yes)
+CXXFLAGS += -march=native
+OBCXXFLAGS += -march=native
 endif
 
 ifeq ($(debug_zobrist), yes)
