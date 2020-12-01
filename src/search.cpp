@@ -427,6 +427,8 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             }
         }
 
+
+
         // Skip the move it is not legal
         if (!b.isLegal(move)) {
             continue;
@@ -522,26 +524,29 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0) && singMove == NO_MOVE) {
         insertKiller(th, ply, bestMove);
         b.insertCounterMove(th, bestMove);
-        int piece = b.pieceAt[get_move_from(bestMove)] / 2;
 
-        int hist = th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;
-        th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
+        if (!isCheck) {
+            int piece = b.pieceAt[get_move_from(bestMove)] / 2;
 
-        if (prevMove != NULL_MOVE) {
-            hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] * std::min(depth, 20) / 23;
-            th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
-        }
-
-
-        for (int i = 0; i < quietsSearched; i++) {
-            piece = b.pieceAt[get_move_from(quiets[i])] / 2;
-
-            hist = th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
-            th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 32 * (-depth * depth) - hist;
+            int hist = th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;
+            th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
 
             if (prevMove != NULL_MOVE) {
-                hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
-                th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] += 32 * (-depth * depth) - hist;
+                hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] * std::min(depth, 20) / 23;
+                th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
+            }
+
+
+            for (int i = 0; i < quietsSearched; i++) {
+                piece = b.pieceAt[get_move_from(quiets[i])] / 2;
+
+                hist = th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
+                th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 32 * (-depth * depth) - hist;
+
+                if (prevMove != NULL_MOVE) {
+                    hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
+                    th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] += 32 * (-depth * depth) - hist;
+                }
             }
         }
     }
