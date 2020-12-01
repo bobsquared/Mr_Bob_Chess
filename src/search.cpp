@@ -406,7 +406,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             continue;
         }
 
-        if (ret > -MATE_VALUE_MAX) {
+        if (!isPv && ret > -MATE_VALUE_MAX) {
             if (isQuiet) {
 
                 // Futility pruning
