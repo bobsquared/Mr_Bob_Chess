@@ -419,6 +419,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
                     break;
                 }
 
+                // History move pruning
+                if (numMoves > 0 && !isCheck && hist < std::pow(1.75, depth - 1) * -350 - 1000) {
+                    continue;
+                }
+
             }
 
             // SEE pruning
