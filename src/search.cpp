@@ -399,11 +399,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     while (moveList.get_next_move(move)) {
         bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
 
-        if (!isPv && ret > -MATE_VALUE_MAX) {
+        if (!isPv && numMoves > 0) {
             if (isQuiet) {
 
                 // Futility pruning
-                if (depth <= 6 && numMoves > 0 && staticEval + 135 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
+                if (depth <= 6 && staticEval + 135 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
                     break;
                 }
 
@@ -415,7 +415,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             }
 
             // SEE pruning
-            if (depth <= 5 && numMoves > 0 && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < seePruningMargin[isQuiet][depth]) {
+            if (depth <= 5 && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < seePruningMargin[isQuiet][depth]) {
                 continue;
             }
         }
