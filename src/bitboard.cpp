@@ -620,7 +620,7 @@ bool Bitboard::InCheckOther() {
     uint64_t ret = 0;
     int index = bitScan(pieces[10 + !toMove]);
 
-    ret = pieces[toMove] & pawnAttacksAll(pieces[10 + !toMove], !toMove);
+    ret = pieces[toMove] & pawnAttacks[index][!toMove];
     ret |= pieces[2 + toMove] & knightMoves[index];
     ret |= (pieces[4 + toMove] | pieces[8 + toMove]) & magics->bishopAttacksMask(occupied, index);
     ret |= (pieces[6 + toMove] | pieces[8 + toMove]) & magics->rookAttacksMask(occupied, index);
@@ -640,7 +640,7 @@ bool Bitboard::InCheck() {
     uint64_t ret = 0;
     int index = bitScan(pieces[10 + toMove]);
 
-    ret = pieces[!toMove] & pawnAttacksAll(pieces[10 + toMove], toMove);
+    ret = pieces[!toMove] & pawnAttacks[index][toMove];
     ret |= pieces[2 + !toMove] & knightMoves[index];
     ret |= (pieces[4 + !toMove] | pieces[8 + !toMove]) & magics->bishopAttacksMask(occupied, index);
     ret |= (pieces[6 + !toMove] | pieces[8 + !toMove]) & magics->rookAttacksMask(occupied, index);
