@@ -212,7 +212,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     int numMoves = 0;
 
     inCheck? moveGen->generate_all_moves(moveList, b) : moveGen->generate_captures_promotions(moveList, b);
-    movePick->scoreMoves(moveList, b, th, 0, hashedBoard.move);
+    movePick->scoreMovesQS(moveList, b, hashedBoard.move);
     while (moveList.get_next_move(move)) {
 
         // Prune negative SEE

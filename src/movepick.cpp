@@ -101,3 +101,44 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
     }
 
 }
+
+
+
+/**
+* A move scorer for qsearch.
+*
+* Score the moves from the move list based on implemented heuristics.
+*
+* @param[in, out] moveList The list of moves to be scored.
+* @param[in]      b        The board representation.
+* @param[in]      pvMove   The principal variation move found in the transposition table.
+*/
+void MovePick::scoreMovesQS(MoveList &moveList, Bitboard &b, MOVE pvMove) {
+
+    MOVE move;
+    int from;
+    int to;
+
+    for (int i = 0; i < moveList.count; i++) {
+        moveList.get_index_move(i, move);
+
+        if (move == pvMove) {
+            moveList.set_score_index(i, 1500000);
+        }
+        else if (move & CAPTURE_FLAG) {
+
+            from = b.pieceAt[get_move_from(move)] / 2;
+            to = b.pieceAt[get_move_to(move)] / 2;
+
+            if ((move & MOVE_FLAGS) == ENPASSANT_FLAG) {
+                moveList.set_score_index(i, 1000000 + mvvlva[from][0]);
+            }
+            else {
+                int score = to > from? 1000000 : (to == from? 975000 : 950000);
+                moveList.set_score_index(i, score + mvvlva[from][to]);
+            }
+
+        }
+    }
+
+}

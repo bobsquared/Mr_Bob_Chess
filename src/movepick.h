@@ -33,6 +33,17 @@ public:
     */
     void scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int ply, MOVE pvMove);
 
+    /**
+    * A move scorer for qsearch.
+    *
+    * Score the moves from the move list based on implemented heuristics.
+    *
+    * @param[in, out] moveList The list of moves to be scored.
+    * @param[in]      b        The board representation.
+    * @param[in]      pvMove   The principal variation move found in the transposition table.
+    */
+    void scoreMovesQS(MoveList &moveList, Bitboard &b, MOVE pvMove);
+
 private:
 
     int mvvlva[6][6]; /**< The array containing values for most valuable victim, least valuable attacker.*/
