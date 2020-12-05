@@ -622,10 +622,9 @@ bool Bitboard::InCheckOther() {
 
     ret = pieces[toMove] & pawnAttacks[index][!toMove];
     ret |= pieces[2 + toMove] & knightMoves[index];
+    ret |= pieces[10 + toMove] & kingMoves[index];
     ret |= (pieces[4 + toMove] | pieces[8 + toMove]) & magics->bishopAttacksMask(occupied, index);
     ret |= (pieces[6 + toMove] | pieces[8 + toMove]) & magics->rookAttacksMask(occupied, index);
-    ret |= pieces[10 + toMove] & kingMoves[index];
-    ret &= color[toMove];
 
     return ret != 0;
 
@@ -642,10 +641,9 @@ bool Bitboard::InCheck() {
 
     ret = pieces[!toMove] & pawnAttacks[index][toMove];
     ret |= pieces[2 + !toMove] & knightMoves[index];
+    ret |= pieces[10 + !toMove] & kingMoves[index];
     ret |= (pieces[4 + !toMove] | pieces[8 + !toMove]) & magics->bishopAttacksMask(occupied, index);
     ret |= (pieces[6 + !toMove] | pieces[8 + !toMove]) & magics->rookAttacksMask(occupied, index);
-    ret |= pieces[10 + !toMove] & kingMoves[index];
-    ret &= color[!toMove];
 
     return ret != 0;
 
