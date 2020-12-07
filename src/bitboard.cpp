@@ -666,32 +666,23 @@ bool Bitboard::isLegal(MOVE move) {
     int from = get_move_from(move);
     int to = get_move_to(move);
     int kingSide = 10 + toMove;
-    uint64_t tofrom = (1ULL << to) | (1ULL << from);
-
+    uint64_t to64 = (1ULL << to);
+    uint64_t from64 = (1ULL << from);
+    uint64_t tofrom = to64 | from64;
 
     bool attacked = false;
-    bool kingMove = false;
+    bool kingMove = pieceAt[from] / 2 == 5;
 
     // If the moving piece is a king
-    if (pieceAt[from] / 2 == 5) {
-        if ((MOVE_FLAGS & move) == KING_CASTLE_FLAG || (MOVE_FLAGS & move) == QUEEN_CASTLE_FLAG) {
-            if (from != 4 && from != 60) {
-                return false;
-            }
-        }
-        kingMove = true;
-        pieces[kingSide] ^= tofrom;
-
-    }
+    pieces[kingSide] ^= kingMove * tofrom;
 
     // If it is a capture
     if (move & CAPTURE_FLAG) {
-        int captured = pieceAt[to];
-        occupied ^= 1ULL << from;
-        pieces[captured] ^= 1ULL << to;
+        occupied ^= from64;
+        pieces[pieceAt[to]] ^= to64;
         attacked = InCheck();
-        pieces[captured] ^= 1ULL << to;
-        occupied ^= 1ULL << from;
+        pieces[pieceAt[to]] ^= to64;
+        occupied ^= from64;
     }
     else {
         occupied ^= tofrom;
@@ -700,9 +691,7 @@ bool Bitboard::isLegal(MOVE move) {
     }
 
     // If the moving piece is a king
-    if (kingMove) {
-        pieces[kingSide] ^= tofrom;
-    }
+    pieces[kingSide] ^= kingMove * tofrom;
 
     return !attacked;
 }
