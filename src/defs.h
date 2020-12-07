@@ -239,6 +239,10 @@ struct ThreadSearch {
     uint64_t queenUnsafe[2] = {};
     uint64_t tempUnsafe[2] = {};
 
+    uint64_t pawnAttAll[2] = {};
+    uint64_t knightAttAll[2] = {};
+    int bscanKing[2] = {};
+
     MOVE bestMove;
 
 

@@ -484,6 +484,14 @@ uint64_t Eval::adjacentMask(uint64_t pawns) {
 // Initialize variables in evaluation
 void Eval::InitializeEval(Bitboard &board, ThreadSearch *th) {
 
+    th->pawnAttAll[0] = pawnAttacksAll(board.pieces[0], 0);
+    th->pawnAttAll[1] = pawnAttacksAll(board.pieces[1], 1);
+
+    th->knightAttAll[0] = knightAttacks(board.pieces[2]);
+    th->knightAttAll[1] = knightAttacks(board.pieces[3]);
+
+    th->bscanKing[0] = bitScan(board.pieces[10]);
+    th->bscanKing[1] = bitScan(board.pieces[11]);
 
     for (int i = 0; i < 2; i++) {
 
@@ -502,11 +510,11 @@ void Eval::InitializeEval(Bitboard &board, ThreadSearch *th) {
         th->rookAttacksAll[i] = 0;
 
         // Mobility
-        th->mobilityUnsafeSquares[i] = pawnAttacksAll(board.pieces[1 - i], 1 - i) | board.pieces[i] | board.pieces[10 + i];
+        th->mobilityUnsafeSquares[i] = th->pawnAttAll[1 - i] | board.pieces[i] | board.pieces[10 + i];
 
         th->minorUnsafe[i] = th->mobilityUnsafeSquares[i] | board.pieces[8 + i];
-        th->queenUnsafe[i] = th->mobilityUnsafeSquares[i] | knightAttacks(board.pieces[3 - i]);
-        th->tempUnsafe[i] = ~(pawnAttacksAll(board.pieces[1 - i], 1 - i) | knightAttacks(board.pieces[3 - i]) | board.pieces[i]) & kingZoneMask[i][bitScan(board.pieces[11 - i])];
+        th->queenUnsafe[i] = th->mobilityUnsafeSquares[i] | th->knightAttAll[1 - i];
+        th->tempUnsafe[i] = ~(th->pawnAttAll[1 - i] | th->knightAttAll[1 - i] | board.pieces[i]) & kingZoneMask[i][th->bscanKing[1 - i]];
 
     }
 
@@ -586,7 +594,7 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
     ret += board.toMove? -tempoBonus : tempoBonus;
     ret += board.material[0] - board.material[1];
     ret += evaluateImbalance(board, false) - evaluateImbalance(board, true);
-    ret += evaluatePawnShield(board, false) - evaluatePawnShield(board, true);
+    ret += evaluatePawnShield(board, th, false) - evaluatePawnShield(board, th, true);
 
 
     ret += probePawnHash(board.getPawnKey(), hit);
@@ -649,15 +657,15 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
     int dist = 0;
     int distFinal = 0;
     uint64_t piece = board.pieces[col];
-    int ourKing = bitScan(board.pieces[10 + col]);
-    int theirKing = bitScan(board.pieces[10 + !col]);
+    int ourKing = th->bscanKing[col];
+    int theirKing = th->bscanKing[!col];
 
-    th->unsafeSquares[!col] |= pawnAttacksAll(board.pieces[col], col);
+    th->unsafeSquares[!col] |= th->pawnAttAll[col];
 
 
 
     if (!hit) {
-        uint64_t supportedPawns = board.pieces[col] & pawnAttacksAll(board.pieces[col], col);
+        uint64_t supportedPawns = board.pieces[col] & th->pawnAttAll[col];
         uint64_t adjacentPawns = board.pieces[col] & adjacentMask(board.pieces[col]);
         uint64_t doubledPawns = col? ((board.pieces[col] ^ supportedPawns) << 8) & board.pieces[col] : ((board.pieces[col] ^ supportedPawns) >> 8) & board.pieces[col];
         uint64_t isolatedPawns = ~supportedPawns & ~adjacentPawns & board.pieces[col];
@@ -724,7 +732,7 @@ int Eval::evaluateKnights(Bitboard &board, ThreadSearch *th, bool col) {
 
     int ret = 0;
     uint64_t piece = board.pieces[2 + col];
-    uint64_t holes = pawnAttacksAll(board.pieces[col], col);
+    uint64_t holes = th->pawnAttAll[col];
     uint64_t defendedKnight = piece & holes;
 
     while (piece) {
@@ -891,10 +899,10 @@ int Eval::evaluateQueens(Bitboard &board, ThreadSearch *th, bool col) {
 int Eval::evaluateKing(Bitboard &board, ThreadSearch *th, bool col) {
 
     int ret = 0;
-    int theirKing = bitScan(board.pieces[10 + !col]);
+    int theirKing = th->bscanKing[!col];
 
     // PST
-    ret += pieceSquare[10 + col][bitScan(board.pieces[10 + col])];
+    ret += pieceSquare[10 + col][th->bscanKing[col]];
 
     if (th->KSAttackersCount[col] > 1) {
 
@@ -924,11 +932,10 @@ int Eval::evaluateKing(Bitboard &board, ThreadSearch *th, bool col) {
 
 
 
-int Eval::evaluatePawnShield(Bitboard &board, bool col) {
+int Eval::evaluatePawnShield(Bitboard &board, ThreadSearch *th, bool col) {
 
     int ret = 0;
-    uint64_t piece = board.pieces[10 + col];
-    int bscan = bitScan(piece);
+    int bscan = th->bscanKing[col];
     uint64_t shield = passedPawnMask[col][bscan] & (rowMask[col? std::max(bscan - 8, 0) : std::min(bscan + 8, 63)] | rowMask[col? std::max(bscan - 16, 0) : std::min(bscan + 16, 63)]);
     int shieldCount = count_population(shield & board.pieces[col]);
 
@@ -976,7 +983,7 @@ int Eval::evaluateThreats(Bitboard &board, ThreadSearch *th, bool col) {
     ret += pawnPushThreat * numAttacks;
 
     // Knight threats
-    attacks = knightAttacks(board.pieces[2 + col]);
+    attacks = th->knightAttAll[col];
     ret += (knightThreatPiece[0] * count_population(attacks & board.pieces[!col]));
     ret += (knightThreatPiece[2] * count_population(attacks & board.pieces[4 + !col]));
     ret += (knightThreatPiece[3] * count_population(attacks & board.pieces[6 + !col]));
