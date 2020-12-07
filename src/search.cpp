@@ -392,7 +392,8 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     MOVE quiets[MAX_NUM_MOVES];
 
     MOVE prevMove = b.moveHistory.move[b.moveHistory.count - 1].move;
-    int prevPiece = b.pieceAt[get_move_to(prevMove)] / 2;
+    int prevMoveTo = get_move_to(prevMove);
+    int prevPiece = b.pieceAt[prevMoveTo] / 2;
 
     moveGen->generate_all_moves(moveList, b); // Generate moves
     movePick->scoreMoves(moveList, b, th, ply, hashedBoard.move);
@@ -434,7 +435,9 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         int newDepth = depth + extension; // Extend
-        int cmh = prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[get_move_from(move)] / 2][get_move_to(move)] : 0;
+        int moveFrom = get_move_from(move);
+        int moveTo = get_move_to(move);
+        int cmh = prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo] : 0;
 
         b.make_move(move); // Make move
 
@@ -449,7 +452,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr -= isKiller(th, ply, move); // Don't reduce as much for killer moves
             lmr += !improving + failing; // Reduce if evaluation is improving (reduce more if evaluation fails)
             lmr -= 2 * isPv; // Don't reduce as much for PV nodes
-            lmr -= (th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) / 1500;
+            lmr -= (th->history[!b.getSideToMove()][moveFrom][moveTo] + cmh) / 1500;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
@@ -505,26 +508,30 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
         insertKiller(th, ply, bestMove);
         b.insertCounterMove(th, bestMove);
-        int piece = b.pieceAt[get_move_from(bestMove)] / 2;
+        int bestMoveFrom = get_move_from(bestMove);
+        int bestMoveTo = get_move_to(bestMove);
+        int piece = b.pieceAt[bestMoveFrom] / 2;
 
-        int hist = th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] * std::min(depth, 20) / 23;
-        th->history[b.getSideToMove()][get_move_from(bestMove)][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
+        int hist = th->history[b.getSideToMove()][bestMoveFrom][bestMoveTo] * std::min(depth, 20) / 23;
+        th->history[b.getSideToMove()][bestMoveFrom][bestMoveTo] += 32 * (depth * depth) - hist;
 
         if (prevMove != NULL_MOVE) {
-            hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] * std::min(depth, 20) / 23;
-            th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(bestMove)] += 32 * (depth * depth) - hist;
+            hist = th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][bestMoveTo] * std::min(depth, 20) / 23;
+            th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][bestMoveTo] += 32 * (depth * depth) - hist;
         }
 
 
         for (int i = 0; i < quietsSearched; i++) {
-            piece = b.pieceAt[get_move_from(quiets[i])] / 2;
+            int quietFrom = get_move_from(quiets[i]);
+            int quietTo = get_move_to(quiets[i]);
+            piece = b.pieceAt[quietFrom] / 2;
 
-            hist = th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
-            th->history[b.getSideToMove()][get_move_from(quiets[i])][get_move_to(quiets[i])] += 32 * (-depth * depth) - hist;
+            hist = th->history[b.getSideToMove()][quietFrom][quietTo] * std::min(depth, 20) / 23;
+            th->history[b.getSideToMove()][quietFrom][quietTo] += 32 * (-depth * depth) - hist;
 
             if (prevMove != NULL_MOVE) {
-                hist = th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] * std::min(depth, 20) / 23;
-                th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][piece][get_move_to(quiets[i])] += 32 * (-depth * depth) - hist;
+                hist = th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][quietTo] * std::min(depth, 20) / 23;
+                th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][quietTo] += 32 * (-depth * depth) - hist;
             }
         }
     }

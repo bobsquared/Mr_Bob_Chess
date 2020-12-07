@@ -51,19 +51,22 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
     int from;
     int to;
     MOVE prevMove = b.moveHistory.count > 0? b.moveHistory.move[b.moveHistory.count - 1].move : NO_MOVE;
-    int prevPiece = b.pieceAt[get_move_to(prevMove)] / 2;
+    int prevMoveTo = get_move_to(prevMove);
+    int prevPiece = b.pieceAt[prevMoveTo] / 2;
     bool isValidPrevMove = (prevMove != NO_MOVE && prevMove != NULL_MOVE);
 
     for (int i = 0; i < moveList.count; i++) {
         moveList.get_index_move(i, move);
+        int moveTo = get_move_to(move);
+        int moveFrom = get_move_from(move);
 
         if (move == pvMove) {
             moveList.set_score_index(i, 1500000);
         }
         else if (move & CAPTURE_FLAG) {
 
-            from = b.pieceAt[get_move_from(move)] / 2;
-            to = b.pieceAt[get_move_to(move)] / 2;
+            from = b.pieceAt[moveFrom] / 2;
+            to = b.pieceAt[moveTo] / 2;
 
             if ((move & MOVE_FLAGS) == ENPASSANT_FLAG) {
                 moveList.set_score_index(i, 1000000 + mvvlva[from][0]);
@@ -91,12 +94,12 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
         else if (th->killers[ply][1] == move) {
             moveList.set_score_index(i, 800000);
         }
-        else if (th->counterMove[b.toMove][get_move_from(prevMove)][get_move_to(prevMove)] == move) {
+        else if (th->counterMove[b.toMove][get_move_from(prevMove)][prevMoveTo] == move) {
             moveList.set_score_index(i, 700000);
         }
         else {
-            int cmh = isValidPrevMove * th->counterHistory[b.toMove][prevPiece][get_move_to(prevMove)][b.pieceAt[get_move_from(move)] / 2][get_move_to(move)];
-            moveList.set_score_index(i, th->history[b.toMove][get_move_from(move)][get_move_to(move)] + cmh);
+            int cmh = isValidPrevMove * th->counterHistory[b.toMove][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo];
+            moveList.set_score_index(i, th->history[b.toMove][moveFrom][moveTo] + cmh);
         }
     }
 
