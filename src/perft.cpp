@@ -73,7 +73,8 @@ uint64_t PerftCall(Bitboard & b, int depth) {
     if (depth == 1) {
         int count = 0;
 
-        while (moveList.get_next_move(move)) {
+        for (int i = 0; i < moveList.count; i++) {
+            move = moveList.moveList[i].move;
             if (b.isLegal(move)) {
                 count++;
             }
@@ -81,8 +82,8 @@ uint64_t PerftCall(Bitboard & b, int depth) {
         return count;
     }
 
-    while (moveList.get_next_move(move)) {
-
+    for (int i = 0; i < moveList.count; i++) {
+        move = moveList.moveList[i].move;
         if (b.isLegal(move)) {
             b.make_move(move);
             nodes += PerftCall(b, depth - 1);
