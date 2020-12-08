@@ -53,6 +53,8 @@ Bitboard::Bitboard(const Bitboard &b) {
     castleRights = b.castleRights;
     halfMoves = b.halfMoves;
     fullMoves = b.fullMoves;
+    kingLoc[0] = b.kingLoc[0];
+    kingLoc[1] = b.kingLoc[1];
 
     std::copy(b.moveHistory.move, b.moveHistory.move + b.moveHistory.count, moveHistory.move);
 
@@ -102,6 +104,8 @@ void Bitboard::reset() {
     moveHistory.clear();
     posKey = zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove);
     pawnKey = zobrist->hashBoardPawns(pieces);
+    kingLoc[0] = bitScan(pieces[10]);
+    kingLoc[1] = bitScan(pieces[11]);
 }
 
 
@@ -371,9 +375,12 @@ void Bitboard::make_move(MOVE move) {
         zobrist->hashBoard_castle(posKey, castleRights & ~rookCastleFlagMask[from]);
         castleRights &= rookCastleFlagMask[from];
     }
-    else if (fromPiece == 10 + toMove && cflag) {
-        zobrist->hashBoard_castle(posKey, castleRights & cflag);
-        castleRights &= ~cflag;
+    else if (fromPiece == 10 + toMove) {
+        if (cflag) {
+            zobrist->hashBoard_castle(posKey, castleRights & cflag);
+            castleRights &= ~cflag;
+        }
+        kingLoc[toMove] = to;
     }
 
     assert(fromPiece != -1);
@@ -533,6 +540,10 @@ void Bitboard::undo_move(MOVE move) {
     pawnKey = moveInfo.pawnKey;
 
     fullMoves -= toMove;
+
+    if (toPiece == 10 + toMove) {
+        kingLoc[toMove] = from;
+    }
 
     if (moveFlags == QUIET_MOVES_FLAG) {
         move_quiet(to, from, toPiece, i1i2);
@@ -1327,10 +1338,14 @@ void Bitboard::setPosFen(std::string fen) {
             pieces[9] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
         }
         else if (fen.find("K", i) == i) {
-            pieces[10] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
+            int kloc = (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
+            pieces[10] |= 1ULL << kloc;
+            kingLoc[0] = kloc;
         }
         else if (fen.find("k", i) == i) {
-            pieces[11] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
+            int kloc = (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
+            pieces[11] |= 1ULL << kloc;
+            kingLoc[1] = kloc;
         }
     }
 
@@ -1450,6 +1465,10 @@ void Bitboard::setPosFen(std::string fen) {
 //             if (piece / 2 == 0) {
 //                 zobrist->hashBoard_square(pawnKey, lineOffset, piece);
 //             }
+//             else if (piece / 2 == 5) {
+//                 kingLoc[piece - 10] = lineOffset;
+//             }
+//
 //             lineOffset++;
 //         }
 //     }

@@ -44,7 +44,7 @@ private:
     int evaluateRooks(Bitboard &board, ThreadSearch *th, bool col);
     int evaluateQueens(Bitboard &board, ThreadSearch *th, bool col);
     int evaluateKing(Bitboard &board, ThreadSearch *th, bool col);
-    int evaluatePawnShield(Bitboard &board, ThreadSearch *th, bool col);
+    int evaluatePawnShield(Bitboard &board, bool col);
     int evaluateThreats(Bitboard &board, ThreadSearch *th, bool col);
 
     void savePawnHash(uint64_t key, int score);

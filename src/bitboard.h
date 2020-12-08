@@ -33,6 +33,7 @@ public:
     uint8_t castleRights;
     int fullMoves;
     int halfMoves;
+    int kingLoc[2];
 
     int material[2];
     int pieceCount[12];
