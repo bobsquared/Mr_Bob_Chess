@@ -56,19 +56,14 @@ void MoveGen::generate_pawn_moves_quiet(MoveList &moveList, Bitboard &b) {
         uint64_t loc = normalPawns & -normalPawns;
         int locIndex = bitScan(loc);
         create_move(moveList, locIndex, locIndex + (b.toMove? -8 : 8), QUIET_MOVES_FLAG);
+
+        if (doublePushablePawns & loc) {
+            create_move(moveList, locIndex, locIndex + (b.toMove? -16 : 16), DOUBLE_PAWN_PUSH_FLAG);
+        }
         normalPawns &= normalPawns - 1;
 
     }
 
-    // Consider double pawn pushes
-    while (doublePushablePawns) {
-
-        uint64_t loc = doublePushablePawns & -doublePushablePawns;
-        int locIndex = bitScan(loc);
-        create_move(moveList, locIndex, locIndex + (b.toMove? -16 : 16), DOUBLE_PAWN_PUSH_FLAG);
-        doublePushablePawns &= doublePushablePawns - 1;
-
-    }
 }
 
 
