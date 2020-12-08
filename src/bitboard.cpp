@@ -629,7 +629,7 @@ bool Bitboard::InCheckOther() {
 
     assert(pieces[10 + !toMove] != 0);
     uint64_t ret = 0;
-    int index = bitScan(pieces[10 + !toMove]);
+    int index = kingLoc[!toMove];
 
     ret = pieces[toMove] & pawnAttacks[index][!toMove];
     ret |= pieces[2 + toMove] & knightMoves[index];
@@ -648,7 +648,7 @@ bool Bitboard::InCheck() {
 
     assert(pieces[10 + toMove] != 0);
     uint64_t ret = 0;
-    int index = bitScan(pieces[10 + toMove]);
+    int index = kingLoc[toMove];
 
     ret = pieces[!toMove] & pawnAttacks[index][toMove];
     ret |= pieces[2 + !toMove] & knightMoves[index];
@@ -687,6 +687,10 @@ bool Bitboard::isLegal(MOVE move) {
     // If the moving piece is a king
     pieces[kingSide] ^= kingMove * tofrom;
 
+    if (kingMove) {
+        kingLoc[toMove] = to;
+    }
+
     // If it is a capture
     if (move & CAPTURE_FLAG) {
         occupied ^= from64;
@@ -703,6 +707,10 @@ bool Bitboard::isLegal(MOVE move) {
 
     // If the moving piece is a king
     pieces[kingSide] ^= kingMove * tofrom;
+
+    if (kingMove) {
+        kingLoc[toMove] = from;
+    }
 
     return !attacked;
 }
