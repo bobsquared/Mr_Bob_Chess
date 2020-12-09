@@ -69,13 +69,13 @@ typedef uint16_t MOVE;
 
 // All information about a move
 struct Move {
-    MOVE move;
     int score;
+    MOVE move;
 
-    Move() : move(0), score(0) {}
+    Move() : score(0), move(0) {}
 
     Move(MOVE move, int score) :
-    move(move), score(score) {}
+        score(score), move(move) {}
 
     bool operator<(const Move& a) const { return score > a.score; }
     bool operator>(const Move& a) const { return score < a.score; }
@@ -140,40 +140,40 @@ struct MoveList {
 
 // This is what is stored in the transposition table
 struct ZobristVal {
+    uint64_t posKey;
     MOVE move;
+    uint16_t halfMove;
     int16_t score;
     int16_t staticScore;
     int8_t depth;
     uint8_t flag;
-    uint64_t posKey;
-    uint16_t halfMove;
 
-    ZobristVal() : move(NO_MOVE), score(0), staticScore(0), depth(0), flag(0), posKey(0), halfMove(0) {}
+    ZobristVal() : posKey(0), move(NO_MOVE), halfMove(0), score(0), staticScore(0), depth(0), flag(0) {}
 
     ZobristVal(MOVE move, int16_t score, int16_t staticScore, int8_t depth, uint8_t flag, uint64_t posKey, uint16_t halfMove) :
-        move(move), score(score), staticScore(staticScore), depth(depth), flag(flag), posKey(posKey), halfMove(halfMove) {}
+        posKey(posKey), move(move), halfMove(halfMove), score(score), staticScore(staticScore), depth(depth), flag(flag) {}
 };
 
 
 
 struct MoveInfo {
+    uint64_t posKey;
+    uint64_t pawnKey;
     int captureType;
     int enpassantSq;
     int halfMoves;
-    uint8_t castleRights;
-    uint64_t posKey;
-    uint64_t pawnKey;
     MOVE move;
+    uint8_t castleRights;
 
     bool operator==(const uint64_t& rhs) {
         return posKey == rhs;
     }
 
     MoveInfo() :
-        captureType(-1), enpassantSq(0), halfMoves(0), castleRights(15), posKey(0), pawnKey(0), move(NO_MOVE) {}
+        posKey(0), pawnKey(0), captureType(-1), enpassantSq(0), halfMoves(0), move(NO_MOVE), castleRights(15) {}
 
     MoveInfo(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey, uint64_t pawnKey, MOVE move) :
-        captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), castleRights(castleRights), posKey(posKey), pawnKey(pawnKey), move(move) {}
+        posKey(posKey), pawnKey(pawnKey), captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), move(move), castleRights(castleRights) {}
 
 };
 
@@ -211,26 +211,12 @@ struct SearchStack {
 
 // Info each thread has
 struct ThreadSearch {
-    int history[2][64][64] = {};
-    int counterHistory[2][6][64][6][64] = {};
-    MOVE killers[128][2] = {};
-    MOVE counterMove[2][64][64] = {};
-    SearchStack searchStack[128] = {};
-
-    uint64_t nodes;
-    int seldepth;
-    bool nullMoveTree;
-    uint64_t ttWrites;
-
-    uint64_t unsafeSquares[2] = {};
-    int KSAttackersWeight[2] = {};
-    int KSAttacks[2] = {};
-    int KSAttackersCount[2] = {};
+    //evals
     uint64_t attacksKnight[2] = {};
     uint64_t attacksBishop[2] = {};
     uint64_t attacksRook[2] = {};
     uint64_t attacksQueen[2] = {};
-
+    uint64_t unsafeSquares[2] = {};
     uint64_t bishopAttacksAll[2] = {};
     uint64_t rookAttacksAll[2] = {};
 
@@ -242,10 +228,24 @@ struct ThreadSearch {
     uint64_t pawnAttAll[2] = {};
     uint64_t knightAttAll[2] = {};
 
+    uint64_t ttWrites;
+    uint64_t nodes;
+
+    SearchStack searchStack[128] = {};
+    int KSAttackersWeight[2] = {};
+    int KSAttacks[2] = {};
+    int KSAttackersCount[2] = {};
+    int seldepth;
+
+    int history[2][64][64] = {};
+    int counterHistory[2][6][64][6][64] = {};
+    MOVE killers[128][2] = {};
+    MOVE counterMove[2][64][64] = {};
     MOVE bestMove;
 
+    bool nullMoveTree;
 
-    ThreadSearch() : nodes(0), seldepth(0), nullMoveTree(false), ttWrites(0), bestMove(NO_MOVE) {};
+    ThreadSearch() : ttWrites(0), nodes(0), seldepth(0), bestMove(NO_MOVE), nullMoveTree(false)  {};
 };
 
 

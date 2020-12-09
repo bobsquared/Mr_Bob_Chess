@@ -27,6 +27,30 @@ public:
 
 private:
 
+    struct PawnHash{
+        uint64_t pawnKey;
+        int score;
+
+        PawnHash() :
+            pawnKey(0), score(0) {};
+
+        PawnHash(uint64_t pawnKey, int score) :
+            pawnKey(pawnKey), score(score) {};
+    };
+
+    PawnHash *pawnHash;
+    uint64_t numPawnHashes;
+    uint64_t kingZoneMask[2][64];
+    uint64_t passedPawnMask[2][64];
+    uint64_t forwardMask[2][64];
+    uint64_t isolatedPawnMask[64];
+    uint64_t outpostMask[2][64];
+    uint64_t knightOutpost[2][64];
+    int pieceSquare[12][64];
+    int pieceSquareEG[12][64];
+    int manhattanArray[64][64];
+    int chebyshevArray[64][64];
+
     void InitializeEval(Bitboard &board, ThreadSearch *th);
     void InitPieceBoards();
     void InitKingZoneMask();
@@ -51,36 +75,5 @@ private:
     int probePawnHash(uint64_t key, bool &hit);
 
     int getPhase(Bitboard &board);
-
-    int pieceSquare[12][64];
-    int pieceSquareEG[12][64];
-    uint64_t kingZoneMask[2][64];
-    uint64_t passedPawnMask[2][64];
-    uint64_t forwardMask[2][64];
-    int manhattanArray[64][64];
-    int chebyshevArray[64][64];
-    uint64_t isolatedPawnMask[64];
-    uint64_t outpostMask[2][64];
-    uint64_t knightOutpost[2][64];
-
-
-    // King safety
-    const int pieceAttackWeight[8] = {0, 0, 50, 75, 88, 94, 97, 100};
-
-
-    struct PawnHash{
-        uint64_t pawnKey;
-        int score;
-
-        PawnHash() :
-            pawnKey(0), score(0) {};
-
-        PawnHash(uint64_t pawnKey, int score) :
-            pawnKey(pawnKey), score(score) {};
-    };
-
-
-    uint64_t numPawnHashes;
-    PawnHash *pawnHash;
 
 };

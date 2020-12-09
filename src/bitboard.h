@@ -20,23 +20,22 @@ class Bitboard {
 
 public:
 
-    int pieceAt[64];
+    MoveInfoStack moveHistory;
     uint64_t pieces[12];
     uint64_t kingMoves[64];
     uint64_t knightMoves[64];
     uint64_t pawnAttacks[64][2];
     uint64_t color[2];
-    MoveInfoStack moveHistory;
-    int enpassantSq;
     uint64_t occupied;
-    bool toMove;
-    uint8_t castleRights;
+    int pieceAt[64];
+    int enpassantSq;
     int fullMoves;
     int halfMoves;
     int kingLoc[2];
-
     int material[2];
     int pieceCount[12];
+    uint8_t castleRights;
+    bool toMove;
 
     Bitboard();
     Bitboard(const Bitboard &b);
@@ -92,12 +91,15 @@ private:
     uint64_t whiteKings;
     uint64_t blackKings;
 
-    // Position info
-    uint8_t rookCastleFlagMask[64];
-
     // Move info
     uint64_t posKey;
     uint64_t pawnKey;
+
+    const std::string pieceIndex = "PpNnBbRrQqKk";
+    const int pvals[6] = {100, 350, 350, 500, 900, 5000};
+
+    // Position info
+    uint8_t rookCastleFlagMask[64];
 
     // Initialization functions
     void InitBlackPawnAttacks();
@@ -120,8 +122,7 @@ private:
 
     bool isAttackedCastleMask(uint64_t bitboard);
 
-    const std::string pieceIndex = "PpNnBbRrQqKk";
-    const int pvals[6] = {100, 350, 350, 500, 900, 5000};
+
 
 
 

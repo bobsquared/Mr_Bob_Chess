@@ -33,11 +33,10 @@ public:
 
 
 private:
-
-    int halfMove;
+    
     ZobristVal *hashTable;
     uint64_t numHashes;
     uint64_t ttWrites;
-
+    int halfMove;
 
 };
