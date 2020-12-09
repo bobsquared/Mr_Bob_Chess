@@ -906,10 +906,12 @@ int Eval::evaluateKing(Bitboard &board, ThreadSearch *th, bool col) {
 
     if (th->KSAttackersCount[col] > 1) {
 
-        uint64_t knightChecks = knightAttacks(board.pieces[10 + !col]) & th->attacksKnight[col] & ~th->unsafeSquares[col];
-        uint64_t bishopChecks = magics->bishopAttacksMask(board.occupied, theirKing) & th->attacksBishop[col] & ~th->unsafeSquares[col];
-        uint64_t rookChecks = magics->rookAttacksMask(board.occupied, theirKing) & th->attacksRook[col] & ~th->unsafeSquares[col];
-        uint64_t queenChecks = magics->queenAttacksMask(board.occupied, theirKing) & th->attacksQueen[col] & ~th->unsafeSquares[col];
+        uint64_t bishopKing = magics->bishopAttacksMask(board.occupied, theirKing);
+        uint64_t rookKing = magics->rookAttacksMask(board.occupied, theirKing);
+        uint64_t knightChecks = board.knightMoves[theirKing] & th->attacksKnight[col] & ~th->unsafeSquares[col];
+        uint64_t bishopChecks = bishopKing & th->attacksBishop[col] & ~th->unsafeSquares[col];
+        uint64_t rookChecks = rookKing & th->attacksRook[col] & ~th->unsafeSquares[col];
+        uint64_t queenChecks = (bishopKing | rookKing) & th->attacksQueen[col] & ~th->unsafeSquares[col];
 
         // King safety
         int kingSafe = th->KSAttackersWeight[col];
