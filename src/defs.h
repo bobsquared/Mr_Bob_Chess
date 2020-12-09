@@ -97,10 +97,6 @@ struct MoveList {
     }
 
     bool get_next_move(MOVE &move) {
-        if (count == 0) {
-            move = 0;
-            return false;
-        }
 
         int index = 0;
         for (int i = 0; i < count; i++) {
@@ -109,11 +105,11 @@ struct MoveList {
             }
         }
 
-        move = moveList[index].move;
-        moveList[index] = moveList[count - 1];
+        move = count? moveList[index].move : NO_MOVE;
+        moveList[index] = moveList[std::max(0, count - 1)];
         count--;
 
-        return true;
+        return count + 1;
     }
 
     void get_index_move(int index, MOVE &move) {
