@@ -160,8 +160,8 @@ int main(int argc, char* argv[]) {
         // go command with time for each side
         if (command.substr(0, 3) == "go ") {
             exit_thread_flag = false;
-            int whitetime = INT_MAX;
-            int blacktime = INT_MAX;
+            int whitetime = 0;
+            int blacktime = 0;
             int whiteInc = 0;
             int blackInc = 0;
             int movestogo = 0;
@@ -188,6 +188,12 @@ int main(int argc, char* argv[]) {
             }
 
             if (std::regex_search(command, m, searchDepth)) {
+                if (whitetime <= 0) {
+                    whitetime = INFINITY_VAL;
+                }
+                if (blacktime <= 0) {
+                    blacktime = INFINITY_VAL;
+                }
                 depth = std::stoi(m[1]);
             }
 
