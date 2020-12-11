@@ -399,6 +399,8 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     movePick->scoreMoves(moveList, b, th, ply, hashedBoard.move);
     while (moveList.get_next_move(move)) {
         bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
+        int moveFrom = get_move_from(move);
+        int moveTo = get_move_to(move);
 
         if (!isPv && numMoves > 0) {
             if (isQuiet) {
@@ -411,6 +413,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
                 // Late move pruning
                 if (depth <= 6 && quietsSearched > lateMoveMargin[improving][depth]) {
                     break;
+                }
+
+                // History move pruning
+                if (quietsSearched >= 3 && th->history[b.getSideToMove()][moveFrom][moveTo] < depth * depth * (-100 - (600 * improving))) {
+                    continue;
                 }
 
             }
@@ -435,8 +442,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         int newDepth = depth + extension; // Extend
-        int moveFrom = get_move_from(move);
-        int moveTo = get_move_to(move);
         int cmh = prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo] : 0;
 
         b.make_move(move); // Make move
