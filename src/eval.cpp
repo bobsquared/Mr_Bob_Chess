@@ -597,7 +597,10 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
     ret += evaluatePawnShield(board, false) - evaluatePawnShield(board, true);
 
 
+    #ifndef TUNER
     ret += probePawnHash(board.getPawnKey(), hit);
+    #endif
+
     ret += evaluatePawns(board, th, false, hit, pawnScore) - evaluatePawns(board, th, true, hit, pawnScore);
     ret += evaluateKnights(board, th, false) - evaluateKnights(board, th, true);
     ret += evaluateBishops(board, th, false) - evaluateBishops(board, th, true);
@@ -606,9 +609,11 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
     ret += evaluateKing(board, th, false) - evaluateKing(board, th, true);
     ret += evaluateThreats(board, th, false) - evaluateThreats(board, th, true);
 
+    #ifndef TUNER
     if (!hit) {
         savePawnHash(board.getPawnKey(), pawnScore);
     }
+    #endif
 
     int phase = getPhase(board);
     ret = ((MGVAL(ret) * (256 - phase)) + (EGVAL(ret) * phase)) / 256;
