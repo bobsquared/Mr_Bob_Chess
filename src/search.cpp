@@ -170,12 +170,15 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
         return 0;
     }
 
-    // Probe Transpostion Table:
     ZobristVal hashedBoard;
-    uint64_t posKey = b.getPosKey();
-    bool ttRet = false;
 
     #ifndef TUNER
+    // Probe Transpostion Table:
+    uint64_t posKey = b.getPosKey();
+    bool ttRet = false;
+    int prevAlpha = alpha;
+
+
     bool hashed = tt->probeTTQsearch(posKey, hashedBoard, ttRet, alpha, beta, ply);
 
     if (ttRet) {
@@ -183,11 +186,15 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     }
     #endif
 
-
     bool inCheck = b.InCheck();
-    int prevAlpha = alpha;
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
+
+    #ifndef TUNER
     int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
+    #else
+    int staticEval = eval->evaluate(b, th);
+    #endif
+
     if (!inCheck) {
         stand_pat = staticEval;
 
@@ -415,7 +422,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
                 if (depth <= 6 && quietsSearched > lateMoveMargin[improving][depth]) {
                     break;
                 }
-                
+
                 // History move pruning
                 if (quietsSearched >= 3 && th->history[b.getSideToMove()][moveFrom][moveTo] < depth * depth * (-100 - (600 * improving))) {
                     continue;
