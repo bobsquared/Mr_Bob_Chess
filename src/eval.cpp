@@ -3,7 +3,6 @@
 extern Magics *magics;
 
 
-
 int pieceValues[6] = {S(114, 94), S(491, 332), S(500, 328), S(694, 559), S(1271, 1259), S(5000, 5000)};
 
 // Queen, Bishop, Knight and rook weights
@@ -214,7 +213,6 @@ const int outpostPotentialEG[64] = { 0,  0,  0,  0,  0,  0,  0,  0,
                                      0,  0,  0,  0,  0,  0,  0,  0,
                                      0,  0,  0,  0,  0,  0,  0,  0};
 // ---------------------------------------------------------------------------//
-
 
 
 
@@ -533,6 +531,15 @@ int Eval::getPhase(Bitboard &board) {
 
 
 
+#ifdef TUNER
+// clears the trace to 0
+void Eval::clearTrace() {
+    evalTrace = emptyTrace;
+}
+#endif
+
+
+
 // Evaluate the position
 int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
 
@@ -593,9 +600,19 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
 
     ret += board.toMove? -tempoBonus : tempoBonus;
     ret += board.material[0] - board.material[1];
+
+    #ifdef TUNER
+    for (int i = 0; i < 2; i++) {
+        evalTrace.pawnCoeff[i]   = board.pieceCount[i];
+        evalTrace.knightCoeff[i] = board.pieceCount[i + 2];
+        evalTrace.bishopCoeff[i] = board.pieceCount[i + 4];
+        evalTrace.rookCoeff[i]   = board.pieceCount[i + 6];
+        evalTrace.queenCoeff[i]  = board.pieceCount[i + 8];
+    }
+    #endif
+
     ret += evaluateImbalance(board, false) - evaluateImbalance(board, true);
     ret += evaluatePawnShield(board, false) - evaluatePawnShield(board, true);
-
 
     #ifndef TUNER
     ret += probePawnHash(board.getPawnKey(), hit);
@@ -609,11 +626,13 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
     ret += evaluateKing(board, th, false) - evaluateKing(board, th, true);
     ret += evaluateThreats(board, th, false) - evaluateThreats(board, th, true);
 
-    #ifndef TUNER
+    #ifdef TUNER
+    return ret;
+    #endif
+    
     if (!hit) {
         savePawnHash(board.getPawnKey(), pawnScore);
     }
-    #endif
 
     int phase = getPhase(board);
     ret = ((MGVAL(ret) * (256 - phase)) + (EGVAL(ret) * phase)) / 256;

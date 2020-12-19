@@ -21,9 +21,27 @@
 class Eval {
 
 public:
+
+    #ifdef TUNER
+    struct EvalTrace{
+        int pawnCoeff[2] = {0};
+        int knightCoeff[2] = {0};
+        int bishopCoeff[2] = {0};
+        int rookCoeff[2] = {0};
+        int queenCoeff[2] = {0};
+    };
+
+    EvalTrace emptyTrace;
+    EvalTrace evalTrace;
+    #endif
+
     Eval();
     ~Eval();
     int evaluate(Bitboard &board, ThreadSearch *th);
+
+    #ifdef TUNER
+    void clearTrace();
+    #endif
 
 private:
 
@@ -73,7 +91,6 @@ private:
 
     void savePawnHash(uint64_t key, int score);
     int probePawnHash(uint64_t key, bool &hit);
-
     int getPhase(Bitboard &board);
 
 };
