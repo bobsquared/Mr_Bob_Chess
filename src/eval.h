@@ -29,6 +29,12 @@ public:
         int bishopCoeff[2] = {0};
         int rookCoeff[2] = {0};
         int queenCoeff[2] = {0};
+
+        int doubledPawnsCoeff[2] = {0};
+        int isolatedPawnsCoeff[2] = {0};
+
+        int supportedPawnsCoeff[7][2] = {0};
+        int adjacentPawnsCoeff[7][2] = {0};
     };
 
     EvalTrace emptyTrace;

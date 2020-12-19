@@ -629,7 +629,7 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
     #ifdef TUNER
     return ret;
     #endif
-    
+
     if (!hit) {
         savePawnHash(board.getPawnKey(), pawnScore);
     }
@@ -695,10 +695,16 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
         uint64_t isolatedPawns = ~supportedPawns & ~adjacentPawns & board.pieces[col];
 
         ret -= doublePawnValue * count_population(doubledPawns);
+        #ifdef TUNER
+        evalTrace.doubledPawnsCoeff[!col] = count_population(doubledPawns);
+        #endif
 
         while (isolatedPawns) {
             int bscan = bitScan(isolatedPawns);
             if ((isolatedPawnMask[bscan] & board.pieces[col]) == 0) {
+                #ifdef TUNER
+                evalTrace.isolatedPawnsCoeff[!col]++;
+                #endif
                 ret -= isolatedPawnValue;
             }
             isolatedPawns &= isolatedPawns - 1;
@@ -707,12 +713,22 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
         while (supportedPawns) {
             int bscan = bitScan(supportedPawns) / 8;
             ret += supportedPawnWeight[col? 7 - bscan : bscan];
+
+            #ifdef TUNER
+            evalTrace.supportedPawnsCoeff[col? 7 - bscan : bscan][col]++;
+            #endif
+
             supportedPawns &= supportedPawns - 1;
         }
 
         while (adjacentPawns) {
             int bscan = bitScan(adjacentPawns) / 8;
             ret += adjacentPawnWeight[col? 7 - bscan : bscan];
+
+            #ifdef TUNER
+            evalTrace.adjacentPawnsCoeff[col? 7 - bscan : bscan][col]++;
+            #endif
+
             adjacentPawns &= adjacentPawns - 1;
         }
 
