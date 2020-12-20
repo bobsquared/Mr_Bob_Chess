@@ -649,26 +649,47 @@ int Eval::evaluateImbalance(Bitboard &board, bool col) {
 
     // Bishop pair
     if (board.pieceCount[4 + col] >= 2) {
-        ret += bishopWeight[board.pieceCount[0]];
+        ret += bishopWeight[board.pieceCount[col]];
+
+        #ifdef TUNER
+        evalTrace.bishopWeightCoeff[board.pieceCount[col]][col]++;
+        #endif
     }
 
     // Knight pair
     if (board.pieceCount[2 + col] >= 2) {
         ret -= knightPair;
+
+        #ifdef TUNER
+        evalTrace.knightPairCoeff[!col]++;
+        #endif
     }
 
     // Rook pair
     if (board.pieceCount[6 + col] >= 2) {
         ret -= rookPair;
+
+        #ifdef TUNER
+        evalTrace.rookPairCoeff[!col]++;
+        #endif
     }
 
     // Pawn count
     if (board.pieceCount[col] == 0) {
         ret -= noPawns;
+
+        #ifdef TUNER
+        evalTrace.noPawnsCoeff[!col]++;
+        #endif
     }
 
     ret += knightWeight[board.pieceCount[col]] * board.pieceCount[2 + col];
     ret += rookWeight[board.pieceCount[col]] * board.pieceCount[6 + col];
+
+    #ifdef TUNER
+    evalTrace.knightWeightCoeff[board.pieceCount[col]][col] += board.pieceCount[2 + col];
+    evalTrace.rookWeightCoeff[board.pieceCount[col]][col] += board.pieceCount[6 + col];
+    #endif
 
     return ret;
 }
@@ -784,6 +805,10 @@ int Eval::evaluateKnights(Bitboard &board, ThreadSearch *th, bool col) {
         // Mobility
         ret += knightMobilityBonus[count_population(board.knightMoves[bscan] & ~th->minorUnsafe[col])];
 
+        #ifdef TUNER
+        evalTrace.knightMobilityCoeff[count_population(board.knightMoves[bscan] & ~th->minorUnsafe[col])][col]++;
+        #endif
+
         // King safety
         th->unsafeSquares[!col] |= board.knightMoves[bscan];
         th->attacksKnight[col] |= board.knightMoves[bscan];
@@ -824,6 +849,10 @@ int Eval::evaluateBishops(Bitboard &board, ThreadSearch *th, bool col) {
         // Mobility
         ret += bishopMobilityBonus[count_population(bishopAttacks & ~th->minorUnsafe[col])];
 
+        #ifdef TUNER
+        evalTrace.bishopMobilityCoeff[count_population(bishopAttacks & ~th->minorUnsafe[col])][col]++;
+        #endif
+
         // King safety
         th->unsafeSquares[!col] |= bishopAttacks;
         th->attacksBishop[col] |= bishopAttacks;
@@ -858,6 +887,10 @@ int Eval::evaluateRooks(Bitboard &board, ThreadSearch *th, bool col) {
 
         // Mobility
         ret += rookMobilityBonus[count_population(rookAttacks & ~th->mobilityUnsafeSquares[col])];
+
+        #ifdef TUNER
+        evalTrace.rookMobilityCoeff[count_population(rookAttacks & ~th->mobilityUnsafeSquares[col])][col]++;
+        #endif
 
         // King safety
         th->unsafeSquares[!col] |= rookAttacks;
@@ -916,6 +949,10 @@ int Eval::evaluateQueens(Bitboard &board, ThreadSearch *th, bool col) {
 
         // Mobility
         ret += queenMobilityBonus[count_population(queenAttacks & ~th->queenUnsafe[col])];
+
+        #ifdef TUNER
+        evalTrace.queenMobilityCoeff[count_population(queenAttacks & ~th->queenUnsafe[col])][col]++;
+        #endif
 
         // King safety
         th->unsafeSquares[!col] |= queenAttacks;

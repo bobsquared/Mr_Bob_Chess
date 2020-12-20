@@ -35,6 +35,19 @@ public:
 
         int supportedPawnsCoeff[7][2] = {0};
         int adjacentPawnsCoeff[7][2] = {0};
+
+        int knightWeightCoeff[9][2] = {0};
+        int rookWeightCoeff[9][2] = {0};
+        int bishopWeightCoeff[9][2] = {0};
+
+        int knightPairCoeff[2] = {0};
+        int rookPairCoeff[2] = {0};
+        int noPawnsCoeff[2] = {0};
+
+        int knightMobilityCoeff[9][2] = {0};
+        int bishopMobilityCoeff[14][2] = {0};
+        int rookMobilityCoeff[15][2] = {0};
+        int queenMobilityCoeff[28][2] = {0};
     };
 
     EvalTrace emptyTrace;
