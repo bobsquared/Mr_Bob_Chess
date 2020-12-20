@@ -33,6 +33,7 @@ public:
         int doubledPawnsCoeff[2] = {0};
         int isolatedPawnsCoeff[2] = {0};
 
+        int passedPawnCoeff[7][2] = {0};
         int supportedPawnsCoeff[7][2] = {0};
         int adjacentPawnsCoeff[7][2] = {0};
 
@@ -48,6 +49,13 @@ public:
         int bishopMobilityCoeff[14][2] = {0};
         int rookMobilityCoeff[15][2] = {0};
         int queenMobilityCoeff[28][2] = {0};
+
+        int pawnPstCoeff[64][2] = {0};
+        int knightPstCoeff[64][2] = {0};
+        int bishopPstCoeff[64][2] = {0};
+        int rookPstCoeff[64][2] = {0};
+        int queenPstCoeff[64][2] = {0};
+        int kingPstCoeff[64][2] = {0};
     };
 
     EvalTrace emptyTrace;
