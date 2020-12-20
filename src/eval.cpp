@@ -3,7 +3,7 @@
 extern Magics *magics;
 
 
-int pieceValues[6] = {S(100, 100), S(491, 332), S(500, 328), S(694, 559), S(1271, 1259), S(5000, 5000)};
+int pieceValues[6] = {S(114, 94), S(491, 332), S(500, 328), S(694, 559), S(1271, 1259), S(5000, 5000)};
 
 // Queen, Bishop, Knight and rook weights
 int knightWeight[9] = {S(-89, -75), S(-28, -35), S(-15, -20), S(-7, -9), S(-5, -1), S(4, 2), S(5, 23) , S(6, 38), S(14, 62)};
