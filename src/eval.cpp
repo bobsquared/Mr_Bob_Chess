@@ -62,9 +62,9 @@ int tempoBonus = S(16, 16);
 int pawnThreat = S(64, 24);
 int pawnPushThreat = S(6, 6);
 
-int knightThreatPiece[5] = {S(-6, 12), S(0, 0), S(40, 32), S(65, 16), S(47, 5)};
-int bishopThreatPiece[5] = {S(-4, 7), S(14, 25), S(0, 0), S(33, 20), S(45, 47)};
-int rookThreatPiece[5] = {S(-12, 12), S(15, 8), S(16, 27), S(0, 0), S(65, 25)};
+int knightThreatPiece[5] = {S(0, 10), S(0, 0), S(33, 30), S(52, 14), S(37, 29)};
+int bishopThreatPiece[5] = {S(-2, 6), S(29, 36), S(0, 0), S(35, 25), S(30, 26)};
+int rookThreatPiece[5] = {S(-9, 14), S(4, 22), S(7, 26), S(0, 0), S(12, 29)};
 
 
 // -----------------------Pawn attack tables----------------------------------//
@@ -1097,6 +1097,13 @@ int Eval::evaluateThreats(Bitboard &board, ThreadSearch *th, bool col) {
     ret += (knightThreatPiece[3] * count_population(attacks & board.pieces[6 + !col]));
     ret += (knightThreatPiece[4] * count_population(attacks & board.pieces[8 + !col]));
 
+    #ifdef TUNER
+    ret += (evalTrace.knightThreatCoeff[0][col] += count_population(attacks & board.pieces[!col]));
+    ret += (evalTrace.knightThreatCoeff[2][col] += count_population(attacks & board.pieces[4 + !col]));
+    ret += (evalTrace.knightThreatCoeff[3][col] += count_population(attacks & board.pieces[6 + !col]));
+    ret += (evalTrace.knightThreatCoeff[4][col] += count_population(attacks & board.pieces[8 + !col]));
+    #endif
+
     // Bishop threats
     attacks = th->bishopAttacksAll[col];
     ret += (bishopThreatPiece[0] * count_population(attacks & board.pieces[!col]));
@@ -1104,12 +1111,26 @@ int Eval::evaluateThreats(Bitboard &board, ThreadSearch *th, bool col) {
     ret += (bishopThreatPiece[3] * count_population(attacks & board.pieces[6 + !col]));
     ret += (bishopThreatPiece[4] * count_population(attacks & board.pieces[8 + !col]));
 
+    #ifdef TUNER
+    ret += (evalTrace.bishopThreatCoeff[0][col] += count_population(attacks & board.pieces[!col]));
+    ret += (evalTrace.bishopThreatCoeff[1][col] += count_population(attacks & board.pieces[2 + !col]));
+    ret += (evalTrace.bishopThreatCoeff[3][col] += count_population(attacks & board.pieces[6 + !col]));
+    ret += (evalTrace.bishopThreatCoeff[4][col] += count_population(attacks & board.pieces[8 + !col]));
+    #endif
+
     // Rook threats
     attacks = th->rookAttacksAll[col];
     ret += (rookThreatPiece[0] * count_population(attacks & board.pieces[!col]));
     ret += (rookThreatPiece[1] * count_population(attacks & board.pieces[2 + !col]));
     ret += (rookThreatPiece[2] * count_population(attacks & board.pieces[4 + !col]));
     ret += (rookThreatPiece[4] * count_population(attacks & board.pieces[8 + !col]));
+
+    #ifdef TUNER
+    ret += (evalTrace.rookThreatCoeff[0][col] += count_population(attacks & board.pieces[!col]));
+    ret += (evalTrace.rookThreatCoeff[1][col] += count_population(attacks & board.pieces[2 + !col]));
+    ret += (evalTrace.rookThreatCoeff[2][col] += count_population(attacks & board.pieces[4 + !col]));
+    ret += (evalTrace.rookThreatCoeff[4][col] += count_population(attacks & board.pieces[8 + !col]));
+    #endif
 
     return ret;
 

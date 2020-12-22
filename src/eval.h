@@ -56,6 +56,10 @@ public:
         int rookPstCoeff[64][2] = {0};
         int queenPstCoeff[64][2] = {0};
         int kingPstCoeff[64][2] = {0};
+
+        int knightThreatCoeff[5][2] = {0};
+        int bishopThreatCoeff[5][2] = {0};
+        int rookThreatCoeff[5][2] = {0};
     };
 
     EvalTrace emptyTrace;
