@@ -13,7 +13,7 @@ int bishopWeight[9] = {S(81, 78), S(40, 77), S(37, 74), S(35, 72), S(35, 70), S(
 
 // Supported and adjacent pawn weights
 int supportedPawnWeight[7] = {S(0, 0), S(0, 0), S(17, 24), S(14, 13), S(20, 21), S(53, 54), S(288, -38)};
-int adjacentPawnWeight[7]  = {S(0, 0), S(8, 4), S(7, 5), S(13, 11), S(18, 35), S(50, 100), S(-96, 408)};
+int adjacentPawnWeight[7]  = {S(0, 0), S(4, 8), S(6, 7), S(7, 19), S(23, 48), S(57, 96), S(123, 74)};
 
 // Passed Pawn weights
 int passedPawnWeight[7] = {S(0, 0), S(-2, 18), S(-8, 21), S(-5, 46), S(29, 67), S(57, 127), S(65, 210)};
