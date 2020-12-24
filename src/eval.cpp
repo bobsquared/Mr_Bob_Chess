@@ -14,6 +14,7 @@ int bishopWeight[9] = {S(81, 78), S(40, 77), S(37, 74), S(35, 72), S(35, 70), S(
 // Supported and adjacent pawn weights
 int supportedPawnWeight[7] = {S(0, 0), S(0, 0), S(17, 24), S(14, 13), S(20, 21), S(53, 54), S(288, -38)};
 int adjacentPawnWeight[7]  = {S(0, 0), S(4, 8), S(6, 7), S(7, 19), S(23, 48), S(57, 96), S(123, 74)};
+int freePasser[7]  = {S(0, 0), S(-4, -2), S(-4, 1), S(-2, -6), S(-1, -14), S(3, -39), S(53, -116)};
 
 // Passed Pawn weights
 int passedPawnWeight[7] = {S(0, 0), S(-2, 18), S(-8, 21), S(-5, 46), S(29, 67), S(57, 127), S(65, 210)};
@@ -777,6 +778,14 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
             #ifdef TUNER
             evalTrace.passedPawnCoeff[col? (7 - (bscan / 8)) : (bscan / 8)][col]++;
             #endif
+
+            if ((forwardMask[col][bscan] & board.occupied) != 0) {
+                ret += freePasser[col? (7 - (bscan / 8)) : (bscan / 8)];
+
+                #ifdef TUNER
+                evalTrace.freePasserCoeff[col? (7 - (bscan / 8)) : (bscan / 8)][col]++;
+                #endif
+            }
 
             if (columnMask[bscan] & board.pieces[6 + col]) {
                 ret += rookBehindPasser;

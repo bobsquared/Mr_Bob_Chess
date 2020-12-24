@@ -36,6 +36,7 @@ public:
         int passedPawnCoeff[7][2] = {0};
         int supportedPawnsCoeff[7][2] = {0};
         int adjacentPawnsCoeff[7][2] = {0};
+        int freePasserCoeff[7][2] = {0};
 
         int knightWeightCoeff[9][2] = {0};
         int rookWeightCoeff[9][2] = {0};
