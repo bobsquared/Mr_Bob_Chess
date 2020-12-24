@@ -45,6 +45,10 @@ public:
         int rookPairCoeff[2] = {0};
         int noPawnsCoeff[2] = {0};
 
+        int rookOnOpenCoeff[2] = {0};
+        int rookOnSemiOpenCoeff[2] = {0};
+        int rookOnQueenCoeff[2] = {0};
+
         int knightMobilityCoeff[9][2] = {0};
         int bishopMobilityCoeff[14][2] = {0};
         int rookMobilityCoeff[15][2] = {0};

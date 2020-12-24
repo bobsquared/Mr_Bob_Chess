@@ -46,9 +46,9 @@ int kingPawnFrontN = S(18, -9);
 int kingPawnAdj = S(15, -18);
 int kingPawnAdjN = S(10, -2);
 
-int rookOnOpen = S(29, -15);
-int rookOnSemiOpen = S(27, 12);
-int rookOnQueen = S(-24, 18);
+int rookOnOpen = S(21, 5);
+int rookOnSemiOpen = S(20, 2);
+int rookOnQueen = S(-17, 19);
 
 int knightPair = S(9, -2);
 int rookPair = S(22, 18);
@@ -926,14 +926,23 @@ int Eval::evaluateRooks(Bitboard &board, ThreadSearch *th, bool col) {
         // Rook on open file
         if ((columnMask[bscan] & board.pieces[col]) == 0) {
             ret += rookOnSemiOpen;
+            #ifdef TUNER
+            evalTrace.rookOnSemiOpenCoeff[col]++;
+            #endif
             if ((columnMask[bscan] & board.pieces[!col]) == 0) {
                 ret += rookOnOpen;
+                #ifdef TUNER
+                evalTrace.rookOnOpenCoeff[col]++;
+                #endif
             }
         }
 
         // Rook on enemy queen file
         if ((columnMask[bscan] & board.pieces[8 + !col]) == 0) {
             ret += rookOnQueen;
+            #ifdef TUNER
+            evalTrace.rookOnQueenCoeff[col]++;
+            #endif
         }
 
         // Trapped rooks
