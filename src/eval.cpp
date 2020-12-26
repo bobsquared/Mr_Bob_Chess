@@ -56,7 +56,7 @@ int rookPair = S(22, 18);
 int noPawns = S(15, 35);
 
 int trappedRook = S(-8, 48);
-int pawnShield = S(2400, 0);
+int pawnShield = S(24, 0);
 int rookBehindPasser = S(6, 12);
 int tempoBonus = S(16, 16);
 
@@ -1065,7 +1065,11 @@ int Eval::evaluatePawnShield(Bitboard &board, bool col) {
     uint64_t shield = passedPawnMask[col][bscan] & (rowMask[col? std::max(bscan - 8, 0) : std::min(bscan + 8, 63)] | rowMask[col? std::max(bscan - 16, 0) : std::min(bscan + 16, 63)]);
     int shieldCount = count_population(shield & board.pieces[col]);
 
-    ret += S(shieldCount * MGVAL(pawnShield) / 100, shieldCount * EGVAL(pawnShield) / 100);
+    ret += pawnShield * shieldCount;
+
+    #ifdef TUNER
+    evalTrace.pawnShieldCoeff[col] += shieldCount;
+    #endif
 
     if ((forwardMask[col][bscan] & board.pieces[col]) != 0) {
         ret += kingPawnFront;
