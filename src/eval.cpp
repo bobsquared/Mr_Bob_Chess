@@ -41,11 +41,11 @@ int knightCheckVal = 126;
 int KSOffset = 123;
 
 
-int kingPawnFront = S(27, -15);
-int kingPawnFrontN = S(18, -9);
+int kingPawnFront = S(33, -19);
+int kingPawnFrontN = S(23, -13);
 
-int kingPawnAdj = S(15, -18);
-int kingPawnAdjN = S(10, -2);
+int kingPawnAdj = S(20, -15);
+int kingPawnAdjN = S(6, -7);
 
 int rookOnOpen = S(21, 5);
 int rookOnSemiOpen = S(20, 2);
@@ -56,7 +56,7 @@ int rookPair = S(22, 18);
 int noPawns = S(15, 35);
 
 int trappedRook = S(-8, 48);
-int pawnShield = S(24, 0);
+int pawnShield = S(18, -1);
 int rookBehindPasser = S(6, 12);
 int tempoBonus = S(16, 16);
 
@@ -1073,22 +1073,49 @@ int Eval::evaluatePawnShield(Bitboard &board, bool col) {
 
     if ((forwardMask[col][bscan] & board.pieces[col]) != 0) {
         ret += kingPawnFront;
+
+        #ifdef TUNER
+        evalTrace.kingPawnFrontCoeff[col]++;
+        #endif
+
         if ((forwardMask[col][bscan] & board.pieces[!col]) != 0) {
             ret += kingPawnFrontN;
+
+            #ifdef TUNER
+            evalTrace.kingPawnFrontNCoeff[col]++;
+            #endif
         }
     }
 
     if (bscan % 8 > 0 && (forwardMask[col][bscan - 1] & board.pieces[col]) != 0) {
         ret += kingPawnAdj;
+
+        #ifdef TUNER
+        evalTrace.kingPawnAdjCoeff[col]++;
+        #endif
+
         if ((forwardMask[col][bscan - 1] & board.pieces[!col]) != 0) {
             ret += kingPawnAdjN;
+
+            #ifdef TUNER
+            evalTrace.kingPawnAdjNCoeff[col]++;
+            #endif
         }
     }
 
     if (bscan % 8 < 7 && (forwardMask[col][bscan + 1] & board.pieces[col]) != 0) {
         ret += kingPawnAdj;
+
+        #ifdef TUNER
+        evalTrace.kingPawnAdjCoeff[col]++;
+        #endif
+
         if ((forwardMask[col][bscan + 1] & board.pieces[!col]) != 0) {
             ret += kingPawnAdjN;
+
+            #ifdef TUNER
+            evalTrace.kingPawnAdjNCoeff[col]++;
+            #endif
         }
     }
 

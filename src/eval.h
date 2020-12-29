@@ -67,6 +67,12 @@ public:
         int rookThreatCoeff[5][2] = {0};
 
         int pawnShieldCoeff[2] = {0};
+
+        int kingPawnFrontCoeff[2] = {0};
+        int kingPawnFrontNCoeff[2] = {0};
+        int kingPawnAdjCoeff[2] = {0};
+        int kingPawnAdjNCoeff[2] = {0};
+
     };
 
     EvalTrace emptyTrace;
@@ -76,6 +82,7 @@ public:
     Eval();
     ~Eval();
     int evaluate(Bitboard &board, ThreadSearch *th);
+    void InitPieceBoards();
 
     #ifdef TUNER
     void clearTrace();
@@ -108,7 +115,6 @@ private:
     int chebyshevArray[64][64];
 
     void InitializeEval(Bitboard &board, ThreadSearch *th);
-    void InitPieceBoards();
     void InitKingZoneMask();
     void InitPassedPawnsMask();
     void InitForwardBackwardMask();
