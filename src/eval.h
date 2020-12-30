@@ -75,6 +75,10 @@ public:
         int kingPawnAdjCoeff[2] = {0};
         int kingPawnAdjNCoeff[2] = {0};
 
+        int tempoCoeff[2] = {0};
+        int rookBehindPasserCoeff[2] = {0};
+        int trappedRookCoeff[2] = {0};
+
     };
 
     EvalTrace emptyTrace;

@@ -55,7 +55,6 @@ int rookPair = S(22, 18);
 int noPawns = S(15, 35);
 
 int trappedRook = S(-8, 48);
-
 int rookBehindPasser = S(6, 12);
 int tempoBonus = S(16, 16);
 
@@ -602,6 +601,7 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
     ret += board.material[0] - board.material[1];
 
     #ifdef TUNER
+    evalTrace.tempoCoeff[board.toMove]++;
     for (int i = 0; i < 2; i++) {
         evalTrace.pawnCoeff[i]   = board.pieceCount[i];
         evalTrace.knightCoeff[i] = board.pieceCount[i + 2];
@@ -788,6 +788,10 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
 
             if (columnMask[bscan] & board.pieces[6 + col]) {
                 ret += rookBehindPasser;
+
+                #ifdef TUNER
+                evalTrace.rookBehindPasserCoeff[col]++;
+                #endif
             }
             dist *= 3;
         }
@@ -958,9 +962,17 @@ int Eval::evaluateRooks(Bitboard &board, ThreadSearch *th, bool col) {
         if (rowMask[col * 56] & pieceLoc) {
             if (board.pieces[col + 10] > 1ULL << (3 + (col * 56)) && pieceLoc > board.pieces[col + 10]) {
                 ret -= trappedRook;
+
+                #ifdef TUNER
+                evalTrace.trappedRookCoeff[!col]++;
+                #endif
             }
             if (board.pieces[col + 10] < 1ULL << (4 + (col * 56)) && pieceLoc < board.pieces[col + 10]) {
                 ret -= trappedRook;
+
+                #ifdef TUNER
+                evalTrace.trappedRookCoeff[!col]++;
+                #endif
             }
         }
 
