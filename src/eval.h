@@ -65,6 +65,8 @@ public:
         int knightThreatCoeff[5][2] = {0};
         int bishopThreatCoeff[5][2] = {0};
         int rookThreatCoeff[5][2] = {0};
+        int pawnThreatCoeff[2] = {0};
+        int pawnPushThreatCoeff[2] = {0};
 
         int pawnShieldCoeff[2] = {0};
 
