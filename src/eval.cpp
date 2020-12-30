@@ -847,6 +847,10 @@ int Eval::evaluateKnights(Bitboard &board, ThreadSearch *th, bool col) {
         // Outposts
         if ((defendedKnight & (1ULL << bscan)) && (outpostMask[col][bscan] & board.pieces[!col]) == 0) {
             ret += knightOutpost[col][bscan];
+
+            #ifdef TUNER
+            evalTrace.knightOutpostCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
+            #endif
         }
 
         piece &= piece - 1;

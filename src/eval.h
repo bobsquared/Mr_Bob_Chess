@@ -79,6 +79,8 @@ public:
         int rookBehindPasserCoeff[2] = {0};
         int trappedRookCoeff[2] = {0};
 
+        int knightOutpostCoeff[64][2] = {0};
+
     };
 
     EvalTrace emptyTrace;
@@ -89,6 +91,7 @@ public:
     ~Eval();
     int evaluate(Bitboard &board, ThreadSearch *th);
     void InitPieceBoards();
+    void InitOutpostMask();
 
     #ifdef TUNER
     void clearTrace();
@@ -127,7 +130,6 @@ private:
     void InitDistanceArray();
     void InitOutpostSquares();
     void InitIsolatedPawnsMask();
-    void InitOutpostMask();
     uint64_t adjacentMask(uint64_t pawns);
     int evaluateImbalance(Bitboard &board, bool col);
     int evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, int &pawnScore);
