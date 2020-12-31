@@ -12,16 +12,16 @@ int bishopWeight[9] = {S(81, 78), S(40, 77), S(37, 74), S(35, 72), S(35, 70), S(
 // int queenWeight[7] = {S(37, 20), S(45, 10), S(35, 24), S(18, 10), S(-5, 10), S(11, 19), S(54, 48)};
 
 // Supported and adjacent pawn weights
-int supportedPawnWeight[7] = {S(0, 0), S(0, 0), S(17, 24), S(14, 13), S(20, 21), S(53, 54), S(288, -38)};
-int adjacentPawnWeight[7]  = {S(0, 0), S(4, 8), S(6, 7), S(7, 19), S(23, 48), S(57, 96), S(123, 74)};
-int freePasser[7]  = {S(0, 0), S(-4, -2), S(-4, 1), S(-2, -6), S(-1, -14), S(3, -39), S(53, -116)};
+int supportedPawnWeight[7] = {S(0, 0), S(0, 0), S(18, 17), S(16, 10), S(19, 15), S(50, 29), S(212, -41)};
+int adjacentPawnWeight[7]  = {S(0, 0), S(4, 3), S(9, 3), S(8, 12), S(20, 31), S(90, 69), S(-105, 359)};
+int freePasser[7]  = {S(0, 0), S(-7, -4), S(24, -6), S(13, -12), S(13, -34), S(17, -106), S(60, -177)};
 
 // Passed Pawn weights
-int passedPawnWeight[7] = {S(0, 0), S(-2, 18), S(-8, 21), S(-5, 46), S(29, 67), S(57, 127), S(65, 210)};
+int passedPawnWeight[7] = {S(0, 0), S(10, 12), S(-14, 21), S(-20, 50), S(6, 83), S(37, 154), S(66, 221)};
 
 // Doubled pawns and isolated pawns and backward pawns
-int doublePawnValue = S(18, 12);
-int isolatedPawnValue = S(10, 2);
+int doublePawnValue = S(11, 10);
+int isolatedPawnValue = S(11, 8);
 
 // Mobility
 int knightMobilityBonus[9] =  {S(-45, -152), S(-30, -67), S(-21, -23), S(-19, 2), S(-18, 12), S(-13, 24), S(-5, 28), S(1, 29), S(9, 22)};
