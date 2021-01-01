@@ -55,7 +55,7 @@ int rookPair = S(22, 18);
 int noPawns = S(15, 35);
 
 int trappedRook = S(-8, 48);
-int rookBehindPasser = S(6, 12);
+int rookBehindPasser = S(16, 21);
 int tempoBonus = S(16, 16);
 
 int pawnThreat = S(43, 53);
