@@ -361,7 +361,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     // Reverse futility pruning
-    if (!isPv && !isCheck && depth <= 8 && staticEval - 185 * depth + (55 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
+    if (!isPv && !isCheck && staticEval - 185 * depth + (55 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
         return staticEval;
     }
 
