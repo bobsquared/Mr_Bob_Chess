@@ -25,10 +25,22 @@ struct BestMoveInfo {
     BestMoveInfo(uint16_t move, int eval) : move(move), eval(eval) {}
 };
 
+struct PrintInfo {
+    uint64_t nodes;
+    uint64_t nps;
+    int depth;
+    int seldepth;
+    int score;
+    int eval;
+    int totalTime;
+    int hashUsage;
+    std::string pv;
+};
+
 
 extern std::atomic<bool> exit_thread_flag;
 extern int totalTime;
-extern bool printInfo;
+extern bool canPrintInfo;
 extern ThreadSearch *thread;
 extern int nThreads;
 

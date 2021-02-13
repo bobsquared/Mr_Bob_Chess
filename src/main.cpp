@@ -31,7 +31,7 @@ void Bench(Bitboard &b) {
     int nn = 0;
     int time  = 0;
 
-    printInfo = false;
+    canPrintInfo = false;
     for (int i = 0; strcmp(Benchmarks[i], ""); i++) {
         exit_thread_flag = false;
         b.setPosFen(Benchmarks[i]);
@@ -42,7 +42,7 @@ void Bench(Bitboard &b) {
         time += totalTime;
         b.reset();
     }
-    printInfo = true;
+    canPrintInfo = true;
 
     printf("OVERALL: %53d nodes %8d nps\n", nn, (int) (1000.0f * nn / (time + 1)));
 }

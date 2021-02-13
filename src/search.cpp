@@ -12,7 +12,7 @@
 
 
 int totalTime;                      /**< Total time used to search an iteration.*/
-bool printInfo = true;              /**< False to turn of info print statements.*/
+bool canPrintInfo = true;              /**< False to turn of info print statements.*/
 int nThreads = 1;                   /**< Number of threads to search, default is 1.*/
 bool stopable = false;              /**< Used to ensure that we search atleast a depth one 1.*/
 std::atomic<bool> exit_thread_flag; /**< True to stop the search.*/
@@ -617,7 +617,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
         }
 
         // UCI information
-        if (totalTime > 3000 && printInfo && id == 0) {
+        if (totalTime > 3000 && canPrintInfo && id == 0) {
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
@@ -745,6 +745,75 @@ uint64_t getHashFullTotal() {
 
 
 /**
+* Return true if the eval is mating
+*/
+bool isMateScore(int eval) {
+    if (std::abs(eval) >= MATE_VALUE_MAX) {
+        return true;
+    }
+    return false;
+}
+
+
+
+/**
+* The score of the search, convert to mate score if a mate is found.
+*/
+int getSearchedScore(int eval) {
+    int score = eval;
+    if (isMateScore(eval)) {
+        score = (MATE_VALUE - std::abs(eval) + 1) / 2;
+        if (eval < 0) {
+            score = -score;
+        }
+    }
+
+    return score;
+}
+
+
+
+/**
+* The function that gets the hash usage across all threads
+*/
+void setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int eval) {
+    printInfo.nodes = getTotalNodesSearched();
+    printInfo.totalTime = tm.getTimePassed();
+    printInfo.nps = (uint64_t) ((double) printInfo.nodes * 1000.0) / ((double) printInfo.totalTime + 1);
+    printInfo.depth = depth;
+    printInfo.seldepth = getSeldepth();
+    printInfo.score = getSearchedScore(eval);
+    printInfo.eval = eval;
+    printInfo.hashUsage = getHashFullTotal();
+    printInfo.pv = tt->getPv(board);
+}
+
+
+
+/**
+* The function that gets the hash usage across all threads
+*/
+void printSearchInfo(PrintInfo &printInfo, int bound) {
+    std::string cpScoreOrMate = " score cp ";
+    if (isMateScore(printInfo.eval)) {
+        cpScoreOrMate = " score mate ";
+    }
+
+    std::string printedBound = "";
+    if (bound == LOWER_BOUND) {
+        printedBound = " lowerbound";
+    }
+    else if (bound == UPPER_BOUND) {
+        printedBound = " upperbound";
+    }
+
+    std::cout << "info depth " << printInfo.depth << " seldepth " << printInfo.seldepth << cpScoreOrMate << printInfo.score << printedBound <<
+        " nodes " << printInfo.nodes << " nps " << printInfo.nps << " hashfull " << printInfo.hashUsage << " time " << printInfo.totalTime << " pv" << printInfo.pv << std::endl;
+}
+
+
+
+/**
 * The function that that prepares and calls the search
 *
 * This includes iterative deepening, generating root moves, and aspiration windows.
@@ -760,17 +829,13 @@ uint64_t getHashFullTotal() {
 void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
     MOVE bestMove = NO_MOVE;
-    MoveList moveList;
-    uint64_t nps;
-    uint64_t nodes;
-
-
+    int searchedEval = 0;
     int alpha;
     int beta;
-    int score = 0;
-    int compareScore = 0;
     std::string cpScore;
+    PrintInfo printInfo;
 
+    MoveList moveList;
     moveGen->generate_all_moves(moveList, b);
     movePick->scoreMoves(moveList, b, th, 0, NO_MOVE);
 
@@ -786,68 +851,42 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
         th->seldepth = 1;
 
         // Use aspiration window with depth >= 4
-        if (i >= 4) {
-            alpha = compareScore - delta;
-            beta = compareScore + delta;
-        }
-        else {
-            alpha = -INFINITY_VAL;
-            beta = INFINITY_VAL;
-        }
+        alpha = i >= 4? searchedEval - delta : -INFINITY_VAL;
+        beta = i >= 4? searchedEval + delta : INFINITY_VAL;
 
         if (id == 0 && i > 1) {
             stopable = true;
         }
 
-
         while (true) {
 
             BestMoveInfo bm = pvSearchRoot(b, th, i, moveList, alpha, beta, analysis, id);
-            compareScore = bm.eval;
             moveList.set_score_move(bm.move, 1400000 + (i * 100) + aspNum);
+            searchedEval = bm.eval;
 
             if (stopable && (exit_thread_flag || tm.outOfTime())) {
                 break;
             }
 
             bestMove = bm.move;
-            cpScore = " score cp ";
-            score = compareScore;
-            if (std::abs(compareScore) >= MATE_VALUE_MAX) {
-                score = (MATE_VALUE - std::abs(compareScore) + 1) / 2;
-                if (compareScore < 0) {
-                    score = -score;
-                }
-                cpScore = " score mate ";
-            }
-
-
 
             if (id == 0) {
+                setSearchInfo(printInfo, b, i, searchedEval);
                 totalTime = tm.getTimePassed();
-                nodes = getTotalNodesSearched();
-                nps = (uint64_t) ((double) nodes * 1000.0) / ((double) totalTime + 1);
             }
 
-            // Update the aspiration score
-            // Fail high
-            if (compareScore >= beta) {
-                beta = compareScore + delta;
+            int bound;
 
-                if (id == 0 && totalTime > 3000 && printInfo) {
-                    std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score << " lowerbound"
-                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << tt->getPv(b) << std::endl;
-                }
+            // Fail high
+            if (searchedEval >= beta) {
+                beta = searchedEval + delta;
+                bound = LOWER_BOUND;
             }
             // Fail low
-            else if (compareScore <= alpha) {
+            else if (searchedEval <= alpha) {
                 beta = (alpha + beta) / 2;
-                alpha = compareScore - delta;
-
-                if (id == 0 && totalTime > 3000 && printInfo) {
-                    std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score << " upperbound"
-                        " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << tt->getPv(b) << std::endl;
-                }
+                alpha = searchedEval - delta;
+                bound = UPPER_BOUND;
             }
             // exact
             else {
@@ -855,7 +894,11 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
             }
 
             aspNum++;
-            delta += delta / 3 + compareScore <= alpha? 5 : 3;
+            delta += delta / 3 + searchedEval <= alpha? 5 : 3;
+
+            if (id == 0 && totalTime > 3000 && canPrintInfo) {
+                printSearchInfo(printInfo, bound);
+            }
 
         }
 
@@ -863,9 +906,8 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
             break;
         }
 
-        if (id == 0 && printInfo) {
-            std::cout << "info depth " << i << " seldepth " << getSeldepth() << cpScore << score <<
-                " nodes " << nodes << " nps " << nps << " hashfull " << getHashFullTotal() << " time " << totalTime << " pv" << tt->getPv(b) << std::endl;
+        if (id == 0 && canPrintInfo) {
+            printSearchInfo(printInfo, EXACT);
         }
 
     }
@@ -876,6 +918,20 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
         exit_thread_flag = true;
     }
 
+}
+
+
+
+/**
+* Clears all the data for all threads
+*/
+void clearThreadData() {
+    for (int id = 0; id < nThreads; id++) {
+        thread[id].nodes = 0;
+        thread[id].seldepth = 0;
+        thread[id].nullMoveTree = true;
+        thread[id].bestMove = NO_MOVE;
+    }
 }
 
 
@@ -892,24 +948,18 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 * @param[in]      analysis  True if we are in analysis mode.
 */
 void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
-    tm = TimeManager(b.getSideToMove(), wtime, btime, winc, binc, movesToGo);
-    tt->setTTAge(b.moveHistory.count);
-
     stopable = false;
     totalTime = 0;
+
+    tm = TimeManager(b.getSideToMove(), wtime, btime, winc, binc, movesToGo);
+    tt->setTTAge(b.moveHistory.count);
+    clearThreadData();
+
     std::deque<std::thread> threads;
     for (int id = 1; id < nThreads; id++) {
-        thread[id].nodes = 0;
-        thread[id].seldepth = 0;
-        thread[id].nullMoveTree = true;
-        thread[id].bestMove = NO_MOVE;
         threads.push_back(std::thread(search, id, &thread[id], depth, analysis, b));
     }
 
-    thread[0].nodes = 0;
-    thread[0].seldepth = 0;
-    thread[0].nullMoveTree = true;
-    thread[0].bestMove = NO_MOVE;
     search(0, &thread[0], depth, analysis, b);
 
     for (int i = 1; i < nThreads; i++) {
