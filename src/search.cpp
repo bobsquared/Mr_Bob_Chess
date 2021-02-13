@@ -774,7 +774,7 @@ int getSearchedScore(int eval) {
 
 
 /**
-* The function that gets the hash usage across all threads
+* Set the search info
 */
 void setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int eval) {
     printInfo.nodes = getTotalNodesSearched();
@@ -791,7 +791,7 @@ void setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int eval) {
 
 
 /**
-* The function that gets the hash usage across all threads
+* Print the search info (UCI)
 */
 void printSearchInfo(PrintInfo &printInfo, int bound) {
     std::string cpScoreOrMate = " score cp ";
