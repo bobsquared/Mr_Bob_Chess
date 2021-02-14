@@ -38,6 +38,7 @@ int queenCheckVal = 72;
 int rookCheckVal = 78;
 int bishopCheckVal = 72;
 int knightCheckVal = 126;
+int noQueen = -175;
 int KSOffset = 123;
 
 int pawnShield = S(18, -1);
@@ -535,8 +536,6 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
     // assert(board.kingLoc[1] == bitScan(board.pieces[11]));
     #endif
 
-
-
     InitializeEval(board, th);
 
     int ret = 0;
@@ -1004,9 +1003,20 @@ int Eval::evaluateKing(Bitboard &board, ThreadSearch *th, bool col) {
         kingSafe += rookCheckVal * count_population(rookChecks);
         kingSafe += bishopCheckVal * count_population(bishopChecks);
         kingSafe += knightCheckVal * count_population(knightChecks);
-        kingSafe += th->KSAttacks[col] * attacksSafety / (count_population(kingZoneMask[!col][theirKing] & board.pieces[!col]) + 1);
-        kingSafe += (board.pieces[8 + col] == 0) * -175;
+        kingSafe += (th->KSAttacks[col] * attacksSafety) / (count_population(kingZoneMask[!col][theirKing] & board.pieces[!col]) + 1);
+        kingSafe += (board.pieces[8 + col] == 0) * noQueen;
         kingSafe -= KSOffset;
+
+
+
+        #if TUNER
+        kingSafetyTrace.queenChecksCount[col] = count_population(queenChecks);
+        kingSafetyTrace.rookChecksCount[col] = count_population(rookChecks);
+        kingSafetyTrace.bishopChecksCount[col] = count_population(bishopChecks);
+        kingSafetyTrace.knightChecksCount[col] = count_population(knightChecks);
+        kingSafetyTrace.attackScaleCount[col] = count_population(kingZoneMask[!col][theirKing] & board.pieces[!col]) + 1;
+        kingSafetyTrace.noQueen[col] = board.pieces[8 + col] == 0;
+        #endif
 
         if (kingSafe > 0) {
             ret += S(kingSafe, 0);

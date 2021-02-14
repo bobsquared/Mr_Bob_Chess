@@ -83,8 +83,18 @@ public:
 
     };
 
+    struct KingSafetyTrace{
+        int knightChecksCount[2] = {0};
+        int bishopChecksCount[2] = {0};
+        int rookChecksCount[2] = {0};
+        int queenChecksCount[2] = {0};
+        int attackScaleCount[2] = {0};
+        bool noQueen[2] = {0};
+    };
+
     EvalTrace emptyTrace;
     EvalTrace evalTrace;
+    KingSafetyTrace kingSafetyTrace;
     #endif
 
     Eval();
