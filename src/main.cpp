@@ -17,7 +17,7 @@
 
 
 Zobrist *zobrist = new Zobrist();
-Magics *magics = new Magics();
+Magics *magics;
 extern int pieceValues[6];
 
 
@@ -51,11 +51,11 @@ void Bench(Bitboard &b) {
 
 int main(int argc, char* argv[]) {
 
-
-
     InitColumnsMask();
     InitRowsMask();
     InitLateMoveArray();
+
+    magics = new Magics();
 
     Bitboard pos = Bitboard();
     UCI uci = UCI();

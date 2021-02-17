@@ -34,9 +34,6 @@ private:
             bitboard(bitboard), shift(shift), magic(magic), mask(mask) {}
     };
 
-    uint64_t *rookMoves;
-    uint64_t *bishopMoves;
-
     uint64_t bitCombinations(uint64_t index, uint64_t bitboard);
     bool InitBlocksRook(uint64_t bitboard, uint64_t index, uint64_t magic);
     bool InitBlocksBishop(uint64_t bitboard, uint8_t index, uint64_t magic);
@@ -46,6 +43,9 @@ private:
 
     void InitBishopMoves(uint64_t *bishopMoves);
     void InitRookMoves(uint64_t *rookMoves);
+
+    void InitializeRookMagicsInfo(uint64_t *magicR, uint64_t *rookMoves);
+    void InitializeBishopMagicsInfo(uint64_t *magicB, uint64_t *bishopMoves);
 
     MagicPro attacksR[64];
     MagicPro attacksB[64];

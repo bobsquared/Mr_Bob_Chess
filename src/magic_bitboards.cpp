@@ -14,9 +14,11 @@ Magics::~Magics() {
 
 Magics::Magics() {
 
-    // Initialize magic numbers
     uint64_t magicR[64];
     uint64_t magicB[64];
+
+    optimalMagicRook(magicR);
+    optimalMagicBishop(magicB);
 
     uint64_t bishopMoves[64];
     uint64_t rookMoves[64];
@@ -24,59 +26,8 @@ Magics::Magics() {
     InitBishopMoves(bishopMoves);
     InitRookMoves(rookMoves);
 
-    optimalMagicRook(magicR);
-    optimalMagicBishop(magicB);
-
-    for (uint8_t i = 0; i < 64; i++) {
-
-        uint64_t mrMasked = 0;
-        if (i == 0) {
-            mrMasked = 72057594037927935U & 9187201950435737471U;
-        }
-        else if (i == 7) {
-            mrMasked = 72057594037927935U & 18374403900871474942U;
-        }
-        else if (i == 63) {
-            mrMasked = 18446744073709551360U & 18374403900871474942U;
-        }
-        else if (i == 56) {
-            mrMasked = 18446744073709551360U & 9187201950435737471U;
-        }
-        else if (i < 7 && i > 0) {
-            mrMasked = 72057594037927935U & 18374403900871474942U & 9187201950435737471U;
-        }
-        else if (i < 63 && i > 56) {
-            mrMasked = 18446744073709551360U & 18374403900871474942U & 9187201950435737471U;
-        }
-        else if (i == 8 || i == 16 || i == 24 || i == 32 || i == 40 || i == 48) {
-            mrMasked = 72057594037927935U & 9187201950435737471U & 18446744073709551360U;
-        }
-        else if (i == 15 || i == 23 || i == 31 || i == 39 || i == 47 || i == 55) {
-            mrMasked = 72057594037927935U & 18374403900871474942U & 18446744073709551360U;
-        }
-        else {
-            mrMasked = 35604928818740736U;
-        }
-
-        mrMasked &= rookMoves[i];
-        uint8_t count = count_population(mrMasked);
-        uint8_t mrShift = 64 - count;
-        uint64_t mrMagic = magicR[i];
-
-        const MagicPro mp = MagicPro(rookMoves[i], mrShift, mrMagic, mrMasked);
-        attacksR[i] = mp;
-
-    }
-
-    for (uint8_t i = 0; i < 64; i++) {
-        uint64_t mrMasked = 35604928818740736U & bishopMoves[i];
-        uint8_t count = count_population(mrMasked);
-        uint8_t mrShift = 64 - count;
-        uint64_t mrMagic = magicB[i];
-
-        const MagicPro mp = MagicPro(bishopMoves[i], mrShift, mrMagic, mrMasked);
-        attacksB[i] = mp;
-    }
+    InitializeRookMagicsInfo(magicR, rookMoves);
+    InitializeBishopMagicsInfo(magicB, bishopMoves);
 
     rookComb = new uint64_t[262144];
     bishopComb = new uint64_t[32768];
@@ -90,9 +41,64 @@ Magics::Magics() {
     }
 
     // Assert to make sure everything works before going any further
+    // Functions need to be called for initialization of magics
     for (uint8_t i = 0; i < 64; i++) {
         assert(InitBlocksRook(rookMoves[i], i, magicR[i]));
         assert(InitBlocksBishop(bishopMoves[i], i, magicB[i]));
+    }
+}
+
+
+
+void Magics::InitializeRookMagicsInfo(uint64_t *magicR, uint64_t *rookMoves) {
+    for (uint8_t i = 0; i < 64; i++) {
+
+        uint64_t all_bits_set = 18446744073709551615U;
+        uint64_t rookMask = all_bits_set;;
+
+        bool indexIsFirstRank = (i / 8) == 0;
+        bool indexIsEighthRank = (i / 8) == 7;
+        bool indexIsFirstFile = (i % 8) == 0;
+        bool indexIsLastFile = (i % 8) == 7;
+
+        if (indexIsFirstRank || ((indexIsFirstFile|| indexIsLastFile) && !indexIsEighthRank)) {
+            rookMask &= ~rowMask[56];
+        }
+
+        if (indexIsFirstFile || ((indexIsFirstRank || indexIsEighthRank) && !indexIsLastFile)) {
+            rookMask &= ~columnMask[7];
+        }
+
+        if (indexIsEighthRank || ((indexIsFirstFile || indexIsLastFile) && !indexIsFirstRank)) {
+            rookMask &= ~rowMask[0];
+        }
+
+        if (indexIsLastFile || ((indexIsFirstRank || indexIsEighthRank) && !indexIsFirstFile)) {
+            rookMask &= ~columnMask[0];
+        }
+
+        if (rookMask == all_bits_set) {
+            rookMask = ~rowMask[56] & ~columnMask[7] & ~rowMask[0] & ~columnMask[0];
+        }
+
+        rookMask &= rookMoves[i];
+        uint8_t count = count_population(rookMask);
+        uint8_t rookShift = 64 - count;
+        uint64_t rookMagic = magicR[i];
+        attacksR[i] = MagicPro(rookMoves[i], rookShift, rookMagic, rookMask);
+
+    }
+}
+
+
+
+void Magics::InitializeBishopMagicsInfo(uint64_t *magicB, uint64_t *bishopMoves) {
+    for (uint8_t i = 0; i < 64; i++) {
+        uint64_t bishopMask = (~rowMask[56] & ~columnMask[7] & ~rowMask[0] & ~columnMask[0]) & bishopMoves[i];
+        uint8_t count = count_population(bishopMask);
+        uint8_t bishopShift = 64 - count;
+        uint64_t bishopMagic = magicB[i];
+        attacksB[i] = MagicPro(bishopMoves[i], bishopShift, bishopMagic, bishopMask);
     }
 }
 
@@ -316,6 +322,11 @@ bool Magics::InitBlocksRook(uint64_t bitboard, uint64_t index, uint64_t magic) {
         uint64_t magicI = ((r * magic) >> attacksR[index].shift);
 
         if (rookComb[index * 4096 + magicI] != 0) {
+            for (uint64_t k = 0; k < i; k++) {
+                uint64_t r2 = bitCombinations(k, bitboardMasked);
+                uint64_t magicI2 = ((r2 * magic) >> attacksR[index].shift);
+                rookComb[index * 4096 + magicI2] = 0;
+            }
             return false;
         }
 
@@ -341,6 +352,11 @@ bool Magics::InitBlocksBishop(uint64_t bitboard, uint8_t index, uint64_t magic) 
         uint64_t magicI = ((r * magic) >> attacksB[index].shift);
 
         if (bishopComb[index * 512 + magicI]  != 0) {
+            for (uint64_t k = 0; k < i; k++) {
+                uint64_t r2 = bitCombinations(k, bitboardMasked);
+                uint64_t magicI2 = ((r2 * magic) >> attacksB[index].shift);
+                bishopComb[index * 512 + magicI2] = 0;
+            }
             return false;
         }
 
@@ -355,7 +371,9 @@ bool Magics::InitBlocksBishop(uint64_t bitboard, uint8_t index, uint64_t magic) 
 // Used to generate numbers in the function optimalMagicRook
 void Magics::Generate_Magic_Rooks() {
     uint64_t x = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+    uint64_t rookMoves[64];
 
+    InitRookMoves(rookMoves);
     for (uint8_t i = 0; i < 64; i++) {
 
         while(!InitBlocksRook(rookMoves[i], i, x)) {
@@ -368,6 +386,7 @@ void Magics::Generate_Magic_Rooks() {
         }
         std::cout << "  magicR[" << unsigned(i) << "] = " << x << "ULL;" << std::endl;
     }
+    std::cout << std::endl;
 }
 
 
@@ -375,7 +394,9 @@ void Magics::Generate_Magic_Rooks() {
 // Used to generate numbers in the function optimalMagicBishop
 void Magics::Generate_Magic_Bishops() {
     uint64_t x = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
+    uint64_t bishopMoves[64];
 
+    InitBishopMoves(bishopMoves);
     for (uint8_t i = 0; i < 64; i++) {
         while(!InitBlocksBishop(bishopMoves[i], i, x)) {
             uint64_t x1 = (rand() & 0xffff) | ((rand() & 0xffff) << 16) | (((uint64_t)rand() & 0xffff) << 32) | (((uint64_t)rand() & 0xffff) << 48);
@@ -387,6 +408,7 @@ void Magics::Generate_Magic_Bishops() {
         }
         std::cout << "  magicB[" << unsigned(i) << "] = " << x << "ULL;" << std::endl;
     }
+    std::cout << std::endl;
 }
 
 
