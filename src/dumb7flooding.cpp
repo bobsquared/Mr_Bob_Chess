@@ -28,6 +28,8 @@ uint64_t dumb7FloodingN(uint64_t index, uint64_t empty) {
     return (flood << 8) & 18446744073709551615U;
 }
 
+
+
 uint64_t dumb7FloodingS(uint64_t index, uint64_t empty) {
     empty ^= 18446744073709551615U;
     uint64_t flood = index;
@@ -48,6 +50,8 @@ uint64_t dumb7FloodingS(uint64_t index, uint64_t empty) {
 
     return (flood >> 8) & 18446744073709551615U;
 }
+
+
 
 uint64_t dumb7FloodingE(uint64_t index, uint64_t empty) {
     empty ^= 18446744073709551615U;
@@ -71,6 +75,8 @@ uint64_t dumb7FloodingE(uint64_t index, uint64_t empty) {
     return (flood << 1) & 0xfefefefefefefefe;
 }
 
+
+
 uint64_t dumb7FloodingW(uint64_t index, uint64_t empty) {
     empty ^= 18446744073709551615U;
     empty &= 0x7f7f7f7f7f7f7f7f;
@@ -92,6 +98,8 @@ uint64_t dumb7FloodingW(uint64_t index, uint64_t empty) {
 
     return (flood >> 1) & 0x7f7f7f7f7f7f7f7f;
 }
+
+
 
 uint64_t dumb7FloodingNE(uint64_t index, uint64_t empty) {
     empty ^= 18446744073709551615U;
@@ -115,6 +123,8 @@ uint64_t dumb7FloodingNE(uint64_t index, uint64_t empty) {
     return (flood << 9) & 0xfefefefefefefefe;
 }
 
+
+
 uint64_t dumb7FloodingSE(uint64_t index, uint64_t empty) {
     empty ^= 18446744073709551615U;
     empty &= 0xfefefefefefefefe;
@@ -137,6 +147,8 @@ uint64_t dumb7FloodingSE(uint64_t index, uint64_t empty) {
     return (flood >> 7) & 0xfefefefefefefefe;
 }
 
+
+
 uint64_t dumb7FloodingNW(uint64_t index, uint64_t empty) {
     empty ^= 18446744073709551615U;
     empty &= 0x7f7f7f7f7f7f7f7f;
@@ -158,6 +170,8 @@ uint64_t dumb7FloodingNW(uint64_t index, uint64_t empty) {
 
     return (flood << 7) & 0x7f7f7f7f7f7f7f7f;
 }
+
+
 
 uint64_t dumb7FloodingSW(uint64_t index, uint64_t empty) {
     empty ^= 18446744073709551615U;
