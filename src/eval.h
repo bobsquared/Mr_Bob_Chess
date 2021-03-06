@@ -34,8 +34,8 @@ public:
         int isolatedPawnsCoeff[2] = {0};
 
         int passedPawnCoeff[7][2] = {0};
-        int supportedPawnsCoeff[7][2] = {0};
-        int adjacentPawnsCoeff[7][2] = {0};
+        int supportedPawnsCoeff[64][2] = {0};
+        int adjacentPawnsCoeff[64][2] = {0};
         int freePasserCoeff[7][2] = {0};
 
         int knightWeightCoeff[9][2] = {0};
@@ -132,6 +132,8 @@ private:
     int pieceSquareEG[12][64];
     int manhattanArray[64][64];
     int chebyshevArray[64][64];
+    int adjacentPawnsVal[2][64];
+    int supportedPawnsVal[2][64];
 
     void InitializeEval(Bitboard &board, ThreadSearch *th);
     void InitKingZoneMask();
@@ -154,5 +156,6 @@ private:
     void savePawnHash(uint64_t key, int score);
     int probePawnHash(uint64_t key, bool &hit);
     int getPhase(Bitboard &board);
+    int flipSide64(int index);
 
 };
