@@ -72,6 +72,7 @@ int queenMobilityBonus[28] = {S(-115, -574), S(-74, -344), S(-69, -150), S(-68, 
 
 int passedPawnWeight[7] = {S(0, 0), S(1, -11), S(-7, -6), S(4, 35), S(32, 57), S(37, 50), S(-20, 32)};
 int freePasser[7]  = {S(0, 0), S(-3, -9), S(-1, -9), S(6, -26), S(17, -48), S(42, -109), S(59, -140)};
+int isolatedPawnValue = S(-4, -10);
 int adjacentPawnWeight[64] = {S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
                               S(-18, 314), S(-124, 302), S(-23, 354), S(134, 321), S(13, 187), S(208, 372), S(229, 298), S(130, 182),
                               S(85, 153), S(67, 161), S(12, 182), S(30, 163), S(7, 192), S(47, 189), S(46, 160), S(26, 154),
@@ -523,7 +524,7 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
         #endif
 
         // Passed pawns
-       if ((passedPawnMask[col][bscan] & board.pieces[!col]) == 0 && (forwardMask[col][bscan] & board.pieces[col]) == 0) {
+        if ((passedPawnMask[col][bscan] & board.pieces[!col]) == 0 && (forwardMask[col][bscan] & board.pieces[col]) == 0) {
            ret += col? passedPawnWeight[(7 - (bscan / 8))] : passedPawnWeight[(bscan / 8)];
 
            #ifdef TUNER
@@ -537,23 +538,23 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
                 evalTrace.freePasserCoeff[col? (7 - (bscan / 8)) : (bscan / 8)][col]++;
                 #endif
             }
-       }
+        }
 
-       if (adjacentPawns & (1ULL << bscan)) {
-           ret += adjacentPawnsVal[col][bscan];
+        if (adjacentPawns & (1ULL << bscan)) {
+            ret += adjacentPawnsVal[col][bscan];
 
-           #ifdef TUNER
-           evalTrace.adjacentPawnsCoeff[col? bscan : flipSide64(bscan)][col]++;
-           #endif
-       }
+            #ifdef TUNER
+            evalTrace.adjacentPawnsCoeff[col? bscan : flipSide64(bscan)][col]++;
+            #endif
+        }
 
-       if (supportedPawns & (1ULL << bscan)) {
-           ret += supportedPawnsVal[col][bscan];
+        if (supportedPawns & (1ULL << bscan)) {
+            ret += supportedPawnsVal[col][bscan];
 
-           #ifdef TUNER
-           evalTrace.supportedPawnsCoeff[col? bscan : flipSide64(bscan)][col]++;
-           #endif
-       }
+            #ifdef TUNER
+            evalTrace.supportedPawnsCoeff[col? bscan : flipSide64(bscan)][col]++;
+            #endif
+        }
 
         pawns &= pawns - 1;
     }
