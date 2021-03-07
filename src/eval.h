@@ -124,6 +124,7 @@ private:
     uint64_t numPawnHashes;
     uint64_t kingZoneMask[2][64];
     uint64_t passedPawnMask[2][64];
+    uint64_t pawnShieldMask[2][64];
     uint64_t forwardMask[2][64];
     uint64_t isolatedPawnMask[64];
     uint64_t outpostMask[2][64];
@@ -138,6 +139,7 @@ private:
     void InitializeEval(Bitboard &board, ThreadSearch *th);
     void InitKingZoneMask();
     void InitPassedPawnsMask();
+    void InitPawnShieldMask();
     void InitForwardBackwardMask();
     void InitDistanceArray();
     void InitOutpostSquares();

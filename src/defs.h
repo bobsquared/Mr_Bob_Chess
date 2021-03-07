@@ -208,6 +208,8 @@ struct SearchStack {
 // Info each thread has
 struct ThreadSearch {
     //evals
+    uint64_t connectedPawns[2] = {};
+    uint64_t passedPawns[2] = {};
     uint64_t attacksKnight[2] = {};
     uint64_t attacksBishop[2] = {};
     uint64_t attacksRook[2] = {};

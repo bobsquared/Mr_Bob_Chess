@@ -72,7 +72,6 @@ int queenMobilityBonus[28] = {S(-115, -574), S(-74, -344), S(-69, -150), S(-68, 
 
 int passedPawnWeight[7] = {S(0, 0), S(1, -11), S(-7, -6), S(4, 35), S(32, 57), S(37, 50), S(-20, 32)};
 int freePasser[7]  = {S(0, 0), S(-3, -9), S(-1, -9), S(6, -26), S(17, -48), S(42, -109), S(59, -140)};
-int isolatedPawnValue = S(-4, -10);
 int adjacentPawnWeight[64] = {S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
                               S(-18, 314), S(-124, 302), S(-23, 354), S(134, 321), S(13, 187), S(208, 372), S(229, 298), S(130, 182),
                               S(85, 153), S(67, 161), S(12, 182), S(30, 163), S(7, 192), S(47, 189), S(46, 160), S(26, 154),
@@ -92,6 +91,13 @@ int supportedPawnWeight[64] = {S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0,
                                S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)};
 
 int tempoBonus = S(14, 22);
+int pawnShield = S(14, -3);
+int kingPawnFront = S(-32, 21);
+int kingPawnFrontN = S(-51, -26);
+int kingPawnAdj = S(-14, 14);
+int kingPawnAdjN = S(-21, 15);
+
+int bishopWeight[9] = {S(259, -28), S(149, 91), S(66, 129), S(39, 124), S(22, 115), S(9, 109), S(4, 95), S(0, 83), S(-3, 67)};
 
 
 
@@ -102,6 +108,7 @@ Eval::Eval() {
     InitForwardBackwardMask();
     InitDistanceArray();
     InitIsolatedPawnsMask();
+    InitPawnShieldMask();
 
     numPawnHashes = (8 * 0xFFFFF / sizeof(PawnHash));
     pawnHash = new PawnHash [numPawnHashes];
@@ -262,6 +269,62 @@ void Eval::InitPassedPawnsMask() {
 
 
 
+void Eval::InitPawnShieldMask() {
+
+  for (int i = 0; i < 64; i++) {
+
+    pawnShieldMask[0][i] = 0;
+    pawnShieldMask[1][i] = 0;
+
+    if (i % 8 == 0) {
+
+      if (i + 8 <= 63) {
+        pawnShieldMask[0][i] |= 1ULL << (i + 8);
+        pawnShieldMask[0][i] |= pawnShieldMask[0][i] << 1;
+      }
+
+      if (i - 8 >= 0) {
+        pawnShieldMask[1][i] |= 1ULL << (i - 8);
+        pawnShieldMask[1][i] |= pawnShieldMask[1][i] << 1;
+      }
+
+    }
+    else if (i % 8 == 7) {
+
+      if (i + 8 <= 63) {
+        pawnShieldMask[0][i] |= 1ULL << (i + 8);
+        pawnShieldMask[0][i] |= pawnShieldMask[0][i] >> 1;
+      }
+
+      if (i - 8 >= 0) {
+        pawnShieldMask[1][i] |= 1ULL << (i - 8);
+        pawnShieldMask[1][i] |= pawnShieldMask[1][i] >> 1;
+      }
+    }
+    else {
+
+      if (i + 8 <= 63) {
+        pawnShieldMask[0][i] |= 1ULL << (i + 8);
+        pawnShieldMask[0][i] |= pawnShieldMask[0][i] << 1;
+        pawnShieldMask[0][i] |= pawnShieldMask[0][i] >> 1;
+      }
+
+      if (i - 8 >= 0) {
+        pawnShieldMask[1][i] |= 1ULL << (i - 8);
+        pawnShieldMask[1][i] |= pawnShieldMask[1][i] << 1;
+        pawnShieldMask[1][i] |= pawnShieldMask[1][i] >> 1;
+      }
+    }
+
+    pawnShieldMask[0][i] |= pawnShieldMask[0][i] << 8;
+    pawnShieldMask[1][i] |= pawnShieldMask[1][i] >> 8;
+
+  }
+
+}
+
+
+
 // Initialize the forward and backwards masks bitboard
 void Eval::InitForwardBackwardMask() {
 
@@ -355,6 +418,8 @@ void Eval::InitializeEval(Bitboard &board, ThreadSearch *th) {
     th->knightAttAll[1] = knightAttacks(board.pieces[3]);
 
     for (int i = 0; i < 2; i++) {
+
+        th->passedPawns[i] = 0;
 
         // King safety
         th->unsafeSquares[i] = 0;
@@ -526,6 +591,7 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
         // Passed pawns
         if ((passedPawnMask[col][bscan] & board.pieces[!col]) == 0 && (forwardMask[col][bscan] & board.pieces[col]) == 0) {
            ret += col? passedPawnWeight[(7 - (bscan / 8))] : passedPawnWeight[(bscan / 8)];
+           th->passedPawns[col] |= (1ULL << bscan);
 
            #ifdef TUNER
            evalTrace.passedPawnCoeff[col? (7 - (bscan / 8)) : (bscan / 8)][col]++;
@@ -620,6 +686,14 @@ int Eval::evaluateBishops(Bitboard &board, ThreadSearch *th, bool col) {
         bishops &= bishops - 1;
     }
 
+    if (board.pieceCount[col + 4] >= 2) {
+        ret += bishopWeight[board.pieceCount[col]];
+
+        #ifdef TUNER
+        evalTrace.bishopWeightCoeff[board.pieceCount[col]][col]++;
+        #endif
+    }
+
     return ret;
 }
 
@@ -690,6 +764,7 @@ int Eval::evaluateQueens(Bitboard &board, ThreadSearch *th, bool col) {
 int Eval::evaluateKing(Bitboard &board, ThreadSearch *th, bool col) {
 
     int ret = 0;
+    int kingColumn = board.kingLoc[col] % 8;
 
     // PST
     ret += pieceSquare[col + 10][board.kingLoc[col]];
@@ -697,6 +772,46 @@ int Eval::evaluateKing(Bitboard &board, ThreadSearch *th, bool col) {
     #ifdef TUNER
     evalTrace.kingPstCoeff[col? board.kingLoc[col] : flipSide64(board.kingLoc[col])][col]++;
     #endif
+
+    int shieldCount = count_population(pawnShieldMask[col][board.kingLoc[col]] & board.pieces[col]);
+    ret += pawnShield * shieldCount;
+
+    #ifdef TUNER
+    evalTrace.pawnShieldCoeff[col] += shieldCount;
+    #endif
+
+    if ((forwardMask[col][board.kingLoc[col]] & board.pieces[col]) == 0) {
+        ret += kingPawnFront;
+
+        #ifdef TUNER
+        evalTrace.kingPawnFrontCoeff[col]++;
+        #endif
+
+        if ((forwardMask[col][board.kingLoc[col]] & board.pieces[!col]) == 0) {
+            ret += kingPawnFrontN;
+
+            #ifdef TUNER
+            evalTrace.kingPawnFrontNCoeff[col]++;
+            #endif
+        }
+    }
+
+    if ((kingColumn > 0 && (forwardMask[col][board.kingLoc[col] - 1] & board.pieces[col]) == 0)
+     || (kingColumn < 7 && (forwardMask[col][board.kingLoc[col] + 1] & board.pieces[col]) == 0)) {
+        ret += kingPawnAdj;
+
+        #ifdef TUNER
+        evalTrace.kingPawnAdjCoeff[col]++;
+        #endif
+
+        if ((forwardMask[col][board.kingLoc[col] - 1] & board.pieces[!col]) == 0) {
+            ret += kingPawnAdjN;
+
+            #ifdef TUNER
+            evalTrace.kingPawnAdjNCoeff[col]++;
+            #endif
+        }
+    }
 
     return ret;
 }
