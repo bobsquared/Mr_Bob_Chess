@@ -30,8 +30,13 @@ public:
         int rookCoeff[2] = {0};
         int queenCoeff[2] = {0};
 
-        int doubledPawnsCoeff[2] = {0};
-        int isolatedPawnsCoeff[2] = {0};
+        int doubledPawnsCoeff[8][2] = {0};
+        int isolatedPawnsCoeff[8][2] = {0};
+        int kingPawnDistFriendlyCoeff[8][2] = {0};
+        int kingPawnDistEnemyCoeff[8][2] = {0};
+        int kingPassedDistFriendlyCoeff[8][2] = {0};
+        int kingPassedDistEnemyCoeff[8][2] = {0};
+        int backwardPawnsCoeff[64][2] = {0};
 
         int passedPawnCoeff[7][2] = {0};
         int supportedPawnsCoeff[64][2] = {0};
@@ -135,6 +140,7 @@ private:
     int chebyshevArray[64][64];
     int adjacentPawnsVal[2][64];
     int supportedPawnsVal[2][64];
+    int backwardPawnsVal[2][64];
 
     void InitializeEval(Bitboard &board, ThreadSearch *th);
     void InitKingZoneMask();
