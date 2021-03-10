@@ -30,6 +30,11 @@ public:
         int rookCoeff[2] = {0};
         int queenCoeff[2] = {0};
 
+        int kingPawnDistFriendlyCoeff[8][2] = {0};
+        int kingPawnDistEnemyCoeff[8][2] = {0};
+        int kingPassedDistFriendlyCoeff[8][2] = {0};
+        int kingPassedDistEnemyCoeff[8][2] = {0};
+
         int doubledPawnsCoeff[2] = {0};
         int isolatedPawnsCoeff[2] = {0};
 

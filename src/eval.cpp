@@ -79,6 +79,11 @@ int knightThreatPiece[5] = {S(1, 13), S(0, 0), S(31, 33), S(54, 15), S(37, 33)};
 int bishopThreatPiece[5] = {S(-2, 8), S(27, 40), S(0, 0), S(36, 28), S(29, 30)};
 int rookThreatPiece[5] = {S(-4, 17), S(9, 21), S(12, 24), S(0, 0), S(20, 25)};
 
+int kingPawnDistFriendly[8] = {S(0, 0), S(20, 7), S(16, 6), S(18, 0), S(9, -2), S(10, -4), S(11, -4), S(19, -15)};
+int kingPawnDistEnemy[8] = {S(0, 0), S(16, -32), S(6, -1), S(-15, 0), S(-21, 3), S(-18, 3), S(-18, 4), S(-17, 3)};
+int kingPassedDistFriendly[8] = {S(0, 0), S(-4, 0), S(1, -12), S(-5, -23), S(-1, -26), S(6, -26), S(25, -29), S(-5, -11)};
+int kingPassedDistEnemy[8] = {S(0, 0), S(-23, -11), S(-3, -13), S(-2, 15), S(-3, 30), S(-11, 38), S(-6, 37), S(-23, 42)};
+
 
 // -----------------------Pawn attack tables----------------------------------//
 int PAWN_TABLE[64] = {S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
@@ -663,8 +668,6 @@ int Eval::evaluateImbalance(Bitboard &board, bool col) {
 int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, int &pawnScore) {
 
     int ret = 0;
-    int dist = 0;
-    int distFinal = 0;
     uint64_t piece = board.pieces[col];
     int ourKing = board.kingLoc[col];
     int theirKing = board.kingLoc[!col];
@@ -731,8 +734,13 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
         evalTrace.pawnPstCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
         #endif
 
-        dist = manhattanArray[bscan][ourKing] * 2;
-        dist -= manhattanArray[bscan][theirKing] * 2;
+        ret += kingPawnDistFriendly[chebyshevArray[board.kingLoc[col]][bscan]];
+        ret += kingPawnDistEnemy[chebyshevArray[board.kingLoc[!col]][bscan]];
+
+        #ifdef TUNER
+        evalTrace.kingPawnDistFriendlyCoeff[chebyshevArray[board.kingLoc[col]][bscan]][col]++;
+        evalTrace.kingPawnDistEnemyCoeff[chebyshevArray[board.kingLoc[!col]][bscan]][col]++;
+        #endif
 
         // Passed pawns
         if ((passedPawnMask[col][bscan] & board.pieces[!col]) == 0 && (forwardMask[col][bscan] & board.pieces[col]) == 0) {
@@ -757,15 +765,18 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
                 evalTrace.rookBehindPasserCoeff[col]++;
                 #endif
             }
-            dist *= 3;
+
+            ret += kingPassedDistFriendly[chebyshevArray[board.kingLoc[col]][bscan]];
+            ret += kingPassedDistEnemy[chebyshevArray[board.kingLoc[!col]][bscan]];
+
+            #ifdef TUNER
+            evalTrace.kingPassedDistFriendlyCoeff[chebyshevArray[board.kingLoc[col]][bscan]][col]++;
+            evalTrace.kingPassedDistEnemyCoeff[chebyshevArray[board.kingLoc[!col]][bscan]][col]++;
+            #endif
+
         }
 
-        distFinal += dist;
         piece &= piece - 1;
-    }
-
-    if (board.pieceCount[col]) {
-        ret += S(0, -distFinal / board.pieceCount[col]);
     }
 
     return ret;
