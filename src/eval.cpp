@@ -669,12 +669,7 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
 
     int ret = 0;
     uint64_t piece = board.pieces[col];
-    int ourKing = board.kingLoc[col];
-    int theirKing = board.kingLoc[!col];
-
     th->unsafeSquares[!col] |= th->pawnAttAll[col];
-
-
 
     if (!hit) {
         uint64_t supportedPawns = board.pieces[col] & th->pawnAttAll[col];
