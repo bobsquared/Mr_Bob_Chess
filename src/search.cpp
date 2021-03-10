@@ -31,7 +31,6 @@ const int lateMoveMargin[2][7] = {{0, 5, 8, 13, 23, 34, 47}, {0, 7, 10, 17, 29, 
 extern int pieceValues[6];                                                                                 /**< Piece values in the evaluation*/
 
 
-
 /**
 * Initialize the late move reduction array
 */
@@ -361,7 +360,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     // Reverse futility pruning
-    if (!isPv && !isCheck && staticEval - 185 * depth + (55 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
+    if (!isPv && !isCheck && staticEval - 135 * depth + (65 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
         return staticEval;
     }
 
