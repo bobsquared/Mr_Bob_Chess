@@ -9,11 +9,24 @@ int pieceValues[6] = {S(114, 94), S(491, 332), S(500, 328), S(694, 559), S(1271,
 int knightWeight[9] = {S(-89, -75), S(-28, -35), S(-15, -20), S(-7, -9), S(-5, -1), S(4, 2), S(5, 23) , S(6, 38), S(14, 62)};
 int rookWeight[9] = {S(125, 36), S(59, 33), S(38, 30), S(25, 29), S(13, 26), S(1, 26), S(-8, 22), S(-15, 16), S(-24, 9)};
 int bishopWeight[9] = {S(81, 78), S(40, 77), S(37, 74), S(35, 72), S(35, 70), S(29, 69), S(26, 69), S(21, 67), S(20, 23)};
-// int queenWeight[7] = {S(37, 20), S(45, 10), S(35, 24), S(18, 10), S(-5, 10), S(11, 19), S(54, 48)};
 
 // Supported and adjacent pawn weights
-int supportedPawnWeight[7] = {S(0, 0), S(0, 0), S(18, 17), S(16, 10), S(19, 15), S(50, 29), S(212, -41)};
-int adjacentPawnWeight[7]  = {S(0, 0), S(4, 3), S(9, 3), S(8, 12), S(20, 31), S(90, 69), S(-105, 359)};
+int supportedPawnWeight[64] = {S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+                               S(291, -13), S(222, -95), S(566, -155), S(229, -56), S(933, 40), S(123, 15), S(326, -73), S(-77, 25),
+                               S(37, 16), S(63, 12), S(97, 7), S(50, 32), S(166, 38), S(49, 62), S(93, 15), S(20, 42),
+                               S(-8, 13), S(14, 15), S(24, 21), S(26, 20), S(29, 26), S(31, 17), S(16, 14), S(16, 10),
+                               S(13, 7), S(26, 7), S(17, 11), S(16, 17), S(21, 13), S(16, 11), S(23, 9), S(12, 7),
+                               S(13, 13), S(20, 15), S(21, 17), S(15, 28), S(18, 24), S(11, 17), S(28, 14), S(19, 14),
+                               S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+                               S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)};
+int adjacentPawnWeight[64]  = {S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+                               S(162, 174), S(200, 451), S(-578, 612), S(-731, 140), S(558, 42), S(285, 303), S(227, 359), S(237, 381),
+                               S(63, 57), S(209, 114), S(-1, 175), S(-147, 38), S(127, 68), S(229, -6), S(221, 103), S(-137, 136),
+                               S(0, -4), S(54, 55), S(-32, 28), S(71, 51), S(-13, 17), S(86, 51), S(-68, 36), S(138, -7),
+                               S(-1, 2), S(7, 14), S(9, 20), S(10, 19), S(14, 20), S(-1, 22), S(24, 6), S(5, 5),
+                               S(5, -5), S(12, 1), S(14, 9), S(6, 10), S(25, 1), S(0, 9), S(10, 5), S(-6, 1),
+                               S(6, -2), S(4, 10), S(6, 1), S(8, 15), S(10, 28), S(-1, -7), S(9, 14), S(2, -16),
+                               S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)};
 int freePasser[7]  = {S(0, 0), S(-7, -4), S(24, -6), S(13, -12), S(13, -34), S(17, -106), S(60, -177)};
 
 // Passed Pawn weights
@@ -255,6 +268,12 @@ void Eval::InitPieceBoards() {
             pieceSquare[9][i * 8 + j] = QUEEN_TABLE[j + 8 * i];
             pieceSquare[10][i * 8 + j] = KING_TABLE[(7 - i) * 8 + j];
             pieceSquare[11][i * 8 + j] = KING_TABLE[j + 8 * i];
+
+            adjacentPawnsVal[0][i * 8 + j] = adjacentPawnWeight[(7 - i) * 8 + j];
+            adjacentPawnsVal[1][i * 8 + j] = adjacentPawnWeight[j + 8 * i];
+
+            supportedPawnsVal[0][i * 8 + j] = supportedPawnWeight[(7 - i) * 8 + j];
+            supportedPawnsVal[1][i * 8 + j] = supportedPawnWeight[j + 8 * i];
 
         }
     }
@@ -677,22 +696,22 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
         }
 
         while (supportedPawns) {
-            int bscan = bitScan(supportedPawns) / 8;
-            ret += supportedPawnWeight[col? 7 - bscan : bscan];
+            int bscan = bitScan(supportedPawns);
+            ret += supportedPawnsVal[col][bscan];
 
             #ifdef TUNER
-            evalTrace.supportedPawnsCoeff[col? 7 - bscan : bscan][col]++;
+            evalTrace.supportedPawnsCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
             #endif
 
             supportedPawns &= supportedPawns - 1;
         }
 
         while (adjacentPawns) {
-            int bscan = bitScan(adjacentPawns) / 8;
-            ret += adjacentPawnWeight[col? 7 - bscan : bscan];
+            int bscan = bitScan(adjacentPawns);
+            ret += adjacentPawnsVal[col][bscan];
 
             #ifdef TUNER
-            evalTrace.adjacentPawnsCoeff[col? 7 - bscan : bscan][col]++;
+            evalTrace.adjacentPawnsCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
             #endif
 
             adjacentPawns &= adjacentPawns - 1;
