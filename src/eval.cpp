@@ -110,6 +110,16 @@ int kingPassedDistEnemy[8] = {S(0, 0), S(17, -38), S(13, 19), S(1, 54), S(12, 66
 int bishopWeight[9] = {S(259, -28), S(149, 91), S(66, 129), S(39, 124), S(22, 115), S(9, 109), S(4, 95), S(0, 83), S(-3, 67)};
 
 int pawnThreat = S(47, 93);
+int rookThreatPiece[6] = {S(-3, 11), S(12, 20), S(13, 28), S(0, 0), S(24, 33)};
+
+int pieceAttackValue[5] = {20, 48, 30, 44, 1};
+int attacksSafety = 37;
+int queenCheckVal = 76;
+int rookCheckVal = 67;
+int bishopCheckVal = 46;
+int knightCheckVal = 140;
+int noQueen = -91;
+int KSOffset = 95;
 
 
 
@@ -688,6 +698,7 @@ int Eval::evaluateKnights(Bitboard &board, ThreadSearch *th, bool col) {
     while (knights) {
 
         int bscan = bitScan(knights);
+        th->knightAttAll[col] |= board.knightMoves[bscan];
 
         // PST
         ret += pieceSquare[col + 2][bscan];
@@ -704,6 +715,13 @@ int Eval::evaluateKnights(Bitboard &board, ThreadSearch *th, bool col) {
         #endif
 
         th->unsafeSquares[!col] |= board.knightMoves[bscan];
+        th->attacksKnight[col] |= board.knightMoves[bscan];
+        int attacks = count_population(board.knightMoves[bscan] & th->tempUnsafe[col]);
+        if (attacks) {
+            th->KSAttackersWeight[col] += pieceAttackValue[1];
+            th->KSAttacks[col] += attacks;
+            (th->KSAttackersCount[col])++;
+        }
 
         knights &= knights - 1;
     }
@@ -721,6 +739,7 @@ int Eval::evaluateBishops(Bitboard &board, ThreadSearch *th, bool col) {
 
         int bscan = bitScan(bishops);
         uint64_t bishopAttacks = magics->bishopAttacksMask(board.occupied, bscan);
+        th->bishopAttacksAll[col] |= bishopAttacks;
 
         // PST
         ret += pieceSquare[col + 4][bscan];
@@ -737,6 +756,13 @@ int Eval::evaluateBishops(Bitboard &board, ThreadSearch *th, bool col) {
         #endif
 
         th->unsafeSquares[!col] |= bishopAttacks;
+        th->attacksBishop[col] |= bishopAttacks;
+        int attacks = count_population(bishopAttacks & th->tempUnsafe[col]);
+        if (attacks) {
+            th->KSAttackersWeight[col] += pieceAttackValue[2];
+            th->KSAttacks[col] += attacks;
+            (th->KSAttackersCount[col])++;
+        }
 
         bishops &= bishops - 1;
     }
@@ -762,6 +788,7 @@ int Eval::evaluateRooks(Bitboard &board, ThreadSearch *th, bool col) {
 
         int bscan = bitScan(rooks);
         uint64_t rookAttacks = magics->rookAttacksMask(board.occupied, bscan);
+        th->rookAttacksAll[col] |= rookAttacks;
 
         // PST
         ret += pieceSquare[col + 6][bscan];
@@ -795,6 +822,13 @@ int Eval::evaluateRooks(Bitboard &board, ThreadSearch *th, bool col) {
         }
 
         th->unsafeSquares[!col] |= rookAttacks;
+        th->attacksRook[col] |= rookAttacks;
+        int attacks = count_population(rookAttacks & th->tempUnsafe[col]);
+        if (attacks) {
+            th->KSAttackersWeight[col] += pieceAttackValue[3];
+            th->KSAttacks[col] += attacks;
+            (th->KSAttackersCount[col])++;
+        }
 
         rooks &= rooks - 1;
     }
@@ -828,6 +862,13 @@ int Eval::evaluateQueens(Bitboard &board, ThreadSearch *th, bool col) {
         #endif
 
         th->unsafeSquares[!col] |= queenAttacks;
+        th->attacksQueen[col] |= queenAttacks;
+        int attacks = count_population(queenAttacks & th->tempUnsafe[col]);
+        if (attacks) {
+            th->KSAttackersWeight[col] += pieceAttackValue[4];
+            th->KSAttacks[col] += attacks;
+            (th->KSAttackersCount[col])++;
+        }
 
         queens &= queens - 1;
     }
@@ -841,6 +882,7 @@ int Eval::evaluateKing(Bitboard &board, ThreadSearch *th, bool col) {
 
     int ret = 0;
     int kingColumn = board.kingLoc[col] % 8;
+    int theirKing = board.kingLoc[!col];
 
     // PST
     ret += pieceSquare[col + 10][board.kingLoc[col]];
@@ -889,6 +931,41 @@ int Eval::evaluateKing(Bitboard &board, ThreadSearch *th, bool col) {
         }
     }
 
+    if (th->KSAttackersCount[col] > 1) {
+
+        uint64_t bishopKing = magics->bishopAttacksMask(board.occupied, theirKing);
+        uint64_t rookKing = magics->rookAttacksMask(board.occupied, theirKing);
+        uint64_t knightChecks = board.knightMoves[theirKing] & th->attacksKnight[col] & ~th->unsafeSquares[col];
+        uint64_t bishopChecks = bishopKing & th->attacksBishop[col] & ~th->unsafeSquares[col];
+        uint64_t rookChecks = rookKing & th->attacksRook[col] & ~th->unsafeSquares[col];
+        uint64_t queenChecks = (bishopKing | rookKing) & th->attacksQueen[col] & ~th->unsafeSquares[col];
+
+        // King safety
+        int kingSafe = th->KSAttackersWeight[col];
+        kingSafe += queenCheckVal * count_population(queenChecks);
+        kingSafe += rookCheckVal * count_population(rookChecks);
+        kingSafe += bishopCheckVal * count_population(bishopChecks);
+        kingSafe += knightCheckVal * count_population(knightChecks);
+        kingSafe += (th->KSAttacks[col] * attacksSafety) / (count_population(kingZoneMask[!col][theirKing] & board.pieces[!col]) + 1);
+        kingSafe += (board.pieces[8 + col] == 0) * noQueen;
+        kingSafe -= KSOffset;
+
+
+
+        #if TUNER
+        kingSafetyTrace.queenChecksCount[col] = count_population(queenChecks);
+        kingSafetyTrace.rookChecksCount[col] = count_population(rookChecks);
+        kingSafetyTrace.bishopChecksCount[col] = count_population(bishopChecks);
+        kingSafetyTrace.knightChecksCount[col] = count_population(knightChecks);
+        kingSafetyTrace.attackScaleCount[col] = count_population(kingZoneMask[!col][theirKing] & board.pieces[!col]) + 1;
+        kingSafetyTrace.noQueen[col] = board.pieces[8 + col] == 0;
+        #endif
+
+        if (kingSafe > 0) {
+            ret += S(kingSafe, 0);
+        }
+    }
+
     return ret;
 }
 
@@ -905,6 +982,20 @@ int Eval::evaluateThreats(Bitboard &board, ThreadSearch *th, bool col) {
 
     #ifdef TUNER
     evalTrace.pawnThreatCoeff[col] += numAttacks;
+    #endif
+
+    // Rook threats
+    attacks = th->rookAttacksAll[col] & ~th->pawnAttAll[!col];
+    ret += (rookThreatPiece[0] * count_population(attacks & board.pieces[!col]));
+    ret += (rookThreatPiece[1] * count_population(attacks & board.pieces[2 + !col]));
+    ret += (rookThreatPiece[2] * count_population(attacks & board.pieces[4 + !col]));
+    ret += (rookThreatPiece[4] * count_population(attacks & board.pieces[8 + !col]));
+
+    #ifdef TUNER
+    evalTrace.rookThreatCoeff[0][col] += count_population(attacks & board.pieces[!col]);
+    evalTrace.rookThreatCoeff[1][col] += count_population(attacks & board.pieces[2 + !col]);
+    evalTrace.rookThreatCoeff[2][col] += count_population(attacks & board.pieces[4 + !col]);
+    evalTrace.rookThreatCoeff[4][col] += count_population(attacks & board.pieces[8 + !col]);
     #endif
 
     return ret;

@@ -67,7 +67,9 @@ public:
         int queenPstCoeff[64][2] = {0};
         int kingPstCoeff[64][2] = {0};
 
-        int knightThreatCoeff[5][2] = {0};
+        int numKnightThreatsCoeff[2] = {0};
+
+        int knightThreatCoeff[6][2] = {0};
         int bishopThreatCoeff[5][2] = {0};
         int rookThreatCoeff[5][2] = {0};
         int pawnThreatCoeff[2] = {0};
