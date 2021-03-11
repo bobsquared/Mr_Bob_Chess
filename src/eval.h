@@ -161,5 +161,10 @@ private:
     void savePawnHash(uint64_t key, int score);
     int probePawnHash(uint64_t key, bool &hit);
     int getPhase(Bitboard &board);
+    int flipIndex64(int index);
+    int getFile(int index);
+    int getRank(int index);
+    int flipFile(int index);
+    int flipRank(int index);
 
 };

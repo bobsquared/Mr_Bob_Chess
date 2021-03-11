@@ -501,6 +501,36 @@ int Eval::getPhase(Bitboard &board) {
 
 
 
+int Eval::getFile(int index) {
+    return index % 8;
+}
+
+
+
+int Eval::getRank(int index) {
+    return index / 8;
+}
+
+
+
+int Eval::flipFile(int index) {
+    return 7 - getFile(index);
+}
+
+
+
+int Eval::flipRank(int index) {
+    return 7 - getRank(index);
+}
+
+
+
+int Eval::flipIndex64(int index) {
+    return getFile(index) + flipRank(index) * 8;
+}
+
+
+
 #ifdef TUNER
 // clears the trace to 0
 void Eval::clearTrace() {
@@ -699,7 +729,7 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
             ret += supportedPawnsVal[col][bscan];
 
             #ifdef TUNER
-            evalTrace.supportedPawnsCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
+            evalTrace.supportedPawnsCoeff[col? bscan : flipIndex64(bscan)][col]++;
             #endif
 
             supportedPawns &= supportedPawns - 1;
@@ -710,7 +740,7 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
             ret += adjacentPawnsVal[col][bscan];
 
             #ifdef TUNER
-            evalTrace.adjacentPawnsCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
+            evalTrace.adjacentPawnsCoeff[col? bscan : flipIndex64(bscan)][col]++;
             #endif
 
             adjacentPawns &= adjacentPawns - 1;
@@ -727,7 +757,7 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
         ret += pieceSquare[col][bscan];
 
         #ifdef TUNER
-        evalTrace.pawnPstCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
+        evalTrace.pawnPstCoeff[col? bscan : flipIndex64(bscan)][col]++;
         #endif
 
         ret += kingPawnDistFriendly[chebyshevArray[board.kingLoc[col]][bscan]];
@@ -740,17 +770,17 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
 
         // Passed pawns
         if ((passedPawnMask[col][bscan] & board.pieces[!col]) == 0 && (forwardMask[col][bscan] & board.pieces[col]) == 0) {
-            ret += col? passedPawnWeight[(7 - (bscan / 8))] : passedPawnWeight[(bscan / 8)];
+            ret += col? passedPawnWeight[flipRank(bscan)] : passedPawnWeight[getRank(bscan)];
 
             #ifdef TUNER
-            evalTrace.passedPawnCoeff[col? (7 - (bscan / 8)) : (bscan / 8)][col]++;
+            evalTrace.passedPawnCoeff[col? flipRank(bscan) : getRank(bscan)][col]++;
             #endif
 
             if ((forwardMask[col][bscan] & board.occupied) != 0) {
-                ret += freePasser[col? (7 - (bscan / 8)) : (bscan / 8)];
+                ret += freePasser[col? flipRank(bscan) : getRank(bscan)];
 
                 #ifdef TUNER
-                evalTrace.freePasserCoeff[col? (7 - (bscan / 8)) : (bscan / 8)][col]++;
+                evalTrace.freePasserCoeff[col? flipRank(bscan) : getRank(bscan)][col]++;
                 #endif
             }
 
@@ -795,7 +825,7 @@ int Eval::evaluateKnights(Bitboard &board, ThreadSearch *th, bool col) {
         ret += pieceSquare[2 + col][bscan];
 
         #ifdef TUNER
-        evalTrace.knightPstCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
+        evalTrace.knightPstCoeff[col? bscan : flipIndex64(bscan)][col]++;
         #endif
 
         // Mobility
@@ -820,7 +850,7 @@ int Eval::evaluateKnights(Bitboard &board, ThreadSearch *th, bool col) {
             ret += knightOutpost[col][bscan];
 
             #ifdef TUNER
-            evalTrace.knightOutpostCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
+            evalTrace.knightOutpostCoeff[col? bscan : flipIndex64(bscan)][col]++;
             #endif
         }
 
@@ -847,7 +877,7 @@ int Eval::evaluateBishops(Bitboard &board, ThreadSearch *th, bool col) {
         ret += pieceSquare[4 + col][bscan];
 
         #ifdef TUNER
-        evalTrace.bishopPstCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
+        evalTrace.bishopPstCoeff[col? bscan : flipIndex64(bscan)][col]++;
         #endif
 
         // Mobility
@@ -890,7 +920,7 @@ int Eval::evaluateRooks(Bitboard &board, ThreadSearch *th, bool col) {
         ret += pieceSquare[6 + col][bscan];
 
         #ifdef TUNER
-        evalTrace.rookPstCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
+        evalTrace.rookPstCoeff[col? bscan : flipIndex64(bscan)][col]++;
         #endif
 
         // Mobility
@@ -973,7 +1003,7 @@ int Eval::evaluateQueens(Bitboard &board, ThreadSearch *th, bool col) {
         ret += pieceSquare[8 + col][bscan];
 
         #ifdef TUNER
-        evalTrace.queenPstCoeff[col? bscan : (bscan % 8) + (7 - (bscan / 8)) * 8][col]++;
+        evalTrace.queenPstCoeff[col? bscan : flipIndex64(bscan)][col]++;
         #endif
 
         // Mobility
@@ -1011,7 +1041,7 @@ int Eval::evaluateKing(Bitboard &board, ThreadSearch *th, bool col) {
     ret += pieceSquare[10 + col][board.kingLoc[col]];
 
     #ifdef TUNER
-    evalTrace.kingPstCoeff[col? board.kingLoc[col] : (board.kingLoc[col] % 8) + (7 - (board.kingLoc[col] / 8)) * 8][col]++;
+    evalTrace.kingPstCoeff[col? board.kingLoc[col] : flipIndex64(board.kingLoc[col])][col]++;
     #endif
 
     if (th->KSAttackersCount[col] > 1) {
@@ -1084,7 +1114,7 @@ int Eval::evaluatePawnShield(Bitboard &board, bool col) {
         }
     }
 
-    if (bscan % 8 > 0 && (forwardMask[col][bscan - 1] & board.pieces[col]) != 0) {
+    if (getFile(bscan) > 0 && (forwardMask[col][bscan - 1] & board.pieces[col]) != 0) {
         ret += kingPawnAdj;
 
         #ifdef TUNER
@@ -1100,7 +1130,7 @@ int Eval::evaluatePawnShield(Bitboard &board, bool col) {
         }
     }
 
-    if (bscan % 8 < 7 && (forwardMask[col][bscan + 1] & board.pieces[col]) != 0) {
+    if (getFile(bscan) < 7 && (forwardMask[col][bscan + 1] & board.pieces[col]) != 0) {
         ret += kingPawnAdj;
 
         #ifdef TUNER
