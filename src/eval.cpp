@@ -45,14 +45,14 @@ int queenMobilityBonus[28] =  {S(-164, -313), S(-29, -107), S(-27, -70), S(-22, 
                               S(44, 60), S(45, 63), S(47, 64), S(63, 64), S(84, 64), S(84, 67), S(90, 85), S(123, 88), S(135, 90)};
 
 
-int pieceAttackValue[5] = {0, 63, 63, 57, 7};
-int attacksSafety = 17;
-int queenCheckVal = 72;
-int rookCheckVal = 78;
-int bishopCheckVal = 72;
-int knightCheckVal = 126;
-int noQueen = -175;
-int KSOffset = 123;
+int pieceAttackValue[5] = {48, 62, 62, 60, 25};
+int attacksSafety = 13;
+int queenCheckVal = 63;
+int rookCheckVal = 58;
+int bishopCheckVal = 60;
+int knightCheckVal = 88;
+int noQueen = -111;
+int KSOffset = 122;
 
 int pawnShield = S(18, -1);
 int kingPawnFront = S(33, -19);
@@ -670,6 +670,7 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
     int ret = 0;
     uint64_t piece = board.pieces[col];
     th->unsafeSquares[!col] |= th->pawnAttAll[col];
+    th->KSAttackersWeight[col] += pieceAttackValue[0] * count_population(th->pawnAttAll[col] & th->tempUnsafe[col]);
 
     if (!hit) {
         uint64_t supportedPawns = board.pieces[col] & th->pawnAttAll[col];
