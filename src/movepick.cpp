@@ -72,7 +72,8 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
                 moveList.set_score_index(i, 1000000 + mvvlva[from][0]);
             }
             else {
-                int score = to > from? 1000000 : (to == from? 975000 : 950000);
+                int see = b.seeCapture(move);
+                int score = (see > 0? 1000000 : (see == 0? 950000 : (ply <= 6? 0 :  750000)));
                 moveList.set_score_index(i, score + mvvlva[from][to]);
             }
 
