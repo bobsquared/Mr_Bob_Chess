@@ -467,7 +467,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
             lmr -= isKiller(th, ply, move); // Don't reduce as much for killer moves
             lmr += !improving + failing; // Reduce if evaluation is improving (reduce more if evaluation fails)
-            lmr -= 2 * isPv; // Don't reduce as much for PV nodes
+            lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= (th->history[!b.getSideToMove()][moveFrom][moveTo] + cmh) / 1500;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
