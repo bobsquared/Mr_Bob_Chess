@@ -296,14 +296,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     th->seldepth = std::max(ply, th->seldepth); // update seldepth
 
-    // Check if there are any potential wins that don't require help mate.
-    if (beta > 0 && b.noPotentialWin()) {
-        if (alpha >= 0) {
-            th->nodes++;
-            return 0;
-        }
-    }
-
     // Dive into Quiesence search
     if (depth <= 0) {
         return qsearch(b, th, depth - 1, alpha, beta, ply);
@@ -320,7 +312,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     if (b.isDraw(ply)) {
         return 0;
     }
-
 
 
     int prevAlpha = alpha;
