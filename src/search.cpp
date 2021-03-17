@@ -639,7 +639,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
             }
         }
         // Late move reductions
-        else if (depth >= 3 && !inCheck && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
+        else if (depth >= 3 && numMoves > 1 && !inCheck && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
             lmr -= (th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) / 1500;
             lmr--;
