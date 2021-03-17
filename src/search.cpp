@@ -386,6 +386,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
     }
 
+    // Decrease depth for positions not in tt
+    if (depth >= 6 && !hashed) {
+        depth--;
+    }
+
 
     // Search
     int ret = -INFINITY_VAL;
