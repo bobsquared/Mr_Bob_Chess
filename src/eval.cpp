@@ -54,11 +54,11 @@ int knightCheckVal = 88;
 int noQueen = -111;
 int KSOffset = 122;
 
-int pawnShield = S(18, -1);
-int kingPawnFront = S(33, -19);
-int kingPawnFrontN = S(23, -13);
-int kingPawnAdj = S(20, -15);
-int kingPawnAdjN = S(6, -7);
+int pawnShield = S(4, -3);
+int kingPawnFront = S(22, -4);
+int kingPawnFrontN = S(26, -11);
+int kingPawnAdj = S(13, -4);
+int kingPawnAdjN = S(7, -6);
 
 int rookOnOpen = S(21, 5);
 int rookOnSemiOpen = S(20, 2);
@@ -79,10 +79,10 @@ int knightThreatPiece[5] = {S(1, 13), S(0, 0), S(31, 33), S(54, 15), S(37, 33)};
 int bishopThreatPiece[5] = {S(-2, 8), S(27, 40), S(0, 0), S(36, 28), S(29, 30)};
 int rookThreatPiece[5] = {S(-4, 17), S(9, 21), S(12, 24), S(0, 0), S(20, 25)};
 
-int kingPawnDistFriendly[8] = {S(0, 0), S(20, 7), S(16, 6), S(18, 0), S(9, -2), S(10, -4), S(11, -4), S(19, -15)};
-int kingPawnDistEnemy[8] = {S(0, 0), S(16, -32), S(6, -1), S(-15, 0), S(-21, 3), S(-18, 3), S(-18, 4), S(-17, 3)};
-int kingPassedDistFriendly[8] = {S(0, 0), S(-4, 0), S(1, -12), S(-5, -23), S(-1, -26), S(6, -26), S(25, -29), S(-5, -11)};
-int kingPassedDistEnemy[8] = {S(0, 0), S(-23, -11), S(-3, -13), S(-2, 15), S(-3, 30), S(-11, 38), S(-6, 37), S(-23, 42)};
+int kingPawnDistFriendly[8] = {S(0, 0), S(17, -6), S(2, -1), S(-3, -4), S(-13, -5), S(-10, -7), S(-5, -10), S(-6, -17)};
+int kingPawnDistEnemy[8] = {S(0, 0), S(15, -28), S(30, -2), S(7, 3), S(0, 7), S(3, 7), S(0, 10), S(4, 7)};
+int kingPassedDistFriendly[8] = {S(0, 0), S(-10, 15), S(-1, 0), S(-11, -11), S(-4, -15), S(2, -15), S(20, -19), S(-10, -1)};
+int kingPassedDistEnemy[8] = {S(0, 0), S(-4, -26), S(-12, -22), S(1, 4), S(1, 18), S(-8, 26), S(-2, 24), S(-19, 31)};
 
 
 // -----------------------Pawn attack tables----------------------------------//
@@ -1089,8 +1089,7 @@ int Eval::evaluatePawnShield(Bitboard &board, bool col) {
 
     int ret = 0;
     int bscan = board.kingLoc[col];
-    uint64_t shield = passedPawnMask[col][bscan] & (rowMask[col? std::max(bscan - 8, 0) : std::min(bscan + 8, 63)] | rowMask[col? std::max(bscan - 16, 0) : std::min(bscan + 16, 63)]);
-    int shieldCount = count_population(shield & board.pieces[col]);
+    int shieldCount = count_population(passedPawnMask[col][bscan] & board.pieces[col]);
 
     ret += pawnShield * shieldCount;
 
