@@ -1083,6 +1083,23 @@ int Bitboard::seeCapture(MOVE capture) {
 *************************************************************************************************/
 
 
+
+// Return the piece from index
+int Bitboard::getPiece(int index) {
+    if (pieceAt[index] == -1) {
+        return -1;
+    }
+    return pieceAt[index] / 2;
+}
+
+
+
+// Return the rank from index depending on the side to move
+int Bitboard::getRankFromSideToMove(int index) {
+    return toMove? 7 - (index / 8) : index / 8;
+}
+
+
 // Return the side to move
 bool Bitboard::getSideToMove() {
     return toMove;

@@ -452,8 +452,8 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         int score;
         int extension = 0;
 
-        // Check extension
-        if (isCheck) {
+        // Check extension and passed pawn extension
+        if (isCheck || (b.getPiece(moveFrom) == 0 && b.getRankFromSideToMove(moveTo) == 6)) {
             extension = 1;
         }
 

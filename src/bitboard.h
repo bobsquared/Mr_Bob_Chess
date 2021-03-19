@@ -74,6 +74,8 @@ public:
     bool can_castle_queen();
     bool isPseudoLegal(MOVE move);
 
+    int getPiece(int index);
+    int getRankFromSideToMove(int index);
 
 private:
 
