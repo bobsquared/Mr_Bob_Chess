@@ -36,6 +36,10 @@ int passedPawnWeight[7] = {S(0, 0), S(10, 12), S(-14, 21), S(-20, 50), S(6, 83),
 int doublePawnValue = S(11, 10);
 int isolatedPawnValue = S(11, 8);
 
+// Blocked pawns
+int blockedPawns5th = S(-4, -4);
+int blockedPawns6th = S(-10, -14);
+
 // Mobility
 int knightMobilityBonus[9] =  {S(-45, -152), S(-30, -67), S(-21, -23), S(-19, 2), S(-18, 12), S(-13, 24), S(-5, 28), S(1, 29), S(9, 22)};
 int bishopMobilityBonus[14] = {S(-35, -12), S(-26, -10), S(-4, 5), S(4, 20), S(17, 22), S(22, 30), S(26, 36), S(27, 38), S(30, 41), S(32, 41), S(46, 41), S(64, 42), S(82, 42), S(83, 43)};
@@ -707,10 +711,19 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
         uint64_t adjacentPawns = board.pieces[col] & adjacentMask(board.pieces[col]);
         uint64_t doubledPawns = col? ((board.pieces[col] ^ supportedPawns) << 8) & board.pieces[col] : ((board.pieces[col] ^ supportedPawns) >> 8) & board.pieces[col];
         uint64_t isolatedPawns = ~supportedPawns & ~adjacentPawns & board.pieces[col];
+        uint64_t blockedPawns = col? ((board.pieces[!col] << 8) & board.pieces[col]) : ((board.pieces[!col] >> 8) & board.pieces[col]);
 
         ret -= doublePawnValue * count_population(doubledPawns);
         #ifdef TUNER
         evalTrace.doubledPawnsCoeff[!col] = count_population(doubledPawns);
+        #endif
+
+        ret += blockedPawns5th * count_population(blockedPawns & (col? rowMask[24] : rowMask[32]));
+        ret += blockedPawns6th * count_population(blockedPawns & (col? rowMask[16] : rowMask[40]));
+
+        #ifdef TUNER
+        evalTrace.blockedPawns5thCoeff[col] += count_population(blockedPawns & (col? rowMask[24] : rowMask[32]));
+        evalTrace.blockedPawns6thCoeff[col] += count_population(blockedPawns & (col? rowMask[16] : rowMask[40]));
         #endif
 
         while (isolatedPawns) {

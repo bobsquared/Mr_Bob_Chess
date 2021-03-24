@@ -38,6 +38,9 @@ public:
         int doubledPawnsCoeff[2] = {0};
         int isolatedPawnsCoeff[2] = {0};
 
+        int blockedPawns5thCoeff[2] = {0};
+        int blockedPawns6thCoeff[2] = {0};
+
         int passedPawnCoeff[7][2] = {0};
         int supportedPawnsCoeff[64][2] = {0};
         int adjacentPawnsCoeff[64][2] = {0};
