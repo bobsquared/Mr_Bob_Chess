@@ -289,6 +289,7 @@ extern void InitCounterMoves(ThreadSearch *th);
 extern uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag);
 extern uint64_t knightAttacks(uint64_t knights);
 extern int count_population(uint64_t bitboard);
+extern int check_bit(uint64_t bitboard);
 extern void printBoard(const uint64_t board);
 
 extern int get_move_from(MOVE move);

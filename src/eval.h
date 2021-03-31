@@ -143,6 +143,8 @@ private:
     int adjacentPawnsVal[2][64];
     int supportedPawnsVal[2][64];
 
+    uint64_t lightSquares;
+
     void InitializeEval(Bitboard &board, ThreadSearch *th);
     void InitKingZoneMask();
     void InitPassedPawnsMask();
@@ -150,6 +152,7 @@ private:
     void InitDistanceArray();
     void InitOutpostSquares();
     void InitIsolatedPawnsMask();
+    void InitLightSquares();
     uint64_t adjacentMask(uint64_t pawns);
     int evaluateImbalance(Bitboard &board, bool col);
     int evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, int &pawnScore);
@@ -169,5 +172,7 @@ private:
     int getRank(int index);
     int flipFile(int index);
     int flipRank(int index);
+
+    int scaleEndgame(Bitboard &board, int eval);
 
 };

@@ -217,6 +217,12 @@ int count_population(uint64_t bitboard) {
 }
 
 
+// Check if only one bit is set
+int check_bit(uint64_t bitboard) {
+    return bitboard && !(bitboard & (bitboard - 1));
+}
+
+
 
 // Prints the bitboard in 1s and 0s
 void printBoard(const uint64_t board) {

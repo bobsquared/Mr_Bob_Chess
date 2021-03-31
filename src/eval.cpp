@@ -192,6 +192,7 @@ Eval::Eval() {
     InitDistanceArray();
     InitIsolatedPawnsMask();
     InitOutpostMask();
+    InitLightSquares();
 
     numPawnHashes = (8 * 0xFFFFF / sizeof(PawnHash));
     pawnHash = new PawnHash [numPawnHashes];
@@ -445,6 +446,17 @@ void Eval::InitOutpostMask() {
 
 
 
+void Eval::InitLightSquares() {
+    lightSquares = 0;
+    for (int i = 0; i < 64; i++) {
+        if (((i / 8) + (i % 8)) % 2) {
+            lightSquares |= 1ULL << i;
+        }
+    }
+}
+
+
+
 // Find all adjacent pawns
 uint64_t Eval::adjacentMask(uint64_t pawns) {
     uint64_t ret = (pawns << 1) & ~columnMask[0];
@@ -544,6 +556,33 @@ void Eval::clearTrace() {
 
 
 
+int Eval::scaleEndgame(Bitboard &board, int eval) {
+
+    uint64_t knights = board.pieces[2] | board.pieces[3];
+    uint64_t bishops = board.pieces[4] | board.pieces[5];
+    uint64_t rooks = board.pieces[6] | board.pieces[7];
+    uint64_t queens = board.pieces[8] | board.pieces[9];
+
+    bool attackingColor = eval < 0;
+    uint64_t attacking = board.color[attackingColor];
+    uint64_t minors = knights | bishops;
+    uint64_t majors = rooks | queens;
+    uint64_t minorAndMajors = minors | majors;
+
+    if (check_bit(board.pieces[4]) && check_bit(board.pieces[5]) && check_bit(bishops & lightSquares) && minorAndMajors == bishops) {
+        return 122;
+    }
+
+    if (rooks == minorAndMajors && count_population(board.pieces[6]) == 1 && count_population(board.pieces[7]) == 1) {
+        return std::min(140 + 50 * board.pieceCount[attackingColor] - board.pieceCount[!attackingColor], 256);
+    }
+
+    return 256;
+
+}
+
+
+
 // Evaluate the position
 int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
 
@@ -638,7 +677,7 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
     }
 
     int phase = getPhase(board);
-    ret = ((MGVAL(ret) * (256 - phase)) + (EGVAL(ret) * phase)) / 256;
+    ret = ((MGVAL(ret) * (256 - phase)) + (EGVAL(ret) * phase * scaleEndgame(board, EGVAL(ret)) / 256)) / 256;
     return board.toMove? -ret : ret;
 }
 
