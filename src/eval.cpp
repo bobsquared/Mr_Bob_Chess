@@ -558,6 +558,7 @@ void Eval::clearTrace() {
 
 int Eval::scaleEndgame(Bitboard &board, int eval) {
 
+    uint64_t pawns = board.pieces[0] | board.pieces[1];
     uint64_t knights = board.pieces[2] | board.pieces[3];
     uint64_t bishops = board.pieces[4] | board.pieces[5];
     uint64_t rooks = board.pieces[6] | board.pieces[7];
@@ -565,16 +566,29 @@ int Eval::scaleEndgame(Bitboard &board, int eval) {
 
     bool attackingColor = eval < 0;
     uint64_t attacking = board.color[attackingColor];
+    uint64_t defending = board.color[!attackingColor];
     uint64_t minors = knights | bishops;
     uint64_t majors = rooks | queens;
     uint64_t minorAndMajors = minors | majors;
+
+    int numMajorMinors = count_population(minorAndMajors);
 
     if (check_bit(board.pieces[4]) && check_bit(board.pieces[5]) && check_bit(bishops & lightSquares) && minorAndMajors == bishops) {
         return 122;
     }
 
-    if (rooks == minorAndMajors && count_population(board.pieces[6]) == 1 && count_population(board.pieces[7]) == 1) {
+    if (rooks == minorAndMajors && check_bit(board.pieces[6]) && check_bit(board.pieces[7])) {
         return std::min(140 + 50 * board.pieceCount[attackingColor] - board.pieceCount[!attackingColor], 256);
+    }
+
+    // K vs KNN
+    if (pawns == 0 && numMajorMinors == 2 && minorAndMajors == board.pieces[2 + attackingColor]) {
+        return 0;
+    }
+
+    // KB vs KNN or KN vs KNN
+    if (pawns == 0 && numMajorMinors == 3 && check_bit(defending & minors) && (defending & majors) == 0 && (attacking & minorAndMajors) == board.pieces[2 + attackingColor]) {
+        return 0;
     }
 
     return 256;

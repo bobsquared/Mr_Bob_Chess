@@ -922,7 +922,7 @@ bool Bitboard::isDraw(int ply) {
     }
 
     // Material draw.
-    if (pieceCount[2] + pieceCount[3] + pieceCount[4] + pieceCount[5] == 1) {
+    if (pieceCount[2] + pieceCount[3] + pieceCount[4] + pieceCount[5] <= 1) {
         return true;
     }
 
