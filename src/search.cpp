@@ -331,7 +331,10 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
+    bool improving = ply >= 2? staticEval > th->searchStack[ply - 2].eval : false;
     bool isCheck = b.InCheck();
+
+    th->searchStack[ply].eval = staticEval;
 
     // Null move pruning
     if (!isPv && canNullMove && !isCheck && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
@@ -356,6 +359,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     moveGen->generate_all_moves(moveList, b); // Generate moves
     movePick->scoreMoves(moveList, b, th, ply, hashedBoard.move);
     while (moveList.get_next_move(move)) {
+        bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
 
         // Skip the move it is not legal
         if (!b.isLegal(move)) {
@@ -370,6 +374,23 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         // First move search at full depth and full window
         if (numMoves == 0) {
             score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
+        }
+        // Late move reductions
+        else if (depth >= 3 && numMoves > 1 && isQuiet) {
+            int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)]; // Base reduction
+            lmr += !improving;
+            lmr -= isPv; // Don't reduce as much for PV nodes
+
+            lmr = std::min(depth - 2, std::max(lmr, 0));
+            score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
+            if (score > alpha) {
+                if (lmr > 0) {
+                    score = -pvSearch(b, th, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
+                }
+                if (score > alpha && score < beta) {
+                    score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
+                }
+            }
         }
         // Null window search
         else {
@@ -479,6 +500,22 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
                 ret = tempRet;
                 b.undo_move(move);
                 break;
+            }
+        }
+        // Late move reductions
+        else if (depth >= 3 && numMoves > 1 && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
+            int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
+            lmr--;
+
+            lmr = std::min(depth - 2, std::max(lmr, 0));
+            tempRet = -pvSearch(b, th, depth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
+            if (tempRet > alpha) {
+                if (lmr > 0) {
+                    tempRet = -pvSearch(b, th, depth - 1, -alpha - 1, -alpha, true, ply + 1);
+                }
+                if (tempRet > alpha && tempRet < beta) {
+                    tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
+                }
             }
         }
         // Null window search
