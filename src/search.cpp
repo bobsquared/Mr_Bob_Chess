@@ -333,6 +333,19 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
     bool isCheck = b.InCheck();
 
+    // Null move pruning
+    if (!isPv && canNullMove && !isCheck && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
+        int R = 3 + depth;
+
+        b.make_null_move();
+        int nullRet = -pvSearch(b, th, depth - R - 1, -beta, -beta + 1, false, ply + 1);
+        b.undo_null_move();
+
+        if (nullRet >= beta) {
+            return nullRet;
+        }
+    }
+
     // Search
     int ret = -INFINITY_VAL;
     MOVE bestMove = NO_MOVE;
