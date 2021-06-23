@@ -27,7 +27,7 @@ ThreadSearch *thread = new ThreadSearch[1];      /**< An array of thread data up
 
 
 const int seePruningMargin[2][6] = {{0, -100, -175, -275, -425, -750}, {0, -125, -215, -300, -400, -500}}; /**< Margins for SEE pruning in pvSearch*/
-const int lateMoveMargin[2][7] = {{0, 5, 7, 11, 19, 27, 44}, {0, 7, 10, 20, 31, 45, 62}};                  /**< Margins for late move pruning in pvSearch*/
+const int lateMoveMargin[2][8] = {{0, 6, 7, 11, 16, 23, 30, 37}, {0, 9, 12, 15, 27, 39, 41, 53}};                  /**< Margins for late move pruning in pvSearch*/
 extern int pieceValues[6];                                                                                 /**< Piece values in the evaluation*/
 
 
@@ -204,11 +204,6 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
         if (alpha < stand_pat) {
             alpha = stand_pat;
         }
-
-        // delta pruning
-        if (stand_pat < alpha - MGVAL(pieceValues[4])) {
-            return stand_pat;
-        }
     }
 
     MOVE move;
@@ -335,114 +330,19 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         return hashedBoard.score;
     }
 
-    // Mate distance pruning
-    beta = MATE_VALUE - ply < beta? MATE_VALUE - ply : beta;
-    alpha = -MATE_VALUE + ply > alpha? -MATE_VALUE + ply : alpha;
-
-    if (alpha >= beta) {
-        return alpha == -MATE_VALUE + ply? alpha : beta;
-    }
-
     int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
-    bool isEvenPly = ply % 2 == 0;
-    bool improving = ply >= 2? staticEval > th->searchStack[ply - 2].eval : false;
-    bool failing = ply >= 2? staticEval + 32 * depth < th->searchStack[ply - 2].eval : false;
     bool isCheck = b.InCheck();
-
-    removeKiller(th, ply + 1);
-    th->searchStack[ply].eval = staticEval;
-
-
-    // Razoring
-    if (!isPv && !isCheck && depth <= 1 && staticEval <= alpha - 350) {
-        return qsearch(b, th, -1, alpha, beta, ply);
-    }
-
-    // Reverse futility pruning
-    if (!isPv && !isCheck && staticEval - 115 * depth + (45 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
-        return staticEval;
-    }
-
-    // Null move pruning
-    if (!isPv && canNullMove && !isCheck && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
-        int R = 3 + depth / (7 - improving);
-
-        b.make_null_move();
-        int nullRet = -pvSearch(b, th, depth - R - 1, -beta, -beta + 1, false, ply + 1);
-        b.undo_null_move();
-
-        if (nullRet >= beta && std::abs(nullRet) < MATE_VALUE_MAX) {
-
-            if (depth >= 8) {
-                th->nullMoveTree = false;
-                nullRet = pvSearch(b, th, depth - R - 1, beta - 1, beta, false, ply);
-                th->nullMoveTree = true;
-            }
-
-            if (nullRet >= beta) {
-                return nullRet;
-            }
-
-        }
-    }
-
-    // Decrease depth for positions not in tt
-    if (depth >= 6 && !hashed) {
-        depth--;
-    }
-
 
     // Search
     int ret = -INFINITY_VAL;
     MOVE bestMove = NO_MOVE;
     MOVE move;
-    int quietsSearched = 0;
     int numMoves = 0;
     MoveList moveList;
-    MOVE quiets[MAX_NUM_MOVES];
-
-    MOVE prevMove = b.moveHistory.move[b.moveHistory.count - 1].move;
-    int prevMoveTo = get_move_to(prevMove);
-    int prevPiece = b.pieceAt[prevMoveTo] / 2;
 
     moveGen->generate_all_moves(moveList, b); // Generate moves
     movePick->scoreMoves(moveList, b, th, ply, hashedBoard.move);
     while (moveList.get_next_move(move)) {
-        bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
-        int moveFrom = get_move_from(move);
-        int moveTo = get_move_to(move);
-        int cmh = prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo] : 0;
-
-        if ((!isPv || isEvenPly) && numMoves > 0) {
-            if (isQuiet) {
-
-                // Futility pruning
-                if (depth <= 6 && staticEval + 135 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
-                    break;
-                }
-
-                // Late move pruning
-                if (depth <= 6 && quietsSearched > lateMoveMargin[improving][depth]) {
-                    break;
-                }
-
-                // History move pruning
-                if (quietsSearched >= 3 && th->history[b.getSideToMove()][moveFrom][moveTo] < depth * depth * (-100 - (600 * improving))) {
-                    continue;
-                }
-
-                // Counter move history pruning
-                if (quietsSearched >= 3 && cmh < depth * depth * (-250 - (750 * improving))) {
-                    continue;
-                }
-
-            }
-
-            // SEE pruning
-            if (depth <= 5 && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < seePruningMargin[isQuiet][depth]) {
-                continue;
-            }
-        }
 
         // Skip the move it is not legal
         if (!b.isLegal(move)) {
@@ -450,40 +350,13 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         int score;
-        int extension = 0;
-
-        // Check extension and passed pawn extension
-        if (isCheck || (b.getPiece(moveFrom) == 0 && b.getRankFromSideToMove(moveTo) == 6)) {
-            extension = 1;
-        }
-
-        int newDepth = depth + extension; // Extend
+        int newDepth = depth; // Extend
 
         b.make_move(move); // Make move
 
         // First move search at full depth and full window
         if (numMoves == 0) {
             score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
-        }
-        // Late move reductions
-        else if (depth >= 3 && numMoves > 1 && isQuiet && !isCheck) {
-            int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)]; // Base reduction
-
-            lmr -= isKiller(th, ply, move); // Don't reduce as much for killer moves
-            lmr += !improving + failing; // Reduce if evaluation is improving (reduce more if evaluation fails)
-            lmr -= isPv; // Don't reduce as much for PV nodes
-            lmr -= (th->history[!b.getSideToMove()][moveFrom][moveTo] + cmh) / 1500;
-
-            lmr = std::min(depth - 2, std::max(lmr, 0));
-            score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
-            if (score > alpha) {
-                if (lmr > 0) {
-                    score = -pvSearch(b, th, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
-                }
-                if (score > alpha && score < beta) {
-                    score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
-                }
-            }
         }
         // Null window search
         else {
@@ -507,11 +380,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             }
         }
 
-        if (isQuiet) {
-            quiets[quietsSearched] = move;
-            quietsSearched++;
-        }
-
     }
 
     // Stop the search
@@ -522,38 +390,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     // Check for checkmates and stalemates
     if (numMoves == 0) {
         return isCheck? -MATE_VALUE + ply : 0;
-    }
-
-    // Update Histories
-    if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
-        insertKiller(th, ply, bestMove);
-        b.insertCounterMove(th, bestMove);
-        int bestMoveFrom = get_move_from(bestMove);
-        int bestMoveTo = get_move_to(bestMove);
-        int piece = b.pieceAt[bestMoveFrom] / 2;
-
-        int hist = th->history[b.getSideToMove()][bestMoveFrom][bestMoveTo] * std::min(depth, 20) / 23;
-        th->history[b.getSideToMove()][bestMoveFrom][bestMoveTo] += 32 * (depth * depth) - hist;
-
-        if (prevMove != NULL_MOVE) {
-            hist = th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][bestMoveTo] * std::min(depth, 20) / 23;
-            th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][bestMoveTo] += 32 * (depth * depth) - hist;
-        }
-
-
-        for (int i = 0; i < quietsSearched; i++) {
-            int quietFrom = get_move_from(quiets[i]);
-            int quietTo = get_move_to(quiets[i]);
-            piece = b.pieceAt[quietFrom] / 2;
-
-            hist = th->history[b.getSideToMove()][quietFrom][quietTo] * std::min(depth, 20) / 23;
-            th->history[b.getSideToMove()][quietFrom][quietTo] += 32 * (-depth * depth) - hist;
-
-            if (prevMove != NULL_MOVE) {
-                hist = th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][quietTo] * std::min(depth, 20) / 23;
-                th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][quietTo] += 32 * (-depth * depth) - hist;
-            }
-        }
     }
 
     // Update Transposition tables
@@ -593,17 +429,12 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
     int ret = -INFINITY_VAL;
     int ply = 0;
     int staticEval = eval->evaluate(b, th);
-    bool inCheck = b.InCheck();
 
     // Probe transposition table:
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
     bool hashed = tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
-
-
-    MOVE prevMove = b.moveHistory.count > 0? b.moveHistory.move[b.moveHistory.count - 1].move :  NO_MOVE;
-    int prevPiece = b.pieceAt[get_move_to(prevMove)] / 2;
 
 
     // Initialize evaluation stack
@@ -624,7 +455,6 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
-        int cmh = prevMove != NO_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[get_move_from(move)] / 2][get_move_to(move)] : 0;
         b.make_move(move); // Make the move
 
         // First move search at full depth and full window
@@ -636,23 +466,6 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
                 ret = tempRet;
                 b.undo_move(move);
                 break;
-            }
-        }
-        // Late move reductions
-        else if (depth >= 3 && numMoves > 1 && !inCheck && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
-            int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
-            lmr -= (th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) / 1500;
-            lmr--;
-
-            lmr = std::min(depth - 2, std::max(lmr, 0));
-            tempRet = -pvSearch(b, th, depth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
-            if (tempRet > alpha) {
-                if (lmr > 0) {
-                    tempRet = -pvSearch(b, th, depth - 1, -alpha - 1, -alpha, true, ply + 1);
-                }
-                if (tempRet > alpha && tempRet < beta) {
-                    tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
-                }
             }
         }
         // Null window search
