@@ -334,6 +334,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     bool improving = ply >= 2? staticEval > th->searchStack[ply - 2].eval : false;
     bool isCheck = b.InCheck();
 
+     removeKiller(th, ply + 1);
     th->searchStack[ply].eval = staticEval;
 
     // Null move pruning
@@ -424,6 +425,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     // Check for checkmates and stalemates
     if (numMoves == 0) {
         return isCheck? -MATE_VALUE + ply : 0;
+    }
+
+    // Update Histories
+    if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
+        insertKiller(th, ply, bestMove);
     }
 
     // Update Transposition tables
