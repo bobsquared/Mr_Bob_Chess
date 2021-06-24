@@ -337,6 +337,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     removeKiller(th, ply + 1);
     th->searchStack[ply].eval = staticEval;
 
+    // Reverse futility pruning
+    if (!isPv && !isCheck && staticEval - 135 * depth >= beta && std::abs(beta) < MATE_VALUE_MAX) {
+        return staticEval;
+    }
+
     // Null move pruning
     if (!isPv && canNullMove && !isCheck && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
         int R = 3 + depth;
