@@ -334,7 +334,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     bool improving = ply >= 2? staticEval > th->searchStack[ply - 2].eval : false;
     bool isCheck = b.InCheck();
 
-     removeKiller(th, ply + 1);
+    removeKiller(th, ply + 1);
     th->searchStack[ply].eval = staticEval;
 
     // Null move pruning
@@ -430,6 +430,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     // Update Histories
     if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
         insertKiller(th, ply, bestMove);
+        b.insertCounterMove(th, bestMove);
     }
 
     // Update Transposition tables
