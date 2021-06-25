@@ -362,6 +362,10 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     int numMoves = 0;
     MoveList moveList;
 
+    MOVE prevMove = b.moveHistory.move[b.moveHistory.count - 1].move;
+    int prevMoveTo = get_move_to(prevMove);
+    int prevPiece = b.pieceAt[prevMoveTo] / 2;
+
     int quietsSearched = 0;
     MOVE quiets[MAX_NUM_MOVES];
 
@@ -446,9 +450,15 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         b.insertCounterMove(th, bestMove);
         int bestMoveFrom = get_move_from(bestMove);
         int bestMoveTo = get_move_to(bestMove);
+        int piece = b.pieceAt[bestMoveFrom] / 2;
 
         int hist = th->history[b.getSideToMove()][bestMoveFrom][bestMoveTo] * std::min(depth, 57) / 64;
         th->history[b.getSideToMove()][bestMoveFrom][bestMoveTo] += 64 * (depth * depth) - hist;
+
+        if (prevMove != NULL_MOVE) {
+            hist = th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][bestMoveTo] * std::min(depth, 57) / 64;
+            th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][bestMoveTo] += 64 * (depth * depth) - hist;
+        }
 
         for (int i = 0; i < quietsSearched; i++) {
             int quietFrom = get_move_from(quiets[i]);
@@ -456,6 +466,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
             hist = th->history[b.getSideToMove()][quietFrom][quietTo] * std::min(depth, 57) / 64;
             th->history[b.getSideToMove()][quietFrom][quietTo] += 64 * -(depth * depth) - hist;
+
+            if (prevMove != NULL_MOVE) {
+                hist = th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][quietTo] * std::min(depth, 57) / 64;
+                th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][quietTo] += 64 * (-depth * depth) - hist;
+            }
         }
     }
 
