@@ -27,7 +27,7 @@ ThreadSearch *thread = new ThreadSearch[1];      /**< An array of thread data up
 
 
 const int seePruningMargin[2][6] = {{0, -100, -175, -275, -425, -750}, {0, -125, -215, -300, -400, -500}}; /**< Margins for SEE pruning in pvSearch*/
-const int lateMoveMargin[2][8] = {{0, 6, 7, 11, 16, 23, 30, 37}, {0, 9, 12, 15, 27, 39, 41, 53}};                  /**< Margins for late move pruning in pvSearch*/
+const int lateMoveMargin[2][8] = {{0, 4, 6, 9, 14, 21, 30, 40}, {0, 7, 9, 13, 22, 37, 54, 69}};                  /**< Margins for late move pruning in pvSearch*/
 extern int pieceValues[6];                                                                                 /**< Piece values in the evaluation*/
 
 
@@ -335,7 +335,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     // Null move pruning
     if (!isPv && canNullMove && !isCheck && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
-        int R = 3 + depth;
+        int R = 3 + depth / 6;
 
         b.make_null_move();
         int nullRet = -pvSearch(b, th, depth - R - 1, -beta, -beta + 1, false, ply + 1);
