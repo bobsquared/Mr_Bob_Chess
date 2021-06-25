@@ -362,6 +362,9 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     int numMoves = 0;
     MoveList moveList;
 
+    int quietsSearched = 0;
+    MOVE quiets[MAX_NUM_MOVES];
+
     moveGen->generate_all_moves(moveList, b); // Generate moves
     movePick->scoreMoves(moveList, b, th, ply, hashedBoard.move);
     while (moveList.get_next_move(move)) {
@@ -420,6 +423,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             }
         }
 
+        if (isQuiet) {
+            quiets[quietsSearched] = move;
+            quietsSearched++;
+        }
+
     }
 
     // Stop the search
@@ -436,6 +444,19 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
         insertKiller(th, ply, bestMove);
         b.insertCounterMove(th, bestMove);
+        int bestMoveFrom = get_move_from(bestMove);
+        int bestMoveTo = get_move_to(bestMove);
+
+        int hist = th->history[b.getSideToMove()][bestMoveFrom][bestMoveTo] * std::min(depth, 57) / 64;
+        th->history[b.getSideToMove()][bestMoveFrom][bestMoveTo] += 64 * (depth * depth) - hist;
+
+        for (int i = 0; i < quietsSearched; i++) {
+            int quietFrom = get_move_from(quiets[i]);
+            int quietTo = get_move_to(quiets[i]);
+
+            hist = th->history[b.getSideToMove()][quietFrom][quietTo] * std::min(depth, 57) / 64;
+            th->history[b.getSideToMove()][quietFrom][quietTo] += 64 * -(depth * depth) - hist;
+        }
     }
 
     // Update Transposition tables
