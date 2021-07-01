@@ -373,6 +373,8 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     movePick->scoreMoves(moveList, b, th, ply, hashedBoard.move);
     while (moveList.get_next_move(move)) {
         bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
+        int moveFrom = get_move_from(move);
+        int moveTo = get_move_to(move);
 
         // Skip the move it is not legal
         if (!b.isLegal(move)) {
@@ -393,6 +395,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)]; // Base reduction
             lmr += !improving;
             lmr -= isPv; // Don't reduce as much for PV nodes
+            lmr -= (th->history[!b.getSideToMove()][moveFrom][moveTo] - 1653) / 6000;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
