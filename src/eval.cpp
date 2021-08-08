@@ -83,10 +83,10 @@ int knightThreatPiece[5] = {S(1, 13), S(0, 0), S(31, 33), S(54, 15), S(37, 33)};
 int bishopThreatPiece[5] = {S(-2, 8), S(27, 40), S(0, 0), S(36, 28), S(29, 30)};
 int rookThreatPiece[5] = {S(-4, 17), S(9, 21), S(12, 24), S(0, 0), S(20, 25)};
 
-int kingPawnDistFriendly[8] = {S(0, 0), S(17, -6), S(2, -1), S(-3, -4), S(-13, -5), S(-10, -7), S(-5, -10), S(-6, -17)};
-int kingPawnDistEnemy[8] = {S(0, 0), S(15, -28), S(30, -2), S(7, 3), S(0, 7), S(3, 7), S(0, 10), S(4, 7)};
-int kingPassedDistFriendly[8] = {S(0, 0), S(-10, 15), S(-1, 0), S(-11, -11), S(-4, -15), S(2, -15), S(20, -19), S(-10, -1)};
-int kingPassedDistEnemy[8] = {S(0, 0), S(-4, -26), S(-12, -22), S(1, 4), S(1, 18), S(-8, 26), S(-2, 24), S(-19, 31)};
+int kingPawnDistFriendly[8] = {S(0, 0), S(10, 11), S(2, 10), S(-5, 5), S(-11, 4), S(-15, 6), S(-2, 0), S(11, -11)};
+int kingPawnDistEnemy[8] = {S(0, 0), S(-25, -21), S(15, 9), S(3, 11), S(-4, 14), S(1, 16), S(-3, 18), S(2, 20)};
+int kingPassedDistFriendly[8] = {S(0, 0), S(-18, 22), S(-23, 7), S(-23, -1), S(-5, -12), S(20, -24), S(24, -27), S(3, -34)};
+int kingPassedDistEnemy[8] = {S(0, 0), S(-25, -42), S(-11, -9), S(10, 8), S(13, 16), S(1, 26), S(-7, 36), S(-16, 44)};
 
 
 // -----------------------Pawn attack tables----------------------------------//
