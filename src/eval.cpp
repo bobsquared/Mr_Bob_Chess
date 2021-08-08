@@ -756,6 +756,7 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
 
     int ret = 0;
     uint64_t piece = board.pieces[col];
+    uint64_t leveredPawns = board.pieces[!col] & th->pawnAttAll[col];
     th->unsafeSquares[!col] |= th->pawnAttAll[col];
     th->KSAttackersWeight[col] += pieceAttackValue[0] * count_population(th->pawnAttAll[col] & th->tempUnsafe[col]);
 
@@ -835,7 +836,7 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
         #endif
 
         // Passed pawns
-        if ((passedPawnMask[col][bscan] & board.pieces[!col]) == 0 && (forwardMask[col][bscan] & board.pieces[col]) == 0) {
+        if ((passedPawnMask[col][bscan] & (board.pieces[!col] ^ leveredPawns)) == 0 && (forwardMask[col][bscan] & board.pieces[col]) == 0) {
             ret += col? passedPawnWeight[flipRank(bscan)] : passedPawnWeight[getRank(bscan)];
 
             #ifdef TUNER
