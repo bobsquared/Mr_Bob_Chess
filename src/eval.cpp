@@ -27,10 +27,10 @@ int adjacentPawnWeight[64]  = {S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0,
                                S(5, -5), S(12, 1), S(14, 9), S(6, 10), S(25, 1), S(0, 9), S(10, 5), S(-6, 1),
                                S(6, -2), S(4, 10), S(6, 1), S(8, 15), S(10, 28), S(-1, -7), S(9, 14), S(2, -16),
                                S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)};
-int freePasser[7]  = {S(0, 0), S(-7, -4), S(24, -6), S(13, -12), S(13, -34), S(17, -106), S(60, -177)};
+int freePasser[7]  = {S(0, 0), S(7, -12), S(10, -4), S(3, -14), S(8, -22), S(3, -55), S(-25, -84)};
 
 // Passed Pawn weights
-int passedPawnWeight[7] = {S(0, 0), S(10, 12), S(-14, 21), S(-20, 50), S(6, 83), S(37, 154), S(66, 221)};
+int passedPawnWeight[7] = {S(0, 0), S(-11, 7), S(-15, 10), S(-13, 48), S(9, 84), S(56, 138), S(155, 154)};
 
 // Doubled pawns and isolated pawns and backward pawns
 int doublePawnValue = S(11, 10);
