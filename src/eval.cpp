@@ -31,6 +31,7 @@ int freePasser[7]  = {S(0, 0), S(7, -12), S(10, -4), S(3, -14), S(8, -22), S(3, 
 
 // Passed Pawn weights
 int passedPawnWeight[7] = {S(0, 0), S(-11, 7), S(-15, 10), S(-13, 48), S(9, 84), S(56, 138), S(155, 154)};
+int opposedPawnValue[8] = {S(-15, -20), S(14, -17), S(-4, 6), S(2, -5), S(3, -9), S(29, -1), S(18, 0), S(18, -22)};
 
 // Doubled pawns and isolated pawns and backward pawns
 int doublePawnValue = S(11, 10);
@@ -761,10 +762,10 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
     th->KSAttackersWeight[col] += pieceAttackValue[0] * count_population(th->pawnAttAll[col] & th->tempUnsafe[col]);
 
     if (!hit) {
-        uint64_t supportedPawns = board.pieces[col] & th->pawnAttAll[col];
         uint64_t adjacentPawns = board.pieces[col] & adjacentMask(board.pieces[col]);
-        uint64_t doubledPawns = col? ((board.pieces[col] ^ supportedPawns) << 8) & board.pieces[col] : ((board.pieces[col] ^ supportedPawns) >> 8) & board.pieces[col];
+        uint64_t supportedPawns = board.pieces[col] & th->pawnAttAll[col];
         uint64_t isolatedPawns = ~supportedPawns & ~adjacentPawns & board.pieces[col];
+        uint64_t doubledPawns = col? ((board.pieces[col] ^ supportedPawns) << 8) & board.pieces[col] : ((board.pieces[col] ^ supportedPawns) >> 8) & board.pieces[col];
         uint64_t blockedPawns = col? ((board.pieces[!col] << 8) & board.pieces[col]) : ((board.pieces[!col] >> 8) & board.pieces[col]);
 
         ret -= doublePawnValue * count_population(doubledPawns);
@@ -787,6 +788,15 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
                 evalTrace.isolatedPawnsCoeff[!col]++;
                 #endif
                 ret -= isolatedPawnValue;
+
+                // Opposed Pawns
+                if (((1ULL << bscan) & doubledPawns) && (forwardMask[col][bscan] & board.pieces[!col])) {
+                    ret += opposedPawnValue[bscan % 8];
+
+                    #ifdef TUNER
+                    evalTrace.opposedPawnCoeff[bscan % 8][col]++;
+                    #endif
+                }
             }
             isolatedPawns &= isolatedPawns - 1;
         }
@@ -938,6 +948,7 @@ int Eval::evaluateBishops(Bitboard &board, ThreadSearch *th, bool col) {
     while (piece) {
         int bscan = bitScan(piece);
         uint64_t bishopAttacks = magics->bishopAttacksMask(board.occupied ^ board.pieces[8 + col], bscan);
+        uint64_t bishopSpanAttacks = magics->bishopAttacksMask(0, bscan);
         th->bishopAttacksAll[col] |= bishopAttacks;
 
         // PST
@@ -953,6 +964,8 @@ int Eval::evaluateBishops(Bitboard &board, ThreadSearch *th, bool col) {
         #ifdef TUNER
         evalTrace.bishopMobilityCoeff[count_population(bishopAttacks & ~th->minorUnsafe[col])][col]++;
         #endif
+
+        if (kingZoneMask[!col][theirKing] & )
 
         // King safety
         th->unsafeSquares[!col] |= bishopAttacks;
