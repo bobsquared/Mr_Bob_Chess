@@ -213,8 +213,6 @@ struct ThreadSearch {
     uint64_t attacksRook[2] = {};
     uint64_t attacksQueen[2] = {};
     uint64_t unsafeSquares[2] = {};
-    uint64_t bishopAttacksAll[2] = {};
-    uint64_t rookAttacksAll[2] = {};
 
     uint64_t mobilityUnsafeSquares[2] = {};
     uint64_t minorUnsafe[2] = {};
