@@ -77,13 +77,9 @@ public:
         int pawnThreatCoeff[2] = {0};
         int pawnPushThreatCoeff[2] = {0};
 
-        int pawnShieldCoeff[2] = {0};
-        int pawnShieldFileCoeff[8][2] = {0};
-        int pawnShieldRankCoeff[8][2] = {0};
-        int pawnStormFileCoeff[8][2] = {0};
-        int pawnStormRankCoeff[8][2] = {0};
-        int pawnStormBlockadeFileCoeff[8][2] = {0};
-        int pawnStormBlockadeRankCoeff[8][2] = {0};
+        int pawnShieldCoeff[64][2] = {0};
+        int pawnStormCoeff[64][2] = {0};
+        int pawnStormBlockadeCoeff[64][2] = {0};
 
         int kingPawnFrontCoeff[2] = {0};
         int kingPawnFrontNCoeff[2] = {0};
@@ -147,6 +143,9 @@ private:
     int chebyshevArray[64][64];
     int adjacentPawnsVal[2][64];
     int supportedPawnsVal[2][64];
+    int pawnShieldVal[2][64];
+    int pawnStormVal[2][64];
+    int pawnStormBlockadeVal[2][64];
 
     uint64_t lightSquares;
 
@@ -173,6 +172,7 @@ private:
     int probePawnHash(uint64_t key, bool &hit);
     int getPhase(Bitboard &board);
     int flipIndex64(int index);
+    int flipIndex32(int index);
     int getFile(int index);
     int getRank(int index);
     int flipFile(int index);

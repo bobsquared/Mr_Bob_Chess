@@ -59,16 +59,35 @@ int knightCheckVal = 88;
 int noQueen = -111;
 int KSOffset = 122;
 
-int pawnShield = S(4, -3);
 int kingPawnFront = S(25, 1);
 int kingPawnFrontN = S(8, -4);
 
-int pawnShieldFile[8] = {S(57, -22), S(22, -3), S(2, 8), S(11, 0), S(0, -2), S(7, 3), S(-2, -7), S(31, -12)};
-int pawnShieldRank[8] = {S(0, 0), S(10, -4), S(11, -9), S(0, -4), S(1, 6), S(-1, 20), S(33, 15), S(0, 0)};
-int pawnStormFile[8] = {S(-22, 39), S(9, 8), S(-1, 8), S(2, -6), S(10, 3), S(-1, 5), S(7, 3), S(-8, 20)};
-int pawnStormRank[8] = {S(0, 0), S(54, 43), S(-19, 42), S(-21, 12), S(-1, -2), S(13, -6), S(7, -5), S(0, 0)};
-int pawnStormBlockadeFile[8] = {S(39, -29), S(20, -19), S(-5, -17), S(-3, -3), S(-5, -4), S(-6, -14), S(13, -11), S(32, -18)};
-int pawnStormBlockadeRank[8] = {S(0, 0), S(-17, -65), S(14, -22), S(11, -8), S(-3, -2), S(1, -5), S(0, 0), S(0, 0)};
+int pawnShield[64] = {S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+                      S(117, -18), S(46, 16), S(138, 9), S(13, 36), S(63, -14), S(-109, 54), S(59, 13), S(133, -35),
+                      S(92, 5), S(113, -5), S(44, 6), S(-12, 30), S(-35, 22), S(-9, 10), S(10, 11), S(66, 3),
+                      S(73, 0), S(0, 16), S(25, 7), S(12, 4), S(0, 3), S(9, -7), S(3, 5), S(39, 0),
+                      S(65, -18), S(14, 4), S(-8, 2), S(9, -8), S(2, -13), S(3, -12), S(1, -8), S(35, -8),
+                      S(75, -35), S(38, -21), S(-11, 2), S(22, -17), S(9, -14), S(9, -4), S(14, -17), S(45, -21),
+                      S(63, -50), S(29, -8), S(14, 14), S(39, -3), S(7, -5), S(17, 9), S(7, -11), S(41, -40),
+                      S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)};
+
+int pawnStorm[64] = {S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+                     S(-21, 33), S(20, -5), S(9, 10), S(3, -5), S(18, 9), S(8, 0), S(15, -5), S(-1, 16),
+                     S(-1, 14), S(35, -1), S(13, 0), S(12, -3), S(20, 6), S(-2, 4), S(30, -5), S(6, 8),
+                     S(-23, 35), S(-4, 9), S(-2, 4), S(10, -7), S(15, -6), S(0, 0), S(-3, 8), S(-10, 15),
+                     S(-47, 72), S(-25, 26), S(-40, 21), S(-17, -4), S(-10, 0), S(-25, 14), S(-9, 19), S(-14, 38),
+                     S(-45, 133), S(-103, 100), S(-68, 50), S(-56, 25), S(-13, 7), S(-38, 33), S(-20, 65), S(22, 85),
+                     S(33, 153), S(166, 54), S(-120, 81), S(-3, 14), S(-33, 32), S(0, 50), S(70, 55), S(85, 65),
+                     S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)};
+
+int pawnStormBlockade[64] = {S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+                             S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+                             S(9, -70), S(-71, -5), S(-34, -14), S(84, -39), S(-30, 26), S(11, -12), S(25, -23), S(-6, -19),
+                             S(19, -39), S(4, -27), S(-28, -23), S(-13, -5), S(-8, -12), S(0, -14), S(15, -25), S(29, -22),
+                             S(33, -36), S(25, -32), S(20, -22), S(8, -13), S(3, -7), S(4, -12), S(13, -24), S(27, -26),
+                             S(62, -64), S(63, -50), S(28, -29), S(3, -12), S(5, -14), S(18, -26), S(21, -34), S(42, -55),
+                             S(0, -136), S(2, -78), S(-18, -83), S(32, -127), S(-61, -16), S(9, -60), S(21, -94), S(-26, -117),
+                             S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)};
 
 int rookOnOpen = S(21, 5);
 int rookOnSemiOpen = S(20, 2);
@@ -90,10 +109,10 @@ int knightThreatPiece[5] = {S(1, 13), S(0, 0), S(31, 33), S(54, 15), S(37, 33)};
 int bishopThreatPiece[5] = {S(-2, 8), S(27, 40), S(0, 0), S(36, 28), S(29, 30)};
 int rookThreatPiece[5] = {S(-4, 17), S(9, 21), S(12, 24), S(0, 0), S(20, 25)};
 
-int kingPawnDistFriendly[8] = {S(0, 0), S(10, 9), S(3, 11), S(-5, 6), S(-11, 4), S(-19, 7), S(-6, 0), S(2, -7)};
-int kingPawnDistEnemy[8] = {S(0, 0), S(-28, -18), S(11, 11), S(4, 13), S(-3, 16), S(2, 18), S(-2, 22), S(9, 20)};
-int kingPassedDistFriendly[8] = {S(0, 0), S(-12, 30), S(-15, 13), S(-19, 2), S(-6, -9), S(11, -19), S(17, -21), S(-5, -28)};
-int kingPassedDistEnemy[8] = {S(0, 0), S(-26, -50), S(-25, -13), S(-1, 4), S(6, 14), S(6, 23), S(3, 32), S(-6, 39)};
+int kingPawnDistFriendly[8] = {S(0, 0), S(9, 11), S(2, 11), S(-4, 6), S(-11, 4), S(-18, 7), S(-6, 0), S(2, -7)};
+int kingPawnDistEnemy[8] = {S(0, 0), S(-35, -16), S(9, 12), S(4, 13), S(-4, 17), S(2, 19), S(-2, 23), S(10, 20)};
+int kingPassedDistFriendly[8] = {S(0, 0), S(-11, 28), S(-17, 12), S(-20, 1), S(-7, -9), S(11, -18), S(18, -21), S(-4, -29)};
+int kingPassedDistEnemy[8] = {S(0, 0), S(-12, -53), S(-22, -15), S(0, 3), S(7, 14), S(7, 23), S(3, 33), S(-6, 39)};
 
 
 // -----------------------Pawn attack tables----------------------------------//
@@ -291,6 +310,13 @@ void Eval::InitPieceBoards() {
 
             supportedPawnsVal[0][i * 8 + j] = supportedPawnWeight[(7 - i) * 8 + j];
             supportedPawnsVal[1][i * 8 + j] = supportedPawnWeight[j + 8 * i];
+
+            pawnShieldVal[0][i * 8 + j] = pawnShield[(7 - i) * 8 + j];
+            pawnShieldVal[1][i * 8 + j] = pawnShield[j + 8 * i];
+            pawnStormVal[0][i * 8 + j] = pawnStorm[(7 - i) * 8 + j];
+            pawnStormVal[1][i * 8 + j] = pawnStorm[j + 8 * i];
+            pawnStormBlockadeVal[0][i * 8 + j] = pawnStormBlockade[(7 - i) * 8 + j];
+            pawnStormBlockadeVal[1][i * 8 + j] = pawnStormBlockade[j + 8 * i];
 
         }
     }
@@ -1180,13 +1206,6 @@ int Eval::evaluatePawnShield(Bitboard &board, bool col) {
     uint64_t pawnShields = passedPawnMask[col][bscanKing] & board.pieces[col];
     uint64_t pawnStormers = passedPawnMask[col][bscanKing] & board.pieces[!col];
     uint64_t pawnStormBlockade = pawnShields & (col? (pawnStormers << 8) : (pawnStormers >> 8));
-    int shieldCount = count_population(pawnShields);
-
-    ret += pawnShield * std::min(3, shieldCount);
-
-    #ifdef TUNER
-    evalTrace.pawnShieldCoeff[col] += std::min(3, shieldCount);
-    #endif
 
     if ((forwardMask[col][bscanKing] & pawnShields) != 0) {
         ret += kingPawnFront;
@@ -1206,21 +1225,16 @@ int Eval::evaluatePawnShield(Bitboard &board, bool col) {
 
     while (pawnShields) {
         int bscan = bitScan(pawnShields);
-        ret += pawnShieldFile[getFile(bscan)];
-        ret += pawnShieldRank[col? flipRank(bscan) : getRank(bscan)];
 
+        ret += pawnShieldVal[col][bscan];
         #ifdef TUNER
-        evalTrace.pawnShieldFileCoeff[getFile(bscan)][col]++;
-        evalTrace.pawnShieldRankCoeff[col? flipRank(bscan) : getRank(bscan)][col]++;
+        evalTrace.pawnShieldCoeff[col? bscan : flipIndex64(bscan)][col]++;
         #endif
 
         if (1ULL << bscan & pawnStormBlockade) {
-            ret += pawnStormBlockadeFile[getFile(bscan)];
-            ret += pawnStormBlockadeRank[col? flipRank(bscan) : getRank(bscan)];
-
+            ret += pawnStormBlockadeVal[col][bscan];
             #ifdef TUNER
-            evalTrace.pawnStormBlockadeFileCoeff[getFile(bscan)][col]++;
-            evalTrace.pawnStormBlockadeRankCoeff[col? flipRank(bscan) : getRank(bscan)][col]++;
+            evalTrace.pawnStormBlockadeCoeff[col? bscan : flipIndex64(bscan)][col]++;
             #endif
         }
 
@@ -1229,12 +1243,10 @@ int Eval::evaluatePawnShield(Bitboard &board, bool col) {
 
     while (pawnStormers) {
         int bscan = bitScan(pawnStormers);
-        ret += pawnStormFile[getFile(bscan)];
-        ret += pawnStormRank[col? flipRank(bscan) : getRank(bscan)];
 
+        ret += pawnStormVal[col][bscan];
         #ifdef TUNER
-        evalTrace.pawnStormFileCoeff[getFile(bscan)][col]++;
-        evalTrace.pawnStormRankCoeff[col? flipRank(bscan) : getRank(bscan)][col]++;
+        evalTrace.pawnStormCoeff[col? bscan : flipIndex64(bscan)][col]++;
         #endif
 
         pawnStormers &= pawnStormers - 1;
