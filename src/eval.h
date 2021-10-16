@@ -78,11 +78,15 @@ public:
         int pawnPushThreatCoeff[2] = {0};
 
         int pawnShieldCoeff[2] = {0};
+        int pawnShieldFileCoeff[8][2] = {0};
+        int pawnShieldRankCoeff[8][2] = {0};
+        int pawnStormFileCoeff[8][2] = {0};
+        int pawnStormRankCoeff[8][2] = {0};
+        int pawnStormBlockadeFileCoeff[8][2] = {0};
+        int pawnStormBlockadeRankCoeff[8][2] = {0};
 
         int kingPawnFrontCoeff[2] = {0};
         int kingPawnFrontNCoeff[2] = {0};
-        int kingPawnAdjCoeff[2] = {0};
-        int kingPawnAdjNCoeff[2] = {0};
 
         int tempoCoeff[2] = {0};
         int rookBehindPasserCoeff[2] = {0};
