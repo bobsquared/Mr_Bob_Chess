@@ -92,7 +92,6 @@ int pawnStormBlockade[64] = {S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0
 int rookOnOpen = S(21, 5);
 int rookOnSemiOpen = S(20, 2);
 int rookOnQueen = S(-17, 19);
-int rookOnSeven = S(0, 13);
 
 int knightPair = S(9, -2);
 int rookPair = S(22, 18);
@@ -189,23 +188,32 @@ int KING_TABLE[64] =  {S(-193, -46), S(209, -63), S(238, -59), S(151, -42), S(-1
 
 
 // ---------------------------Knight Outpost----------------------------------//
-int outpostPotential[64] = { 0,  0,  0,  0,  0,  0,  0,  0,
-                           -75, 59,-34,-31, 16, 66, 64, 23,
-                            75, 51, 24, 25, 87, 34, 21, 64,
-                            18, 26, 20, 48, 52, 64, 66, 63,
-                            25, 26, 44, 52, 49, 66, 36, 30,
-                             6,  0,  8, 16, 16,  0,-56, 32,
-                             0,  0,  0,  0,  0,  0,  0,  0,
-                             0,  0,  0,  0,  0,  0,  0,  0};
+int KNIGHT_OUTPOST[64] = {S(173, -91), S(112, 20), S(-103, 44), S(169, 20), S(45, 5), S(158, 88), S(13, -6), S(82, 123),
+                          S(93, 19), S(67, -13), S(46, 16), S(63, -13), S(119, -2), S(31, 23), S(-4, 14), S(53, -1),
+                          S(66, 25), S(22, 42), S(57, 22), S(53, 18), S(36, 33), S(23, 41), S(30, 49), S(40, 42),
+                          S(26, 14), S(32, 0), S(46, 13), S(38, 26), S(50, 29), S(45, 26), S(44, 21), S(26, 16),
+                          S(24, 2), S(5, 24), S(39, 10), S(48, 8), S(53, 9), S(34, 7), S(23, 5), S(22, 1),
+                          S(-6, 3), S(11, -20), S(-13, 4), S(-5, -8), S(-7, -7), S(-20, 4), S(-21, 8), S(-20, -15),
+                          S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+                          S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)};
 
-int outpostPotentialEG[64] = { 0,  0,  0,  0,  0,  0,  0,  0,
-                             -71,  1,-26,-26, 50,-31, 56, 63,
-                               4, 12, 14, 33, 15, 30, 47, 32,
-                              15,  0, 14, 22, 18, 21, -6,  6,
-                              26, 14, 24, 13, 22, -8,-14,  6,
-                             -72,  9, -6, 24, 18,  0, 46, -4,
-                               0,  0,  0,  0,  0,  0,  0,  0,
-                               0,  0,  0,  0,  0,  0,  0,  0};
+int KNIGHT_OUTPOST_HOLE[64] = {S(47, -38), S(118, 9), S(-7, 21), S(113, 17), S(-57, 35), S(32, 43), S(-6, 63), S(108, 19),
+                               S(95, -10), S(61, -18), S(-17, 2), S(53, 0), S(31, 20), S(38, -9), S(29, 5), S(48, 26),
+                               S(30, -2), S(-6, -1), S(20, -8), S(11, 2), S(10, 0), S(-49, 28), S(-35, 15), S(-35, 24),
+                               S(2, 8), S(-1, -6), S(34, -15), S(0, 4), S(7, 1), S(-4, 6), S(19, -3), S(14, 7),
+                               S(11, 2), S(4, 9), S(11, 0), S(23, -6), S(10, -1), S(4, -1), S(11, -16), S(14, 2),
+                               S(12, -36), S(18, -14), S(2, -7), S(14, -9), S(-2, -3), S(3, -10), S(-11, 9), S(14, -23),
+                               S(4, -3), S(29, 1), S(8, -19), S(5, -6), S(0, -3), S(-5, -5), S(-2, 6), S(10, 13),
+                               S(-11, -28), S(8, -1), S(23, -7), S(36, -11), S(-4, 7), S(23, -10), S(5, 11), S(-85, -7)};
+
+int BISHOP_OUTPOST[64] = {S(130, -57), S(25, 29), S(136, 10), S(183, -22), S(152, -37), S(168, -7), S(185, -18), S(-191, 31),
+                          S(2, 41), S(83, -13), S(135, -30), S(83, -10), S(74, -18), S(24, 12), S(118, -7), S(-24, -24),
+                          S(8, 33), S(40, 11), S(21, 14), S(59, 2), S(67, 2), S(65, 10), S(48, 13), S(-43, 22),
+                          S(47, 9), S(43, 5), S(35, -6), S(43, 3), S(57, -2), S(51, 0), S(36, 21), S(-8, 24),
+                          S(5, 15), S(32, 10), S(51, -1), S(52, -8), S(65, -4), S(26, 4), S(34, 14), S(-10, 3),
+                          S(4, 31), S(6, 17), S(1, 16), S(11, 9), S(8, -8), S(-19, 5), S(-18, 9), S(-8, 28),
+                          S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0),
+                          S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0), S(0, 0)};
 // ---------------------------------------------------------------------------//
 
 
@@ -469,8 +477,14 @@ void Eval::InitOutpostMask() {
 
   for (int i = 0; i < 8; i++) {
       for (int j = 0; j < 8; j++) {
-        knightOutpost[0][i * 8 + j] = S(outpostPotential[(7 - i) * 8 + j], outpostPotentialEG[(7 - i) * 8 + j]);
-        knightOutpost[1][i * 8 + j] = S(outpostPotential[j + 8 * i], outpostPotentialEG[j + 8 * i]);
+        knightOutpost[0][i * 8 + j] = KNIGHT_OUTPOST[(7 - i) * 8 + j];
+        knightOutpost[1][i * 8 + j] = KNIGHT_OUTPOST[j + 8 * i];
+
+        knightOutpostHole[0][i * 8 + j] = KNIGHT_OUTPOST_HOLE[(7 - i) * 8 + j];
+        knightOutpostHole[1][i * 8 + j] = KNIGHT_OUTPOST_HOLE[j + 8 * i];
+
+        bishopOutpost[0][i * 8 + j] = BISHOP_OUTPOST[(7 - i) * 8 + j];
+        bishopOutpost[1][i * 8 + j] = BISHOP_OUTPOST[j + 8 * i];
       }
   }
 }
@@ -957,6 +971,15 @@ int Eval::evaluateKnights(Bitboard &board, ThreadSearch *th, bool col) {
             #endif
         }
 
+        // Jump to outpost
+        if (board.knightMoves[bscan] & holes) {
+            ret += knightOutpostHole[col][bscan];
+
+            #ifdef TUNER
+            evalTrace.knightOutpostHoleCoeff[col? bscan : flipIndex64(bscan)][col]++;
+            #endif
+        }
+
         piece &= piece - 1;
     }
 
@@ -970,6 +993,8 @@ int Eval::evaluateBishops(Bitboard &board, ThreadSearch *th, bool col) {
 
     int ret = 0;
     uint64_t piece = board.pieces[4 + col];
+    uint64_t holes = th->pawnAttAll[col];
+    uint64_t defendedBishop = piece & holes;
 
     while (piece) {
         int bscan = bitScan(piece);
@@ -988,6 +1013,15 @@ int Eval::evaluateBishops(Bitboard &board, ThreadSearch *th, bool col) {
         #ifdef TUNER
         evalTrace.bishopMobilityCoeff[count_population(bishopAttacks & ~th->minorUnsafe[col])][col]++;
         #endif
+
+        // Outposts
+        if ((defendedBishop & (1ULL << bscan)) && (outpostMask[col][bscan] & board.pieces[!col]) == 0) {
+            ret += bishopOutpost[col][bscan];
+
+            #ifdef TUNER
+            evalTrace.bishopOutpostCoeff[col? bscan : flipIndex64(bscan)][col]++;
+            #endif
+        }
 
         // King safety
         th->unsafeSquares[!col] |= bishopAttacks;
@@ -1063,15 +1097,6 @@ int Eval::evaluateRooks(Bitboard &board, ThreadSearch *th, bool col) {
             evalTrace.rookOnQueenCoeff[col]++;
             #endif
         }
-
-        // if (seventhRank & (1ULL << bscan) && (th->attacksBishop[!col] & (1ULL << bscan)) == 0 && (th->attacksKnight[!col] & (1ULL << bscan)) == 0) {
-        //     ret += rookOnSeven;
-        //     #ifdef TUNER
-        //     evalTrace.rookOnSevenCoeff[col]++;
-        //     #endif
-        //     // board.printPretty();
-        // }
-        
 
         // Trapped rooks
         uint64_t pieceLoc = piece & -piece;
