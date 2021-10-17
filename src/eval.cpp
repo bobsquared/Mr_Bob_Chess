@@ -272,14 +272,12 @@ void Eval::InitKingZoneMask() {
         tempBitBoard &= ~(1ULL << i);
 
         kingZoneMask[0][i] = tempBitBoard | (1ULL << i);
-        // kingZoneMask[0][i] |= kingZoneMask[0][i] << 8;
-        // kingZoneMask[0][i] |= kingZoneMask[0][i] >> 8;
-        // kingZoneMaskWhite[i] |= kingZoneMaskWhite[i] << 8;
+        kingZoneMask[0][i] |= kingZoneMask[0][i] << 8;
+        kingZoneMask[0][i] |= kingZoneMask[0][i] >> 8;
 
         kingZoneMask[1][i] = tempBitBoard | (1ULL << i);
-        // kingZoneMask[1][i] |= kingZoneMask[1][i] << 8;
-        // kingZoneMask[1][i] |= kingZoneMask[1][i] >> 8;
-        // kingZoneMaskBlack[i] |= kingZoneMaskBlack[i] >> 8;
+        kingZoneMask[1][i] |= kingZoneMask[1][i] << 8;
+        kingZoneMask[1][i] |= kingZoneMask[1][i] >> 8;
     }
 
 }
