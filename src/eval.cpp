@@ -1046,7 +1046,6 @@ int Eval::evaluateRooks(Bitboard &board, ThreadSearch *th, bool col) {
 
     int ret = 0;
     uint64_t piece = board.pieces[6 + col];
-    uint64_t seventhRank = rowMask[col? 8 : 48];
 
     while (piece) {
         int bscan = bitScan(piece);
@@ -1225,7 +1224,6 @@ int Eval::evaluatePawnShield(Bitboard &board, bool col) {
 
     int ret = 0;
     int bscanKing = board.kingLoc[col];
-    uint64_t kingFile = rowMask[bscanKing];
     uint64_t pawnShields = passedPawnMask[col][bscanKing] & board.pieces[col];
     uint64_t pawnStormers = passedPawnMask[col][bscanKing] & board.pieces[!col];
     uint64_t pawnStormBlockade = pawnShields & (col? (pawnStormers << 8) : (pawnStormers >> 8));
