@@ -78,20 +78,15 @@ int main(int argc, char* argv[]) {
     std::regex searchDepth(".*depth\\s(\\d+).*");
     std::regex number(".*(\\d+).*");
     std::thread thr;
+    std::string command = "";
 
     // Initial print
     uci.startMessage();
 
     // Forever loop of awesomeness
-    while (1) {
+    while (std::getline(std::cin, command)) {
 
         std::smatch m;
-        std::string command = "";
-
-
-        // Await command
-        std::getline(std::cin, command);
-
         std::string lowerCommand = command;
         std::transform(lowerCommand.begin(), lowerCommand.end(), lowerCommand.begin(), ::tolower);
         exit_thread_flag = false;
