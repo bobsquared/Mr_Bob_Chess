@@ -27,7 +27,7 @@ ThreadSearch *thread = new ThreadSearch[1];      /**< An array of thread data up
 
 
 const int seePruningMargin[2][6] = {{0, -100, -175, -275, -425, -750}, {0, -125, -215, -300, -400, -500}}; /**< Margins for SEE pruning in pvSearch*/
-const int lateMoveMargin[2][7] = {{0, 5, 7, 11, 18, 27, 44}, {0, 7, 10, 17, 29, 43, 62}};                  /**< Margins for late move pruning in pvSearch*/
+const int lateMoveMargin[2][9] = {{0, 4, 6, 9, 16, 23, 36, 50, 64}, {0, 6, 9, 16, 27, 39, 56, 73, 90}};                  /**< Margins for late move pruning in pvSearch*/
 extern int pieceValues[6];                                                                                 /**< Piece values in the evaluation*/
 
 
@@ -417,12 +417,12 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             if (isQuiet) {
 
                 // Futility pruning
-                if (depth <= 6 && staticEval + 135 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
+                if (depth <= 8 && staticEval + 135 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
                     break;
                 }
 
                 // Late move pruning
-                if (depth <= 6 && quietsSearched > lateMoveMargin[improving][depth]) {
+                if (depth <= 8 && quietsSearched > lateMoveMargin[improving][depth]) {
                     break;
                 }
 
