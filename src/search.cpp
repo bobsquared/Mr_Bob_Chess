@@ -343,11 +343,10 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         return alpha == -MATE_VALUE + ply? alpha : beta;
     }
 
-    int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
-    bool isEvenPly = ply % 2 == 0;
-    bool improving = ply >= 2? staticEval > th->searchStack[ply - 2].eval : false;
-    bool failing = ply >= 2? staticEval + 32 * depth < th->searchStack[ply - 2].eval : false;
     bool isCheck = b.InCheck();
+    int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, th));
+    bool isEvenPly = ply % 2 == 0;
+    bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
 
     removeKiller(th, ply + 1);
     th->searchStack[ply].eval = staticEval;
@@ -470,7 +469,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)]; // Base reduction
 
             lmr -= isKiller(th, ply, move); // Don't reduce as much for killer moves
-            lmr += !improving + failing; // Reduce if evaluation is improving (reduce more if evaluation fails)
+            lmr += !improving; // Reduce if evaluation is improving (reduce more if evaluation fails)
             lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= (th->history[!b.getSideToMove()][moveFrom][moveTo] + cmh) / 1500;
 
