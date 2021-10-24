@@ -204,11 +204,6 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
         if (alpha < stand_pat) {
             alpha = stand_pat;
         }
-
-        // delta pruning
-        if (stand_pat < alpha - MGVAL(pieceValues[4])) {
-            return stand_pat;
-        }
     }
 
     MOVE move;
@@ -465,11 +460,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
         }
         // Late move reductions
-        else if (depth >= 3 && numMoves > 1 && isQuiet && !isCheck) {
+        else if (depth >= 3 && numMoves > 1 && isQuiet) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)]; // Base reduction
 
             lmr -= isKiller(th, ply, move); // Don't reduce as much for killer moves
-            lmr += !improving; // Reduce if evaluation is improving (reduce more if evaluation fails)
+            lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= (th->history[!b.getSideToMove()][moveFrom][moveTo] + cmh) / 1500;
 
