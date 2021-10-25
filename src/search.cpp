@@ -586,7 +586,6 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
     int numMoves = 0;
     int ret = -INFINITY_VAL;
     int ply = 0;
-    int staticEval = eval->evaluate(b, th);
     bool inCheck = b.InCheck();
 
     // Probe transposition table:
@@ -601,6 +600,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
 
 
     // Initialize evaluation stack
+    int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, th));
     th->searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
 
 
