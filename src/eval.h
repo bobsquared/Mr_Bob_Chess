@@ -92,6 +92,9 @@ public:
         int knightOutpostHoleCoeff[64][2] = {0};
 
         int bishopOutpostCoeff[64][2] = {0};
+
+        int pawnBlockedByMinorsCoeff[2] = {0};
+        int pawnBlockedByMajorsCoeff[2] = {0};
     };
 
     struct KingSafetyTrace{
@@ -113,6 +116,7 @@ public:
     int evaluate(Bitboard &board, ThreadSearch *th);
     void InitPieceBoards();
     void InitOutpostMask();
+    int scaleEndgame(Bitboard &board, int eval);
 
     #ifdef TUNER
     void clearTrace();
@@ -181,7 +185,5 @@ private:
     int getRank(int index);
     int flipFile(int index);
     int flipRank(int index);
-
-    int scaleEndgame(Bitboard &board, int eval);
 
 };

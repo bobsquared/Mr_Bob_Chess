@@ -41,6 +41,9 @@ int isolatedPawnValue = S(11, 8);
 int blockedPawns5th = S(-4, -4);
 int blockedPawns6th = S(-10, -14);
 
+int pawnBlockedByMinors = S(-6, -6);
+int pawnBlockedByMajors = S(7, -11);
+
 // Mobility
 int knightMobilityBonus[9] = {S(-103, -119), S(-82, -35), S(-72, 10), S(-71, 40), S(-70, 55), S(-65, 70), S(-57, 75), S(-48, 74), S(-40, 67)};
 int bishopMobilityBonus[14] = {S(-81, -52), S(-65, -11), S(-51, 26), S(-43, 41), S(-34, 59), S(-24, 75), S(-20, 83), S(-20, 89), S(-18, 95), S(-15, 94), S(-7, 93), S(13, 81), S(13, 100), S(53, 68)};
@@ -798,6 +801,10 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
     int ret = 0;
     uint64_t piece = board.pieces[col];
     uint64_t leveredPawns = board.pieces[!col] & th->pawnAttAll[col];
+    uint64_t ourMinors = board.pieces[2 + col] | board.pieces[4 + col];
+    uint64_t ourMajors = board.pieces[6 + col] | board.pieces[8 + col];
+    uint64_t minorsBlockingPawn = board.pieces[col] & (col? (ourMinors << 8) : (ourMinors >> 8));
+    uint64_t majorsBlockingPawn = board.pieces[col] & (col? (ourMajors << 8) : (ourMajors >> 8));
     th->unsafeSquares[!col] |= th->pawnAttAll[col];
     th->KSAttackersWeight[col] += pieceAttackValue[0] * count_population(th->pawnAttAll[col] & th->tempUnsafe[col]);
 
@@ -819,6 +826,14 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
         #ifdef TUNER
         evalTrace.blockedPawns5thCoeff[col] += count_population(blockedPawns & (col? rowMask[24] : rowMask[32]));
         evalTrace.blockedPawns6thCoeff[col] += count_population(blockedPawns & (col? rowMask[16] : rowMask[40]));
+        #endif
+
+        ret += pawnBlockedByMinors * count_population(minorsBlockingPawn);
+        ret += pawnBlockedByMajors * count_population(majorsBlockingPawn);
+
+        #ifdef TUNER
+        evalTrace.pawnBlockedByMinorsCoeff[col] += count_population(minorsBlockingPawn);
+        evalTrace.pawnBlockedByMajorsCoeff[col] += count_population(majorsBlockingPawn);
         #endif
 
         while (isolatedPawns) {
