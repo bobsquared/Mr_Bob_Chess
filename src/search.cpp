@@ -380,7 +380,9 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     // Decrease depth for positions not in tt
-    if (depth >= 6 && !hashed) {
+    // Ed Schröder's iid alternative
+    // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=85d340ce4f4af0ed413fba3188189cd1
+    if (depth >= 6 - 2 * !improving && !hashed) {
         depth--;
     }
 
