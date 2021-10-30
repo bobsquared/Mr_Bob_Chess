@@ -339,7 +339,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     bool isCheck = b.InCheck();
     int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, th));
-    bool isEvenPly = ply % 2 == 0;
     bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
 
     removeKiller(th, ply + 1);
@@ -408,7 +407,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         int moveTo = get_move_to(move);
         int cmh = prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo] : 0;
 
-        if ((!isPv || isEvenPly) && numMoves > 0) {
+        if (numMoves > 0) {
             if (isQuiet) {
 
                 // Futility pruning
