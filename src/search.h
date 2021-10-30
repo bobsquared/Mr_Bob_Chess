@@ -15,7 +15,7 @@
 
 
 
-#define ASPIRATION_DELTA 8
+#define ASPIRATION_DELTA 15
 
 
 struct BestMoveInfo {
