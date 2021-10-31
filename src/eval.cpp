@@ -54,12 +54,12 @@ int queenMobilityBonus[28] = {S(-53, -332), S(-21, -254), S(-10, -117), S(-3, -9
                               S(13, 72), S(4, 81), S(-6, 123), S(-61, 121)};
 
 int pieceAttackValue[5] = {48, 62, 62, 60, 25};
-int attacksSafety = 13;
-int queenCheckVal = 63;
-int rookCheckVal = 58;
-int bishopCheckVal = 60;
-int knightCheckVal = 88;
-int noQueen = -111;
+int attacksSafety = 18;
+int queenCheckVal = 75;
+int rookCheckVal = 60;
+int bishopCheckVal = 63;
+int knightCheckVal = 94;
+int noQueen = -185;
 int KSOffset = 122;
 
 int kingPawnFront = S(25, 1);
