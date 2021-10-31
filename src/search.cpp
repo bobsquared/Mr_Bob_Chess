@@ -405,6 +405,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
+        int hist = th->history[b.getSideToMove()][moveFrom][moveTo];
         int cmh = prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo] : 0;
 
         if (numMoves > 0) {
@@ -421,7 +422,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
                 }
 
                 // History move pruning
-                if (quietsSearched >= 3 && th->history[b.getSideToMove()][moveFrom][moveTo] < depth * depth * (-100 - (600 * improving))) {
+                if (quietsSearched >= 3 && hist < depth * depth * (-100 - (600 * improving))) {
                     continue;
                 }
 
@@ -466,7 +467,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr -= isKiller(th, ply, move); // Don't reduce as much for killer moves
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
-            lmr -= (th->history[!b.getSideToMove()][moveFrom][moveTo] + cmh) / 1500;
+            lmr -= (hist + cmh) / 1500;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
