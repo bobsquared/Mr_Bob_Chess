@@ -63,7 +63,7 @@ void TranspositionTable::saveTT(ThreadSearch *th, MOVE move, int score, int stat
         th->ttWrites++;
         hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, flag, key, halfMove);
     }
-    else if (halfMove != hashTable[posKey].halfMove || flag == 0 || depth >= hashTable[posKey].depth - 2) {
+    else if (halfMove != hashTable[posKey].halfMove || flag == 0 || depth >= hashTable[posKey].depth - 2 || (flag != 0 && depth >= hashTable[posKey].depth)) {
         hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, flag, key, halfMove);
     }
 
