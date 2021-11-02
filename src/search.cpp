@@ -305,7 +305,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     th->nodes++; // Increment number of nodes
 
     // Stop the search
-    if (stopable && (exit_thread_flag || tm.outOfTime())) {
+    if (stopable && (exit_thread_flag || ((th->nodes & 1) && tm.outOfTime()))) {
         return 0;
     }
 
@@ -511,7 +511,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     // Stop the search
-    if (stopable && (exit_thread_flag || tm.outOfTime())) {
+    if (stopable && exit_thread_flag) {
         return 0;
     }
 
