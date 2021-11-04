@@ -345,38 +345,41 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     th->searchStack[ply].eval = staticEval;
 
 
-    // Razoring
-    if (!isPv && !isCheck && depth <= 1 && staticEval <= alpha - 350) {
-        return qsearch(b, th, -1, alpha, beta, ply);
-    }
+    if (!isPv && !isCheck) {
+        // Razoring
+        if (depth <= 1 && staticEval <= alpha - 350) {
+            return qsearch(b, th, -1, alpha, beta, ply);
+        }
 
-    // Reverse futility pruning
-    if (!isPv && !isCheck && staticEval - 115 * depth + (45 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
-        return staticEval;
-    }
+        // Reverse futility pruning
+        if (staticEval - 115 * depth + (45 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
+            return staticEval;
+        }
 
-    // Null move pruning
-    if (!isPv && canNullMove && !isCheck && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
-        int R = 3 + depth / (7 - improving);
+        // Null move pruning
+        if (canNullMove && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
+            int R = 3 + depth / (7 - improving);
 
-        b.make_null_move();
-        int nullRet = -pvSearch(b, th, depth - R - 1, -beta, -beta + 1, false, ply + 1);
-        b.undo_null_move();
+            b.make_null_move();
+            int nullRet = -pvSearch(b, th, depth - R - 1, -beta, -beta + 1, false, ply + 1);
+            b.undo_null_move();
 
-        if (nullRet >= beta && std::abs(nullRet) < MATE_VALUE_MAX) {
+            if (nullRet >= beta && std::abs(nullRet) < MATE_VALUE_MAX) {
 
-            if (depth >= 8) {
-                th->nullMoveTree = false;
-                nullRet = pvSearch(b, th, depth - R - 1, beta - 1, beta, false, ply);
-                th->nullMoveTree = true;
+                if (depth >= 8) {
+                    th->nullMoveTree = false;
+                    nullRet = pvSearch(b, th, depth - R - 1, beta - 1, beta, false, ply);
+                    th->nullMoveTree = true;
+                }
+
+                if (nullRet >= beta) {
+                    return nullRet;
+                }
+
             }
-
-            if (nullRet >= beta) {
-                return nullRet;
-            }
-
         }
     }
+    
 
     // Decrease depth for positions not in tt
     // Ed Schröder's iid alternative
