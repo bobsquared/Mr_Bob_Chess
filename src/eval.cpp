@@ -98,11 +98,11 @@ int rookOnOpen = S(20, 8);
 int rookOnSemiOpen = S(20, -1);
 int rookOnQueen = S(-42, 97);
 
-int knightPair = S(10, -9);
-int rookPair = S(67, 4);
-int noPawns = S(-81, -11);
+int knightPair = S(-10, 9);
+int rookPair = S(-67, -4);
+int noPawns = S(81, 11);
 
-int trappedRook = S(-10, 33);
+int trappedRook = S(10, -33);
 int rookBehindPasser = S(14, 11);
 int tempoBonus = S(42, 28);
 
@@ -760,28 +760,28 @@ int Eval::evaluateImbalance(Bitboard &board, bool col) {
 
     // Knight pair
     if (board.pieceCount[2 + col] >= 2) {
-        ret -= knightPair;
+        ret += knightPair;
 
         #ifdef TUNER
-        evalTrace.knightPairCoeff[!col]++;
+        evalTrace.knightPairCoeff[col]++;
         #endif
     }
 
     // Rook pair
     if (board.pieceCount[6 + col] >= 2) {
-        ret -= rookPair;
+        ret += rookPair;
 
         #ifdef TUNER
-        evalTrace.rookPairCoeff[!col]++;
+        evalTrace.rookPairCoeff[col]++;
         #endif
     }
 
     // Pawn count
     if (board.pieceCount[col] == 0) {
-        ret -= noPawns;
+        ret += noPawns;
 
         #ifdef TUNER
-        evalTrace.noPawnsCoeff[!col]++;
+        evalTrace.noPawnsCoeff[col]++;
         #endif
     }
 
@@ -1118,17 +1118,17 @@ int Eval::evaluateRooks(Bitboard &board, ThreadSearch *th, bool col) {
         uint64_t pieceLoc = piece & -piece;
         if (rowMask[col * 56] & pieceLoc) {
             if (board.pieces[col + 10] > 1ULL << (3 + (col * 56)) && pieceLoc > board.pieces[col + 10]) {
-                ret -= trappedRook;
+                ret += trappedRook;
 
                 #ifdef TUNER
-                evalTrace.trappedRookCoeff[!col]++;
+                evalTrace.trappedRookCoeff[col]++;
                 #endif
             }
             if (board.pieces[col + 10] < 1ULL << (4 + (col * 56)) && pieceLoc < board.pieces[col + 10]) {
-                ret -= trappedRook;
+                ret += trappedRook;
 
                 #ifdef TUNER
-                evalTrace.trappedRookCoeff[!col]++;
+                evalTrace.trappedRookCoeff[col]++;
                 #endif
             }
         }
