@@ -232,6 +232,7 @@ struct ThreadSearch {
     int seldepth;
 
     int history[2][64][64] = {};
+    int captureHistory[2][64][64] = {};
     int counterHistory[2][6][64][6][64] = {};
     MOVE killers[128][2] = {};
     MOVE counterMove[2][64][64] = {};
