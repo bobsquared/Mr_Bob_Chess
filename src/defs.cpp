@@ -92,6 +92,7 @@ void InitHistory(ThreadSearch *th) {
         for (int j = 0; j < 64; j++) {
             for (int k = 0; k < 64; k++) {
                 th->history[i][j][k] = 0;
+                th->captureHistory[i][j][k] = 0;
             }
         }
     }
