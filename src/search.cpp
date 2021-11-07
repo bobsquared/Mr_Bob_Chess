@@ -317,13 +317,15 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     int prevAlpha = alpha;
     bool isPv = alpha == beta - 1? false : true;
+    MOVE singMove = th->searchStack[ply].singMove;
+    bool hasSingMove = singMove != NO_MOVE;
 
 
     // Probe Transpostion Table:
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    bool hashed = tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
+    bool hashed = hasSingMove? false : tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
 
     if (ttRet && !isPv) {
         return hashedBoard.score;
@@ -345,7 +347,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     th->searchStack[ply].eval = staticEval;
 
 
-    if (!isPv && !isCheck) {
+    if (!isPv && !isCheck && !hasSingMove) {
         // Razoring
         if (depth <= 1 && staticEval <= alpha - 350) {
             return qsearch(b, th, -1, alpha, beta, ply);
@@ -413,6 +415,10 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         int hist = isQuiet? th->history[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
         int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo] : 0);
 
+        if (singMove == move) {
+            continue;
+        }
+
         if (numMoves > 0) {
             if (isQuiet) {
 
@@ -456,6 +462,23 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         if (isCheck || (b.getPiece(moveFrom) == 0 && b.getRankFromSideToMove(moveTo) == 6)
             || (isPv && prevMoveTo == get_move_to(move))) {
             extension = 1;
+        }
+
+        // Singular extensions
+        if (depth >= 8 && !extension && hashedBoard.move == move && hashedBoard.flag != UPPER_BOUND 
+            && hashedBoard.depth >= depth - 3 && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
+            int singVal = hashedBoard.score - 4 * depth;
+
+            th->searchStack[ply].singMove = move;
+            score = pvSearch(b, th, depth / 2 - 1, singVal - 1, singVal, false, ply);
+            th->searchStack[ply].singMove = NO_MOVE;
+
+            if (score < singVal) {
+                extension = 1;
+            }
+            else if (singVal >= beta) {
+                return singVal;
+            }
         }
 
         int newDepth = depth + extension; // Extend
@@ -526,7 +549,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     // Check for checkmates and stalemates
     if (numMoves == 0) {
-        return isCheck? -MATE_VALUE + ply : 0;
+        return hasSingMove? alpha : (isCheck? -MATE_VALUE + ply : 0);
     }
 
     // Update Histories
@@ -582,8 +605,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     // Update Transposition tables
     assert(alpha >= prevAlpha);
     assert (bestMove != 0);
-    int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
-    tt->saveTT(th, bestMove, ret, staticEval, depth, bound, posKey, ply);
+    if (!hasSingMove) {
+        int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
+        tt->saveTT(th, bestMove, ret, staticEval, depth, bound, posKey, ply);
+    }
+    
 
     return ret;
 
