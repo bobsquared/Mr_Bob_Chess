@@ -1,6 +1,7 @@
 
 #pragma once
 #include <vector>
+#include <stack>
 #include "bitboard.h"
 #include "defs.h"
 
