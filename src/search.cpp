@@ -215,7 +215,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     while (moveList.get_next_move(move)) {
 
         // Prune negative SEE
-        if (!inCheck && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < 0) {
+        if (!inCheck && b.seeCapture(move) < 0) {
             continue;
         }
 
