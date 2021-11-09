@@ -26,8 +26,8 @@ MoveGen *moveGen = new MoveGen;                  /**< The move generator generat
 ThreadSearch *thread = new ThreadSearch[1];      /**< An array of thread data up to 256 threads.*/
 
 
-const int seePruningMargin[2][6] = {{0, -100, -175, -275, -425, -750}, {0, -125, -215, -300, -400, -500}}; /**< Margins for SEE pruning in pvSearch*/
-const int lateMoveMargin[2][9] = {{0, 4, 6, 9, 15, 21, 33, 45, 57}, {0, 6, 9, 15, 27, 39, 51, 63, 75}};    /**< Margins for late move pruning in pvSearch*/
+const int seePruningMargin[2][6] = {{0, -100, -175, -275, -400, -600}, {0, -125, -200, -275, -350, -425}}; /**< Margins for SEE pruning in pvSearch*/
+const int lateMoveMargin[2][9] = {{0, 4, 6, 9, 15, 21, 27, 33, 40}, {0, 6, 9, 15, 23, 32, 42, 52, 62}};    /**< Margins for late move pruning in pvSearch*/
 
 
 /**
