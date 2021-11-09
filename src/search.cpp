@@ -445,7 +445,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             }
 
             // SEE pruning
-            if (depth <= 5 && (move & PROMOTION_FLAG) == 0 && b.seeCapture(move) < seePruningMargin[isQuiet][depth]) {
+            if (depth <= 5 && b.seeCapture(move) < seePruningMargin[isQuiet][depth]) {
                 continue;
             }
         }
