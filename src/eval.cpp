@@ -100,7 +100,6 @@ int rookOnQueen = S(-42, 97);
 
 int knightPair = S(-10, 9);
 int rookPair = S(-67, -4);
-int noPawns = S(81, 11);
 
 int trappedRook = S(10, -33);
 int rookBehindPasser = S(14, 11);
@@ -773,15 +772,6 @@ int Eval::evaluateImbalance(Bitboard &board, bool col) {
 
         #ifdef TUNER
         evalTrace.rookPairCoeff[col]++;
-        #endif
-    }
-
-    // Pawn count
-    if (board.pieceCount[col] == 0) {
-        ret += noPawns;
-
-        #ifdef TUNER
-        evalTrace.noPawnsCoeff[col]++;
         #endif
     }
 

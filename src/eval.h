@@ -53,7 +53,6 @@ public:
 
         int knightPairCoeff[2] = {0};
         int rookPairCoeff[2] = {0};
-        int noPawnsCoeff[2] = {0};
 
         int rookOnOpenCoeff[2] = {0};
         int rookOnSemiOpenCoeff[2] = {0};
