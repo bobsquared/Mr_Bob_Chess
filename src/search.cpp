@@ -496,7 +496,8 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr -= isQuiet && isKiller(th, ply, move); // Don't reduce as much for killer moves
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
-            lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500;
+            lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500; // Increase/decrease depth based on histories
+            lmr += isQuiet * (quietsSearched > lateMoveMargin[improving][8]); //Adjust if very late move
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
