@@ -14,12 +14,14 @@ public:
 
     int getTimePassed();
     bool outOfTime();
+    bool outOfTimeRoot();
     void setTimer(int numMoves);
 
 
 private:
 
     int timeLeft;
+    int maxTimeLeft;
     int wtime;
     int btime;
     int winc;

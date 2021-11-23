@@ -955,7 +955,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
         }
 
-        if (stopable && (exit_thread_flag || tm.outOfTime())) {
+        if (stopable && (exit_thread_flag || tm.outOfTimeRoot())) {
             break;
         }
 
