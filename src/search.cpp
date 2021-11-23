@@ -467,7 +467,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         // Singular extensions
         if (depth >= 8 && !extension && hashedBoard.move == move && hashedBoard.flag != UPPER_BOUND 
             && hashedBoard.depth >= depth - 3 && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
-            int singVal = hashedBoard.score - 4 * depth;
+            int singVal = hashedBoard.score - 2 * depth;
 
             th->searchStack[ply].singMove = move;
             score = pvSearch(b, th, depth / 2 - 1, singVal - 1, singVal, false, ply);
