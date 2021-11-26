@@ -91,9 +91,6 @@ public:
         int knightOutpostHoleCoeff[64][2] = {0};
 
         int bishopOutpostCoeff[64][2] = {0};
-
-        int pawnBlockedByMinorsCoeff[2] = {0};
-        int pawnBlockedByMajorsCoeff[2] = {0};
     };
 
     struct KingSafetyTrace{

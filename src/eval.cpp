@@ -43,9 +43,6 @@ int isolatedPawnValue = S(11, 8);
 int blockedPawns5th = S(-19, -24);
 int blockedPawns6th = S(-11, -80);
 
-int pawnBlockedByMinors = S(-12, 2);
-int pawnBlockedByMajors = S(2, 2);
-
 // Mobility
 int knightMobilityBonus[9] = {S(-79, -87), S(-45, -22), S(-26, 8), S(-16, 25), S(-6, 38), S(3, 53), S(11, 57), S(19, 60), S(22, 56)};
 int bishopMobilityBonus[14] = {S(-101, -33), S(-63, -16), S(-45, 10), S(-35, 29), S(-24, 41), S(-14, 54), S(-8, 60), S(-1, 64), S(2, 70), S(7, 71), S(22, 66), S(32, 68), S(42, 78), S(50, 62)};
@@ -793,10 +790,6 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
     int ret = 0;
     uint64_t piece = board.pieces[col];
     uint64_t leveredPawns = board.pieces[!col] & th->pawnAttAll[col];
-    uint64_t ourMinors = board.pieces[2 + col] | board.pieces[4 + col];
-    uint64_t ourMajors = board.pieces[6 + col] | board.pieces[8 + col];
-    uint64_t minorsBlockingPawn = board.pieces[col] & (col? (ourMinors << 8) : (ourMinors >> 8));
-    uint64_t majorsBlockingPawn = board.pieces[col] & (col? (ourMajors << 8) : (ourMajors >> 8));
     th->unsafeSquares[!col] |= th->pawnAttAll[col];
     th->KSAttackersWeight[col] += pieceAttackValue[0] * count_population(th->pawnAttAll[col] & th->tempUnsafe[col]);
 
@@ -818,14 +811,6 @@ int Eval::evaluatePawns(Bitboard &board, ThreadSearch *th, bool col, bool hit, i
         #ifdef TUNER
         evalTrace.blockedPawns5thCoeff[col] += count_population(blockedPawns & (col? rowMask[24] : rowMask[32]));
         evalTrace.blockedPawns6thCoeff[col] += count_population(blockedPawns & (col? rowMask[16] : rowMask[40]));
-        #endif
-
-        ret += pawnBlockedByMinors * count_population(minorsBlockingPawn);
-        ret += pawnBlockedByMajors * count_population(majorsBlockingPawn);
-
-        #ifdef TUNER
-        evalTrace.pawnBlockedByMinorsCoeff[col] += count_population(minorsBlockingPawn);
-        evalTrace.pawnBlockedByMajorsCoeff[col] += count_population(majorsBlockingPawn);
         #endif
 
         while (isolatedPawns) {
