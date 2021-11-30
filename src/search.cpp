@@ -955,12 +955,18 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
         }
 
-        if (stopable && (exit_thread_flag || tm.outOfTimeRoot())) {
+        // Do not print the search info if the time ran out during a search
+        if (stopable && (exit_thread_flag || tm.outOfTime())) {
             break;
         }
 
         if (id == 0 && canPrintInfo) {
             printSearchInfo(printInfo, EXACT);
+        }
+
+        // Print search info if time runs out before next iteration
+        if (stopable && (exit_thread_flag || tm.outOfTimeRoot())) {
+            break;
         }
 
     }
