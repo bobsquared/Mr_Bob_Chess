@@ -27,7 +27,7 @@ ThreadSearch *thread = new ThreadSearch[1];      /**< An array of thread data up
 
 
 const int seePruningMargin[2][6] = {{0, -100, -175, -275, -400, -600}, {0, -125, -200, -275, -350, -425}}; /**< Margins for SEE pruning in pvSearch*/
-const int lateMoveMargin[2][9] = {{0, 4, 6, 9, 15, 21, 27, 33, 40}, {0, 6, 9, 15, 23, 32, 42, 52, 62}};    /**< Margins for late move pruning in pvSearch*/
+const int lateMoveMargin[2][9] = {{0, 3, 5, 7, 11, 16, 22, 29, 37}, {0, 6, 9, 15, 23, 32, 42, 52, 62}};    /**< Margins for late move pruning in pvSearch*/
 
 
 /**
