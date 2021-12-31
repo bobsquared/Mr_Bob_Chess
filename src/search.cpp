@@ -27,7 +27,7 @@ ThreadSearch *thread = new ThreadSearch[1];      /**< An array of thread data up
 
 
 const int seePruningMargin[2][6] = {{0, -100, -175, -275, -400, -600}, {0, -125, -200, -275, -350, -425}}; /**< Margins for SEE pruning in pvSearch*/
-const int lateMoveMargin[2][9] = {{0, 3, 5, 7, 11, 16, 22, 29, 37}, {0, 6, 9, 15, 23, 32, 42, 52, 62}};    /**< Margins for late move pruning in pvSearch*/
+const int lateMoveMargin[2][9] = {{0, 3, 5, 7, 10, 14, 20, 26, 32}, {0, 6, 9, 13, 19, 27, 35, 43, 50}};    /**< Margins for late move pruning in pvSearch*/
 
 
 /**
@@ -497,7 +497,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500; // Increase/decrease depth based on histories
-            lmr += isQuiet * (quietsSearched > lateMoveMargin[improving][8]); //Adjust if very late move
+            lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
