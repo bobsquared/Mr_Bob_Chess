@@ -423,8 +423,8 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             if (isQuiet) {
 
                 // Futility pruning
-                if (depth <= 8 && staticEval + 135 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
-                    break;
+                if (!isCheck && depth <= 8 && staticEval + 185 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
+                    continue;
                 }
 
                 // Late move pruning
