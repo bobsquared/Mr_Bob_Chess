@@ -98,7 +98,7 @@ private:
     uint64_t pawnKey;
 
     const std::string pieceIndex = "PpNnBbRrQqKk";
-    const int pvals[6] = {100, 350, 350, 500, 900, 5000};
+    const int pvals[6] = {100, 450, 450, 650, 1250, 5000};
 
     // Position info
     uint8_t rookCastleFlagMask[64];
