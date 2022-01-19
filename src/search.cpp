@@ -882,6 +882,7 @@ void printSearchInfo(PrintInfo &printInfo, int bound) {
 void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
     MOVE bestMove = NO_MOVE;
+    MOVE prevBestMove = NO_MOVE;
     int searchedEval = 0;
     int alpha;
     int beta;
@@ -921,6 +922,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
                 break;
             }
 
+            prevBestMove = bestMove;
             bestMove = bm.move;
 
             if (id == 0) {
@@ -964,8 +966,12 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
             printSearchInfo(printInfo, EXACT);
         }
 
+        if (bestMove != prevBestMove && depth > 4) {
+            continue;
+        }
+        
         // Print search info if time runs out before next iteration
-        if (stopable && (exit_thread_flag || tm.outOfTimeRoot())) {
+        if (stopable &&  (exit_thread_flag || tm.outOfTimeRoot())) {
             break;
         }
 
