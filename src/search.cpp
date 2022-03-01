@@ -460,7 +460,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
         // Check extension and passed pawn extension
         if (isCheck || (b.getPiece(moveFrom) == 0 && b.getRankFromSideToMove(moveTo) == 6)
-            || (isPv && prevMoveTo == get_move_to(move))) {
+            || (isPv && prevMoveTo == get_move_to(move)) || (ttRet && hashedBoard.move == move && hashedBoard.flag != UPPER_BOUND)) {
             extension = 1;
         }
 
@@ -498,6 +498,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500; // Increase/decrease depth based on histories
             lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
+            lmr += (hashed && hashedBoard.flag == UPPER_BOUND && hashedBoard.depth > depth - 3 && hashedBoard.score <= alpha - 25);
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
