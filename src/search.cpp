@@ -342,6 +342,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     bool isCheck = b.InCheck();
     int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, th));
     bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
+    bool ttFailLow = (ttRet && hashedBoard.flag == UPPER_BOUND);
 
     removeKiller(th, ply + 1);
     th->searchStack[ply].eval = staticEval;
@@ -428,7 +429,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
                 }
 
                 // Late move pruning
-                if (depth <= 8 && quietsSearched > lateMoveMargin[improving][depth]) {
+                if (depth <= 8 && quietsSearched > lateMoveMargin[improving][std::max(1, depth - 2 * ttFailLow)]) {
                     break;
                 }
 
@@ -498,7 +499,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500; // Increase/decrease depth based on histories
             lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
-            lmr += (hashed && hashedBoard.flag == UPPER_BOUND && hashedBoard.depth > depth - 3 && hashedBoard.score <= alpha - 25);
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
