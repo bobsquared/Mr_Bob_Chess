@@ -460,7 +460,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
         // Check extension and passed pawn extension
         if (isCheck || (b.getPiece(moveFrom) == 0 && b.getRankFromSideToMove(moveTo) == 6)
-            || (isPv && prevMoveTo == get_move_to(move)) || (ttRet && hashedBoard.move == move && hashedBoard.flag != UPPER_BOUND)) {
+            || (isPv && prevMoveTo == get_move_to(move)) || (ttRet && hashedBoard.move == move && hashedBoard.flag == LOWER_BOUND)) {
             extension = 1;
         }
 
