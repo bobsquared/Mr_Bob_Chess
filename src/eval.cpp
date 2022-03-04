@@ -597,6 +597,7 @@ int Eval::scaleEndgame(Bitboard &board, int eval) {
     uint64_t minorAndMajors = minors | majors;
 
     int numMajorMinors = count_population(minorAndMajors);
+    int ret = 256;
 
     // Opposite color bishop
     if (check_bit(board.pieces[4]) && check_bit(board.pieces[5]) && check_bit(bishops & lightSquares) && minorAndMajors == bishops) {
@@ -629,9 +630,25 @@ int Eval::scaleEndgame(Bitboard &board, int eval) {
             return 0;
         }
     }
+
+    if ((defending & pawns) == 0 && check_bit(defending)) {
+        ret += 16 * (7 - chebyshevArray[board.kingLoc[0]][board.kingLoc[1]]);
+        if (check_bit(board.pieces[4 + attackingColor])) {
+            if (lightSquares & board.pieces[4 + attackingColor]) {
+                int brDistance = manhattanArray[board.kingLoc[!attackingColor]][7];
+                int tlDistance = manhattanArray[board.kingLoc[!attackingColor]][56];
+                ret += 16 * (7 - std::min(brDistance, tlDistance));
+            }
+            if (~lightSquares & board.pieces[4 + attackingColor]) {
+                int brDistance = manhattanArray[board.kingLoc[!attackingColor]][0];
+                int tlDistance = manhattanArray[board.kingLoc[!attackingColor]][63];
+                ret += 16 * (7 - std::min(brDistance, tlDistance));
+            }
+        }
+    }
     
 
-    return 256;
+    return ret;
 
 }
 
