@@ -298,7 +298,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     // Dive into Quiesence search
-    if (depth <= 0) {
+    if (depth <= 0 || ply >= MAX_PLY - 1) {
         return qsearch(b, th, depth - 1, alpha, beta, ply);
     }
 
@@ -343,6 +343,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, th));
     bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
     bool ttFailLow = (ttRet && hashedBoard.flag == UPPER_BOUND);
+    bool ttFailHigh = (ttRet && hashedBoard.flag == LOWER_BOUND);
 
     removeKiller(th, ply + 1);
     th->searchStack[ply].eval = staticEval;
@@ -461,7 +462,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
         // Check extension and passed pawn extension
         if (isCheck || (b.getPiece(moveFrom) == 0 && b.getRankFromSideToMove(moveTo) == 6)
-            || (isPv && prevMoveTo == get_move_to(move)) || (ttRet && hashedBoard.move == move && hashedBoard.flag == LOWER_BOUND)) {
+            || (isPv && prevMoveTo == get_move_to(move)) || (ttRet && hashedBoard.move == ttFailHigh)) {
             extension = 1;
         }
 
@@ -903,8 +904,6 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
         int delta = ASPIRATION_DELTA;
         int aspNum = 0;
 
-        th->seldepth = 1;
-
         // Use aspiration window with depth >= 4
         alpha = i >= 4? searchedEval - delta : -INFINITY_VAL;
         beta = i >= 4? searchedEval + delta : INFINITY_VAL;
@@ -915,6 +914,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
         while (true) {
 
+            th->seldepth = 1;
             BestMoveInfo bm = pvSearchRoot(b, th, i, moveList, alpha, beta, analysis, id);
             moveList.set_score_move(bm.move, 1400000 + (i * 100) + aspNum);
             searchedEval = bm.eval;

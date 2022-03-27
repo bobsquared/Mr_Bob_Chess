@@ -20,6 +20,7 @@ typedef uint16_t MOVE;
 #define INFINITY_VAL 99999
 #define MATE_VALUE 10000
 #define MATE_VALUE_MAX (MATE_VALUE - 500)
+#define MAX_PLY 269
 
 #define QUIET_MOVES_FLAG 0
 #define DOUBLE_PAWN_PUSH_FLAG 1
@@ -226,7 +227,7 @@ struct ThreadSearch {
     uint64_t ttWrites;
     uint64_t nodes;
 
-    SearchStack searchStack[128] = {};
+    SearchStack searchStack[MAX_PLY] = {};
     int KSAttackersWeight[2] = {};
     int KSAttacks[2] = {};
     int KSAttackersCount[2] = {};
@@ -235,7 +236,7 @@ struct ThreadSearch {
     int history[2][64][64] = {};
     int captureHistory[2][64][64] = {};
     int counterHistory[2][6][64][6][64] = {};
-    MOVE killers[128][2] = {};
+    MOVE killers[MAX_PLY][2] = {};
     MOVE counterMove[2][64][64] = {};
     MOVE bestMove;
 
