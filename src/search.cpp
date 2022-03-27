@@ -36,7 +36,7 @@ const int lateMoveMargin[2][9] = {{0, 3, 5, 7, 10, 14, 20, 26, 32}, {0, 6, 9, 13
 void InitLateMoveArray() {
     for (int i = 0; i < 64; i++) {
         for (int j = 0; j < 64; j++) {
-            lmrReduction[i][j] = (exp(2) * log(i) * log(j) + 18) / (exp(exp(1.02)));
+            lmrReduction[i][j] = (exp(1.9) * log(i) * log(j) + 18) / 16;
         }
     }
 }
