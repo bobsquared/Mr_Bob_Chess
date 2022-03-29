@@ -356,7 +356,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         // Reverse futility pruning
-        if (staticEval - 125 * depth + (40 * depth * improving) >= beta && std::abs(beta) < MATE_VALUE_MAX) {
+        if (depth <= 7 && staticEval - 125 * depth + (40 * depth * improving) >= beta && std::abs(staticEval) < MATE_VALUE_MAX) {
             return staticEval;
         }
 
@@ -901,7 +901,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
     for (int i = 1; i <= depth; i++) {
 
-        int delta = ASPIRATION_DELTA;
+        int delta = ASPIRATION_DELTA + std::abs(searchedEval / 750);
         int aspNum = 0;
 
         // Use aspiration window with depth >= 4
@@ -950,7 +950,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
             }
 
             aspNum++;
-            delta += delta / 3 + searchedEval <= alpha? 5 : 3;
+            delta += delta / 3 + 2;
 
             if (id == 0 && totalTime > 3000 && canPrintInfo) {
                 printSearchInfo(printInfo, bound);
