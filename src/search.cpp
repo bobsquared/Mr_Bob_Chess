@@ -164,7 +164,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
 
     // determine if it is a draw
     if (b.isDraw(ply)) {
-        return 0;
+        return 2 * (th->nodes & 1) - 1;
     }
 
     ZobristVal hashedBoard;
@@ -311,7 +311,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     // Determine if the position is a textbook draw
     if (b.isDraw(ply)) {
-        return 0;
+        return 2 * (th->nodes & 1) - 1;
     }
 
 
