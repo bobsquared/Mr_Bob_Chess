@@ -435,7 +435,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
                 }
 
                 // History move pruning
-                if (quietsSearched >= 3 && hist < depth * depth * (-100 - (600 * improving))) {
+                if (depth <= 3 && quietsSearched >= 3 && hist < depth * depth * (-100 - (150 * improving))) {
                     continue;
                 }
 
