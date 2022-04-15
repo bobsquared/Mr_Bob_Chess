@@ -314,6 +314,13 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         return 2 * (th->nodes & 1) - 1;
     }
 
+    // Mate distance pruning
+    beta = MATE_VALUE - ply < beta? MATE_VALUE - ply : beta;
+    alpha = -MATE_VALUE + ply > alpha? -MATE_VALUE + ply : alpha;
+
+    if (alpha >= beta) {
+        return alpha == -MATE_VALUE + ply? alpha : beta;
+    }
 
     int prevAlpha = alpha;
     bool isPv = alpha == beta - 1? false : true;
@@ -329,14 +336,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     if (ttRet && !isPv) {
         return hashedBoard.score;
-    }
-
-    // Mate distance pruning
-    beta = MATE_VALUE - ply < beta? MATE_VALUE - ply : beta;
-    alpha = -MATE_VALUE + ply > alpha? -MATE_VALUE + ply : alpha;
-
-    if (alpha >= beta) {
-        return alpha == -MATE_VALUE + ply? alpha : beta;
     }
 
     bool isCheck = b.InCheck();
