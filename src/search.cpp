@@ -156,41 +156,30 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     th->nodes++; // update nodes searched
 
     // stop the search
-    #ifndef TUNER
     if (stopable && exit_thread_flag) {
         return 0;
     }
-    #endif
 
     // determine if it is a draw
     if (b.isDraw(ply)) {
         return 2 * (th->nodes & 1) - 1;
     }
 
-    ZobristVal hashedBoard;
-
-    #ifndef TUNER
     // Probe Transpostion Table:
+    ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
     int prevAlpha = alpha;
-
 
     bool hashed = tt->probeTTQsearch(posKey, hashedBoard, ttRet, alpha, beta, ply);
 
     if (ttRet) {
         return hashedBoard.score;
     }
-    #endif
 
     bool inCheck = b.InCheck();
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
-
-    #ifndef TUNER
     int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
-    #else
-    int staticEval = eval->evaluate(b, th);
-    #endif
 
     if (!inCheck) {
         stand_pat = staticEval;
@@ -247,22 +236,13 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
 
     }
 
-    #ifndef TUNER
-    if (stopable && exit_thread_flag) {
-        return 0;
-    }
-    #endif
-
-    #ifndef TUNER
     if (numMoves > 0) {
         assert (bestMove != 0);
         int bound = prevAlpha >= stand_pat? UPPER_BOUND : (stand_pat >= beta? LOWER_BOUND : EXACT);
         tt->saveTT(th, bestMove, stand_pat, staticEval, depth, bound, posKey, ply);
     }
-    #endif
 
     return stand_pat;
-
 }
 
 
