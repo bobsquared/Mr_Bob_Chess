@@ -404,7 +404,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             if (isQuiet) {
 
                 // Futility pruning
-                if (!isCheck && depth <= 8 && staticEval + 185 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
+                if (!isCheck && depth <= 8 && staticEval + (185 - std::min(20, extLevel)) * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
                     continue;
                 }
 
