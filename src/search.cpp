@@ -332,10 +332,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         // Razoring
         if (depth <= 3 && staticEval + 275 * depth <= alpha) {
             int score = qsearch(b, th, -1, alpha, beta, ply);
-            if (depth == 1) {
-                return score;
-            }
-            else if (score <= alpha) {
+            if (depth == 1 || score <= alpha) {
                 return score;
             }
         }
