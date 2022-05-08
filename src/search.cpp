@@ -330,8 +330,14 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     if (!isPv && !isCheck && !hasSingMove) {
         // Razoring
-        if (depth <= 1 && staticEval <= alpha - 350) {
-            return qsearch(b, th, -1, alpha, beta, ply);
+        if (depth <= 3 && staticEval + 275 * depth <= alpha) {
+            int score = qsearch(b, th, -1, alpha, beta, ply);
+            if (depth == 1) {
+                return score;
+            }
+            else if (score <= alpha) {
+                return score;
+            }
         }
 
         // Reverse futility pruning
