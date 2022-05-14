@@ -199,13 +199,24 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     MoveList moveList;
     int numMoves = 0;
 
+    MOVE prevMove = b.moveHistory.move[b.moveHistory.count - 1].move;
+    int prevMoveTo = get_move_to(prevMove);
+
     inCheck? moveGen->generate_all_moves(moveList, b) : moveGen->generate_captures_promotions(moveList, b);
     movePick->scoreMovesQS(moveList, b, hashedBoard.move);
     while (moveList.get_next_move(move)) {
 
-        // Prune negative SEE
-        if (!inCheck && b.seeCapture(move) < 0) {
-            continue;
+        if (!inCheck) {
+            int see = b.seeCapture(move);
+
+            // Prune negative SEE
+            if (see < 0) {
+                continue;
+            }
+
+            if (prevMoveTo != get_move_to(move) && see + staticEval >= beta + 200 + std::max(-150, (10 * depth))) {
+                return see + staticEval;
+            }
         }
 
         // Check legality
