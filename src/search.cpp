@@ -272,7 +272,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
 * @param[in]      ply         The current ply/height that the search is at.
 * @return                     The score of the best move in the position.
 */
-int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply, int extLevel) {
+int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
@@ -334,6 +334,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
     bool ttFailLow = (ttRet && hashedBoard.flag == UPPER_BOUND);
     bool ttFailHigh = (ttRet && hashedBoard.flag == LOWER_BOUND);
+    int extLevel = th->searchStack[ply].extLevel;
 
     removeKiller(th, ply + 1);
     th->searchStack[ply].eval = staticEval;
@@ -356,16 +357,17 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         // Null move pruning
         if (canNullMove && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
             int R = 3 + depth / (7 - improving) + std::min((staticEval - beta) / 300, 3);
+            th->searchStack[ply + 1].extLevel = extLevel;
 
             b.make_null_move();
-            int nullRet = -pvSearch(b, th, depth - R - 1, -beta, -beta + 1, false, ply + 1, extLevel);
+            int nullRet = -pvSearch(b, th, depth - R - 1, -beta, -beta + 1, false, ply + 1);
             b.undo_null_move();
 
             if (nullRet >= beta && std::abs(nullRet) < MATE_VALUE_MAX) {
 
                 if (depth >= 8) {
                     th->nullMoveTree = false;
-                    nullRet = pvSearch(b, th, depth - R - 1, beta - 1, beta, false, ply, extLevel);
+                    nullRet = pvSearch(b, th, depth - R - 1, beta - 1, beta, false, ply);
                     th->nullMoveTree = true;
                 }
 
@@ -465,7 +467,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             int singVal = hashedBoard.score - 2 * depth;
 
             th->searchStack[ply].singMove = move;
-            score = pvSearch(b, th, depth / 2 - 1, singVal - 1, singVal, false, ply, extLevel);
+            score = pvSearch(b, th, depth / 2 - 1, singVal - 1, singVal, false, ply);
             th->searchStack[ply].singMove = NO_MOVE;
 
             if (score < singVal) {
@@ -477,12 +479,13 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         int newDepth = depth + extension; // Extend
+        th->searchStack[ply + 1].extLevel = extLevel + extension;
 
         b.make_move(move); // Make move
 
         // First move search at full depth and full window
         if (numMoves == 0) {
-            score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1, extLevel + extension);
+            score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
         }
         // Late move reductions
         else if (depth >= 3 && numMoves > 0) {
@@ -495,21 +498,21 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
-            score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1, extLevel + extension);
+            score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
             if (score > alpha) {
                 if (lmr > 0) {
-                    score = -pvSearch(b, th, newDepth - 1, -alpha - 1, -alpha, true, ply + 1, extLevel + extension);
+                    score = -pvSearch(b, th, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
                 }
                 if (score > alpha && score < beta) {
-                    score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1, extLevel + extension);
+                    score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
                 }
             }
         }
         // Null window search
         else {
-            score = -pvSearch(b, th, newDepth - 1, -alpha - 1, -alpha, true, ply + 1, extLevel + extension);
+            score = -pvSearch(b, th, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
             if (score > alpha && score < beta) {
-                score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1, extLevel + extension);
+                score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
             }
         }
 
@@ -674,7 +677,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
 
         // First move search at full depth and full window
         if (numMoves == 0) {
-            tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1, 0);
+            tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
             if (tempRet <= alpha) {
                 numMoves++;
                 bestMove = move;
@@ -690,21 +693,21 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
             lmr--;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
-            tempRet = -pvSearch(b, th, depth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1, 0);
+            tempRet = -pvSearch(b, th, depth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
             if (tempRet > alpha) {
                 if (lmr > 0) {
-                    tempRet = -pvSearch(b, th, depth - 1, -alpha - 1, -alpha, true, ply + 1, 0);
+                    tempRet = -pvSearch(b, th, depth - 1, -alpha - 1, -alpha, true, ply + 1);
                 }
                 if (tempRet > alpha && tempRet < beta) {
-                    tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1, 0);
+                    tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
                 }
             }
         }
         // Null window search
         else {
-            tempRet = -pvSearch(b, th, depth - 1, -alpha - 1, -alpha, true, ply + 1, 0);
+            tempRet = -pvSearch(b, th, depth - 1, -alpha - 1, -alpha, true, ply + 1);
             if (tempRet > alpha && tempRet < beta) {
-                tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1, 0);
+                tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
             }
         }
 
