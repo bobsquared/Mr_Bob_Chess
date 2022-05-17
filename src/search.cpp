@@ -335,6 +335,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     bool ttFailLow = (ttRet && hashedBoard.flag == UPPER_BOUND);
     bool ttFailHigh = (ttRet && hashedBoard.flag == LOWER_BOUND);
     int extLevel = th->searchStack[ply].extLevel;
+    int extLevelMax = std::min(20, extLevel);
 
     removeKiller(th, ply + 1);
     th->searchStack[ply].eval = staticEval;
@@ -350,7 +351,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         // Reverse futility pruning
-        if (depth <= 7 && staticEval - (125 - std::min(20, extLevel)) * (depth - improving) >= beta && std::abs(staticEval) < MATE_VALUE_MAX) {
+        if (depth <= 7 && staticEval - (125 - extLevelMax) * (depth - improving) >= beta && std::abs(staticEval) < MATE_VALUE_MAX) {
             return staticEval;
         }
 
@@ -420,7 +421,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             if (isQuiet) {
 
                 // Futility pruning
-                if (!isCheck && depth <= 8 && staticEval + (185 - std::min(20, extLevel)) * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
+                if (!isCheck && depth <= 8 && staticEval + (185 - extLevelMax) * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
                     continue;
                 }
 
