@@ -336,9 +336,11 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     bool ttFailHigh = (ttRet && hashedBoard.flag == LOWER_BOUND);
     int extLevel = th->searchStack[ply].extLevel;
     int extLevelMax = std::min(20, extLevel);
+    int hashLevel = th->searchStack[ply].hashLevel;
 
     removeKiller(th, ply + 1);
     th->searchStack[ply].eval = staticEval;
+    th->searchStack[ply + 1].hashLevel = hashLevel + hashed;
 
 
     if (!isPv && !isCheck && !hasSingMove) {
@@ -351,7 +353,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         // Reverse futility pruning
-        if (depth <= 7 && staticEval - (125 - extLevelMax) * (depth - improving) >= beta && std::abs(staticEval) < MATE_VALUE_MAX) {
+        if (depth <= 7 && staticEval - (125 - extLevelMax + hashLevel) * (depth - improving) >= beta && std::abs(staticEval) < MATE_VALUE_MAX) {
             return staticEval;
         }
 

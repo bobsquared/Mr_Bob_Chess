@@ -201,9 +201,10 @@ struct MoveInfoStack {
 struct SearchStack {
     int eval;
     int extLevel;
+    int hashLevel;
     MOVE singMove;
 
-    SearchStack() : eval(0), extLevel(0), singMove(NO_MOVE) {};
+    SearchStack() : eval(0), extLevel(0), hashLevel(0), singMove(NO_MOVE) {};
 };
 
 
