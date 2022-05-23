@@ -949,7 +949,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
             }
 
             aspNum++;
-            delta += delta / 3 + 2;
+            delta += 10 * delta / std::max(23, 35 - i) + 2;
 
             if (id == 0 && totalTime > 3000 && canPrintInfo) {
                 printSearchInfo(printInfo, bound);
