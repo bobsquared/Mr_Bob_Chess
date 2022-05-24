@@ -815,6 +815,12 @@ bool isMateScore(int eval) {
 */
 int getSearchedScore(int eval) {
     int score = eval;
+
+    // just cause it looks prettier to me
+    if (score <= 1 && score >= -1) {
+        score = 0;
+    }
+
     if (isMateScore(eval)) {
         score = (MATE_VALUE - std::abs(eval) + 1) / 2;
         if (eval < 0) {
