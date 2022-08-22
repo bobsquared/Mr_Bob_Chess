@@ -55,7 +55,7 @@ void UCI::newGameCommand() {
 
 
 
-// New game has started, clear hash, killers, histories, etc.
+// Set multipv
 void UCI::setMultiPV(int pvs) {
     setMultiPVSearch(pvs);
 }
