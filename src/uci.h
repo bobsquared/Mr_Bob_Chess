@@ -14,6 +14,7 @@ public:
     void startPosMoves(Bitboard & b, std::string moves);
     void newGameCommand();
     void setHash(int hashSize);
+    void setMultiPV(int pvs);
 
 private:
 

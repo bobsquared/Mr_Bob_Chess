@@ -17,6 +17,7 @@ void UCI::uciCommand() {
 
     std::cout << "option name Hash type spin default 256 min 1 max 131072" << std::endl;
     std::cout << "option name Threads type spin default 1 min 1 max 256" << std::endl;
+    std::cout << "option name MultiPV type spin default 1 min 1 max 256" << std::endl;
     std::cout << "uciok" << std::endl;
 }
 
@@ -50,6 +51,13 @@ void UCI::newGameCommand() {
     }
     clearTT();
 
+}
+
+
+
+// New game has started, clear hash, killers, histories, etc.
+void UCI::setMultiPV(int pvs) {
+    setMultiPVSearch(pvs);
 }
 
 

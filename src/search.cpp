@@ -14,6 +14,7 @@
 int totalTime;                      /**< Total time used to search an iteration.*/
 bool canPrintInfo = true;              /**< False to turn of info print statements.*/
 int nThreads = 1;                   /**< Number of threads to search, default is 1.*/
+int multiPv = 1;                   /**< Number of pvs to search, default is 1.*/
 bool stopable = false;              /**< Used to ensure that we search atleast a depth one 1.*/
 std::atomic<bool> exit_thread_flag; /**< True to stop the search.*/
 int lmrReduction[64][64];           /**< A 2D array of reduction values for LMR given depth and move count.*/
@@ -65,6 +66,16 @@ void setNumThreads(const int numThreads) {
     nThreads = numThreads;
     delete [] thread;
     thread = new ThreadSearch[numThreads];
+}
+
+
+/**
+* Set the number of pvs to search
+*
+* @param[in] pvs The number of pvs to search.
+*/
+void setMultiPVSearch(int pvs) {
+    multiPv = pvs;
 }
 
 
@@ -677,7 +688,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
         }
 
         // UCI information
-        if (totalTime > 3000 && canPrintInfo && id == 0) {
+        if (totalTime > 3000 && canPrintInfo && id == 0 && multiPv == 1) {
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
@@ -742,8 +753,12 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
 
     }
 
+    if (numMoves == 0) {
+        return BestMoveInfo(NO_MOVE, 0);
+    }
+
     // Stop the search
-    if (numMoves == 0 || (id == 0 && depth == 2 && numMoves == 1 && !analysis)) {
+    if ((id == 0 && depth == 2 && numMoves == 1 && !analysis)) {
         exit_thread_flag = true;
     }
 
@@ -859,7 +874,14 @@ void setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int eval) {
 /**
 * Print the search info (UCI)
 */
-void printSearchInfo(PrintInfo &printInfo, int bound) {
+void printSearchInfo(PrintInfo &printInfo, std::string &pstring, MOVE move, int bound, int pv) {
+
+    if (move == NO_MOVE) {
+        std::cout << pstring << std::endl;
+        pstring = "";
+        return;
+    }
+
     std::string cpScoreOrMate = " score cp ";
     if (isMateScore(printInfo.eval)) {
         cpScoreOrMate = " score mate ";
@@ -873,8 +895,18 @@ void printSearchInfo(PrintInfo &printInfo, int bound) {
         printedBound = " upperbound";
     }
 
-    std::cout << "info depth " << printInfo.depth << " seldepth " << printInfo.seldepth << cpScoreOrMate << printInfo.score << printedBound <<
-        " nodes " << printInfo.nodes << " nps " << printInfo.nps << " hashfull " << printInfo.hashUsage << " time " << printInfo.totalTime << " pv" << printInfo.pv << std::endl;
+    pstring += "info depth " + std::to_string(printInfo.depth) + " seldepth " + std::to_string(printInfo.seldepth) +
+        " multipv " + std::to_string(pv) + cpScoreOrMate + std::to_string(printInfo.score) + printedBound +
+        " nodes " + std::to_string(printInfo.nodes) + " nps " + std::to_string(printInfo.nps) + " hashfull " + std::to_string(printInfo.hashUsage) + 
+        " time " + std::to_string(printInfo.totalTime) + " pv" + printInfo.pv;
+
+    if (pv == multiPv) {
+        std::cout << pstring << std::endl;
+        pstring = "";
+    }
+    else {
+        pstring += "\n";
+    }
 }
 
 
@@ -894,6 +926,7 @@ void printSearchInfo(PrintInfo &printInfo, int bound) {
 */
 void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
+    MOVE tempBestMove = NO_MOVE;
     MOVE bestMove = NO_MOVE;
     MOVE prevBestMove = NO_MOVE;
     int searchedEval = 0;
@@ -901,13 +934,15 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
     int beta;
     std::string cpScore;
     PrintInfo printInfo;
+    std::string pstring = "";
 
+    MoveList moveListOriginal;
     MoveList moveList;
-    moveGen->generate_all_moves(moveList, b);
-    movePick->scoreMoves(moveList, b, th, 0, NO_MOVE);
+    moveGen->generate_all_moves(moveListOriginal, b);
+    movePick->scoreMoves(moveListOriginal, b, th, 0, NO_MOVE);
 
     if (id == 0) {
-        tm.setTimer(moveList.count);
+        tm.setTimer(moveListOriginal.count);
     }
 
     for (int i = 1; i <= depth; i++) {
@@ -923,48 +958,79 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
             stopable = true;
         }
 
-        while (true) {
+        moveList = MoveList(moveListOriginal);
+        for (int pv = 1; pv < multiPv + 1; pv++) {
+            while (true) {
 
-            th->seldepth = 1;
-            BestMoveInfo bm = pvSearchRoot(b, th, i, moveList, alpha, beta, analysis, id);
-            moveList.set_score_move(bm.move, 1400000 + (i * 100) + aspNum);
-            searchedEval = bm.eval;
+                th->seldepth = 1;
+                BestMoveInfo bm = pvSearchRoot(b, th, i, moveList, alpha, beta, analysis, id);
+                moveList.set_score_move(bm.move, 1400000 + (i * 100) + aspNum);
+                searchedEval = bm.eval;
 
+                if (stopable && (exit_thread_flag || tm.outOfTime())) {
+                    break;
+                }
+
+                if (pv == 1) {
+                    moveListOriginal.set_score_move(bm.move, 1400000 + (i * 100) + aspNum);
+                    prevBestMove = bestMove;
+                    bestMove = bm.move;
+                }
+                tempBestMove = bm.move;
+
+                if (tempBestMove == NO_MOVE) {
+                    break;
+                }
+
+                if (id == 0) {
+                    setSearchInfo(printInfo, b, i, searchedEval);
+                    totalTime = tm.getTimePassed();
+                }
+
+                int bound;
+
+                // Fail high
+                if (searchedEval >= beta) {
+                    beta = searchedEval + delta;
+                    bound = LOWER_BOUND;
+                }
+                // Fail low
+                else if (searchedEval <= alpha) {
+                    beta = (alpha + beta) / 2;
+                    alpha = searchedEval - delta;
+                    bound = UPPER_BOUND;
+                }
+                // exact
+                else {
+                    break;
+                }
+
+                aspNum++;
+                delta += 10 * delta / std::max(23, 35 - i) + 2;
+
+                if (id == 0 && totalTime > 3000 && canPrintInfo && multiPv == 1) {
+                    printSearchInfo(printInfo, pstring, 1, bound, pv);
+                }
+
+            }
+
+            // Do not print the search info if the time ran out during a search
             if (stopable && (exit_thread_flag || tm.outOfTime())) {
                 break;
             }
 
-            prevBestMove = bestMove;
-            bestMove = bm.move;
-
-            if (id == 0) {
-                setSearchInfo(printInfo, b, i, searchedEval);
-                totalTime = tm.getTimePassed();
+            if (id == 0 && canPrintInfo) {
+                printSearchInfo(printInfo, pstring, tempBestMove, EXACT, pv);
             }
 
-            int bound;
-
-            // Fail high
-            if (searchedEval >= beta) {
-                beta = searchedEval + delta;
-                bound = LOWER_BOUND;
-            }
-            // Fail low
-            else if (searchedEval <= alpha) {
-                beta = (alpha + beta) / 2;
-                alpha = searchedEval - delta;
-                bound = UPPER_BOUND;
-            }
-            // exact
-            else {
+            if (tempBestMove == NO_MOVE) {
                 break;
             }
-
-            aspNum++;
-            delta += 10 * delta / std::max(23, 35 - i) + 2;
-
-            if (id == 0 && totalTime > 3000 && canPrintInfo) {
-                printSearchInfo(printInfo, bound);
+            
+            if (pv < multiPv && !(exit_thread_flag || tm.outOfTimeRoot())) { 
+                MOVE checkmove;
+                moveList.get_next_move(checkmove);
+                assert (checkmove == tempBestMove);
             }
 
         }
@@ -972,10 +1038,6 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
         // Do not print the search info if the time ran out during a search
         if (stopable && (exit_thread_flag || tm.outOfTime())) {
             break;
-        }
-
-        if (id == 0 && canPrintInfo) {
-            printSearchInfo(printInfo, EXACT);
         }
 
         if (bestMove != prevBestMove && depth > 4) {

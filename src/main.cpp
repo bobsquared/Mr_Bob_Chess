@@ -68,6 +68,7 @@ int main(int argc, char* argv[]) {
 
     std::regex setHash("setoption\\sname\\shash\\svalue\\s(\\d+)");
     std::regex setThreads("setoption\\sname\\sthreads\\svalue\\s(\\d+)");
+    std::regex setMultiPv("setoption\\sname\\smultipv\\svalue\\s(\\d+)");
     std::regex wtime(".*wtime\\s(\\d+).*");
     std::regex btime(".*btime\\s(\\d+).*");
 
@@ -125,6 +126,13 @@ int main(int argc, char* argv[]) {
         if (std::regex_search(lowerCommand, m, setThreads)) {
             exit_thread_flag = true;
             setNumThreads(std::stoi(m[1]));
+            continue;
+        }
+
+        // set MultiPvs
+        if (std::regex_search(lowerCommand, m, setMultiPv)) {
+            exit_thread_flag = true;
+            uci.setMultiPV(std::stoi(m[1]));
             continue;
         }
 

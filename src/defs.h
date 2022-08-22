@@ -78,6 +78,9 @@ struct Move {
     Move(MOVE move, int score) :
         score(score), move(move) {}
 
+    Move(const Move& m) :
+        score(m.score), move(m.move) {}
+
     bool operator<(const Move& a) const { return score > a.score; }
     bool operator>(const Move& a) const { return score < a.score; }
 };
@@ -91,6 +94,12 @@ struct MoveList {
     int count;
 
     MoveList() : count(0) {}
+
+    MoveList(const MoveList&m) : count(m.count) {
+        for (int i = 0; i < m.count; i++) {
+            moveList[i] = Move(m.moveList[i]);
+        }
+    }
 
     void append_move(Move move) {
         moveList[count] = move;

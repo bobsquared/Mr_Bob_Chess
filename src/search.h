@@ -47,6 +47,7 @@ extern int nThreads;
 extern void cleanUpSearch();
 extern void setNumThreads(const int numThreads);
 extern void setTTSize(int hashSize);
+extern void setMultiPVSearch(int pvs);
 extern void clearTT();
 extern void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
 extern void InitLateMoveArray();
