@@ -190,7 +190,12 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
 
     bool inCheck = b.InCheck();
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
+
+    #ifdef KPTrainer
+    int staticEval = hashed? hashedBoard.staticScore : eval->evaluateKP(b, th);
+    #else
     int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
+    #endif
 
     if (!inCheck) {
         stand_pat = staticEval;
@@ -341,7 +346,13 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     bool isCheck = b.InCheck();
+
+    #ifdef KPTrainer
+    int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluateKP(b, th));
+    #else
     int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, th));
+    #endif
+
     bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
     bool ttFailLow = (ttRet && hashedBoard.flag == UPPER_BOUND);
     bool ttFailHigh = (ttRet && hashedBoard.flag == LOWER_BOUND);
@@ -674,7 +685,12 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
 
 
     // Initialize evaluation stack
+    #ifdef KPTrainer
+    int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluateKP(b, th));
+    #else
     int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, th));
+    #endif
+    
     th->searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
 
 
@@ -754,7 +770,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
     }
 
     if (numMoves == 0) {
-        return BestMoveInfo(NO_MOVE, 0);
+        return BestMoveInfo(NO_MOVE, -9000);
     }
 
     // Stop the search
@@ -924,7 +940,7 @@ void printSearchInfo(PrintInfo &printInfo, std::string &pstring, MOVE move, int 
 * @param[in] analysis True if we are in analysis mode.
 * @param[in] b        The board representation.
 */
-void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
+int search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
     MOVE tempBestMove = NO_MOVE;
     MOVE bestMove = NO_MOVE;
@@ -1057,6 +1073,7 @@ void search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
         exit_thread_flag = true;
     }
 
+    return searchedEval;
 }
 
 
@@ -1086,7 +1103,7 @@ void clearThreadData() {
 * @param[in]      movesToGo Moves to go until the next time control.
 * @param[in]      analysis  True if we are in analysis mode.
 */
-void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
+int beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
     stopable = false;
     totalTime = 0;
 
@@ -1099,7 +1116,7 @@ void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int bin
         threads.push_back(std::thread(search, id, &thread[id], depth, analysis, b));
     }
 
-    search(0, &thread[0], depth, analysis, b);
+    int ret = search(0, &thread[0], depth, analysis, b);
 
     for (int i = 1; i < nThreads; i++) {
         threads.back().join();
@@ -1107,6 +1124,10 @@ void beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int bin
     }
 
     MOVE bestMove = thread[0].bestMove;
-    assert(bestMove != NO_MOVE && bestMove != NULL_MOVE);
-    std::cout << "bestmove " << moveToString(bestMove) << std::endl;
+    assert(bestMove != NULL_MOVE);
+    if (canPrintInfo) {
+        std::cout << "bestmove " << moveToString(bestMove) << std::endl;
+    }
+
+    return b.getSideToMove()? -ret : ret;
 }

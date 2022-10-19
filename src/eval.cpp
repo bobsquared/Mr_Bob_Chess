@@ -754,6 +754,31 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
 
 
 
+// Evaluate the position for kings and pawns
+int Eval::evaluateKP(Bitboard &board, ThreadSearch *th) {
+
+    InitializeEval(board, th);
+
+    int ret = 0;
+    int pawnScore = 0;
+    bool hit = false;
+
+    ret += board.toMove? -tempoBonus : tempoBonus;
+    ret += board.material[0] - board.material[1];
+
+
+    ret += evaluatePawns(board, th, false, hit, pawnScore) - evaluatePawns(board, th, true, hit, pawnScore);
+    ret += evaluateKingForKP(board, false) - evaluateKingForKP(board, true);
+
+    int phase = getPhase(board);
+    ret = ((MGVAL(ret) * (256 - phase)) + (EGVAL(ret) * phase * scaleEndgame(board, EGVAL(ret)) / 256)) / 256;
+    return board.toMove? -ret : ret;
+
+}
+
+
+
+
 
 // Evaluate material imbalance
 int Eval::evaluateImbalance(Bitboard &board, bool col) {
@@ -1223,6 +1248,14 @@ int Eval::evaluateKing(Bitboard &board, ThreadSearch *th, bool col) {
 
     return ret;
 
+}
+
+
+
+int Eval::evaluateKingForKP(Bitboard &board, bool col) {
+    int ret = 0;
+    ret += pieceSquare[10 + col][board.kingLoc[col]];
+    return ret;
 }
 
 

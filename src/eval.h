@@ -110,6 +110,7 @@ public:
     Eval();
     ~Eval();
     int evaluate(Bitboard &board, ThreadSearch *th);
+    int evaluateKP(Bitboard &board, ThreadSearch *th);
     void InitPieceBoards();
     void InitOutpostMask();
     int scaleEndgame(Bitboard &board, int eval);
@@ -169,6 +170,7 @@ private:
     int evaluateRooks(Bitboard &board, ThreadSearch *th, bool col);
     int evaluateQueens(Bitboard &board, ThreadSearch *th, bool col);
     int evaluateKing(Bitboard &board, ThreadSearch *th, bool col);
+    int evaluateKingForKP(Bitboard &board, bool col);
     int evaluatePawnShield(Bitboard &board, bool col);
     int evaluateThreats(Bitboard &board, ThreadSearch *th, bool col);
 
