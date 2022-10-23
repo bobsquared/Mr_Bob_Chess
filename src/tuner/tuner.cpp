@@ -9,6 +9,7 @@ extern int pieceValues[6];
 extern int doublePawnValue;
 extern int isolatedPawnValue;
 extern int opposedPawnValue[8];
+extern int backwardPawnValue;
 
 extern int kingPawnDistFriendly[8];
 extern int kingPawnDistEnemy[8];
@@ -68,8 +69,9 @@ extern int blockedPawns5th;
 extern int blockedPawns6th;
 
 extern int KNIGHT_OUTPOST[64];
-extern int KNIGHT_OUTPOST_HOLE[64];
+extern int KNIGHT_OUTPOST_JUMP[64];
 extern int BISHOP_OUTPOST[64];
+extern int BISHOP_OUTPOST_JUMP[64];
 
 extern int attacksSafety;
 extern int queenCheckVal;
@@ -245,8 +247,9 @@ void Tuner::clearArrays() {
     std::fill_n(KING_TABLE, 64, 0);
 
     std::fill_n(KNIGHT_OUTPOST, 64, 0);
-    std::fill_n(KNIGHT_OUTPOST_HOLE, 64, 0);
+    std::fill_n(KNIGHT_OUTPOST_JUMP, 64, 0);
     std::fill_n(BISHOP_OUTPOST, 64, 0);
+    std::fill_n(BISHOP_OUTPOST_JUMP, 64, 0);
 
     std::fill_n(kingPawnDistFriendly, 8, 0);
     std::fill_n(kingPawnDistEnemy, 8, 0);
@@ -276,6 +279,7 @@ void Tuner::clearArrays() {
 
     doublePawnValue = 0;
     isolatedPawnValue = 0;
+    backwardPawnValue = 0;
 
     blockedPawns5th = 0;
     blockedPawns6th = 0;
@@ -346,6 +350,7 @@ void Tuner::getCoefficients(EvalInfo *evalInfo, int index) {
 
     setCoefficient("doublePawnValue", eval.evalTrace.doubledPawnsCoeff, tempCoeffs, numCoeff, index);
     setCoefficient("isolatedPawnValue", eval.evalTrace.isolatedPawnsCoeff, tempCoeffs, numCoeff, index);
+    setCoefficient("backwardPawnValue", eval.evalTrace.backwardPawnCoeff, tempCoeffs, numCoeff, index);
     setCoefficient("blockedPawns5th", eval.evalTrace.blockedPawns5thCoeff, tempCoeffs, numCoeff, index);
     setCoefficient("blockedPawns6th", eval.evalTrace.blockedPawns6thCoeff, tempCoeffs, numCoeff, index);
 
@@ -360,7 +365,7 @@ void Tuner::getCoefficients(EvalInfo *evalInfo, int index) {
     // KNIGHTS
     setCoefficientArr("KNIGHT_TABLE", eval.evalTrace.knightPstCoeff, tempCoeffs, numCoeff, index, 64);
     setCoefficientArr("KNIGHT_OUTPOST", eval.evalTrace.knightOutpostCoeff, tempCoeffs, numCoeff, index, 64);
-    setCoefficientArr("KNIGHT_OUTPOST_HOLE", eval.evalTrace.knightOutpostHoleCoeff, tempCoeffs, numCoeff, index, 64);
+    setCoefficientArr("KNIGHT_OUTPOST_JUMP", eval.evalTrace.knightOutpostJumpCoeff, tempCoeffs, numCoeff, index, 64);
     setCoefficientArr("knightMobilityBonus", eval.evalTrace.knightMobilityCoeff, tempCoeffs, numCoeff, index, 9);
     setCoefficientArr("knightWeight", eval.evalTrace.knightWeightCoeff, tempCoeffs, numCoeff, index, 9);
     setCoefficientArr("knightThreatPiece", eval.evalTrace.knightThreatCoeff, tempCoeffs, numCoeff, index, 5);
@@ -369,6 +374,7 @@ void Tuner::getCoefficients(EvalInfo *evalInfo, int index) {
     // BISHOPS
     setCoefficientArr("BISHOP_TABLE", eval.evalTrace.bishopPstCoeff, tempCoeffs, numCoeff, index, 64);
     setCoefficientArr("BISHOP_OUTPOST", eval.evalTrace.bishopOutpostCoeff, tempCoeffs, numCoeff, index, 64);
+    setCoefficientArr("BISHOP_OUTPOST_JUMP", eval.evalTrace.knightOutpostJumpCoeff, tempCoeffs, numCoeff, index, 64);
     setCoefficientArr("bishopMobilityBonus", eval.evalTrace.bishopMobilityCoeff, tempCoeffs, numCoeff, index, 14);
     setCoefficientArr("bishopWeight", eval.evalTrace.bishopWeightCoeff, tempCoeffs, numCoeff, index, 9);
     setCoefficientArr("bishopThreatPiece", eval.evalTrace.bishopThreatCoeff, tempCoeffs, numCoeff, index, 5);
@@ -567,8 +573,9 @@ void Tuner::tune_adam(int epochs, int batchSize, double lr, double beta1, double
                 updateGradient(K, gradient, i);
             }
 
+            uint64_t t = batch + epoch * batchSize;
             for (size_t j = 0; j < nParams; j++) {
-                alpha[j] = lr * sqrt(1 - std::pow(beta2, batch + 1)) / (1 - std::pow(beta1, batch + 1));
+                alpha[j] = lr * sqrt(1 - std::pow(beta2, t + 1)) / (1 - std::pow(beta1, t + 1));
 
                 moment[j][0] = beta1 * moment[j][0] + (1 - beta1) * gradient[j][0] / batchSize;
                 moment[j][1] = beta1 * moment[j][1] + (1 - beta1) * gradient[j][1] / batchSize;

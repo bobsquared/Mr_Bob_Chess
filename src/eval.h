@@ -88,9 +88,12 @@ public:
         int trappedRookCoeff[2] = {0};
 
         int knightOutpostCoeff[64][2] = {0};
-        int knightOutpostHoleCoeff[64][2] = {0};
+        int knightOutpostJumpCoeff[64][2] = {0};
 
         int bishopOutpostCoeff[64][2] = {0};
+        int bishopOutpostJumpCoeff[64][2] = {0};
+
+        int backwardPawnCoeff[2];
     };
 
     struct KingSafetyTrace{
@@ -140,8 +143,9 @@ private:
     uint64_t isolatedPawnMask[64];
     uint64_t outpostMask[2][64];
     uint64_t knightOutpost[2][64];
-    uint64_t knightOutpostHole[2][64];
+    uint64_t knightOutpostJump[2][64];
     uint64_t bishopOutpost[2][64];
+    uint64_t bishopOutpostJump[2][64];
     int pieceSquare[12][64];
     int pieceSquareEG[12][64];
     int manhattanArray[64][64];

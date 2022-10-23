@@ -15,5 +15,5 @@ int main() {
     Eval eval = Eval();
 
     Tuner tuner = Tuner(eval, board, "../texeldata.fen");
-    tuner.tune_adam(10000, 8192, 0.003, 0.9, 0.999);
+    tuner.tune_adam(10000, 8192, 0.002, 0.9, 0.999);
 }
