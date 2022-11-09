@@ -82,11 +82,11 @@ extern int KSOffset;
 extern int noQueen;
 
 
-Tuner::Tuner(Eval &evalObject, Bitboard &b, std::string fileName) : eval(evalObject) {
+Tuner::Tuner(Eval &evalObject, Bitboard &b, KPNNUE &model, std::string fileName) : eval(evalObject), board(b), model(model) {
     dataSize = 0;
 
     clearArrays();
-    getFile(fileName, b);
+    getFile(fileName);
 
     params = new double *[eio.size()];
     paramsKS = new double[7]();
@@ -99,7 +99,7 @@ Tuner::Tuner(Eval &evalObject, Bitboard &b, std::string fileName) : eval(evalObj
 
 
 
-void Tuner::getFile(std::string fileName, Bitboard &b) {
+void Tuner::getFile(std::string fileName) {
 
     std::string tempFen;
     std::string fen;
@@ -137,21 +137,21 @@ void Tuner::getFile(std::string fileName, Bitboard &b) {
         fen = tempFen.substr(0, delimiter);
         score = std::stof(tempFen.substr(delimiter + stringDelimiter.size(), tempFen.size() - 1 - delimiter - stringDelimiter.size()));
 
-        b.setPosFen(fen);
+        board.setPosFen(fen);
         eval.clearTrace();
 
         int phase = TOTALPHASE;
-        phase -= (b.pieceCount[0] + b.pieceCount[1]) * PAWNPHASE;
-        phase -= (b.pieceCount[2] + b.pieceCount[3]) * KNIGHTPHASE;
-        phase -= (b.pieceCount[4] + b.pieceCount[5]) * BISHOPPHASE;
-        phase -= (b.pieceCount[6] + b.pieceCount[7]) * ROOKPHASE;
-        phase -= (b.pieceCount[8] + b.pieceCount[9]) * QUEENPHASE;
+        phase -= (board.pieceCount[0] + board.pieceCount[1]) * PAWNPHASE;
+        phase -= (board.pieceCount[2] + board.pieceCount[3]) * KNIGHTPHASE;
+        phase -= (board.pieceCount[4] + board.pieceCount[5]) * BISHOPPHASE;
+        phase -= (board.pieceCount[6] + board.pieceCount[7]) * ROOKPHASE;
+        phase -= (board.pieceCount[8] + board.pieceCount[9]) * QUEENPHASE;
 
         int phaseTotal = (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
-        int evalME = eval.evaluate(b, &thread[0]);
-        int scaleEval = eval.scaleEndgame(b, EGVAL(evalME));
+        int evalME = eval.evaluate(board, &thread[0]);
+        int scaleEval = eval.scaleEndgame(board, EGVAL(evalME));
         int seval = ((MGVAL(evalME) * (256 - phaseTotal)) + (EGVAL(evalME) * phaseTotal * scaleEval / 256)) / 256;
-        evalInfo[count] = EvalInfo(seval, evalME, 0, phaseTotal, scaleEval, 0, score, b.toMove);
+        evalInfo[count] = EvalInfo(seval, evalME, phaseTotal, scaleEval, 0, score, board.toMove);
 
         evalInfo[count].pFactorsMG = 1 - phase / 24.0;
         evalInfo[count].pFactorsEG = phase / 24.0;
@@ -332,11 +332,11 @@ void Tuner::getCoefficients(EvalInfo *evalInfo, int index) {
 
     int numCoeff = 0;
     std::vector<Coefficient> tempCoeffs;
-    // setCoefficient("PawnValue", evalTuner->evalTrace.pawnCoeff, tempCoeffs, index);
-    // setCoefficient("KnightValue", evalTuner->evalTrace.knightCoeff, tempCoeffs, index);
-    // setCoefficient("BishopValue", evalTuner->evalTrace.bishopCoeff, tempCoeffs, index);
-    // setCoefficient("RookValue", evalTuner->evalTrace.rookCoeff, tempCoeffs, index);
-    // setCoefficient("QueenValue", evalTuner->evalTrace.queenCoeff, tempCoeffs, index);
+    // setCoefficient("PawnValue", eval.evalTrace.pawnCoeff, tempCoeffs, numCoeff, index);
+    // setCoefficient("KnightValue", eval.evalTrace.knightCoeff, tempCoeffs, numCoeff, index);
+    // setCoefficient("BishopValue", eval.evalTrace.bishopCoeff, tempCoeffs, numCoeff, index);
+    // setCoefficient("RookValue", eval.evalTrace.rookCoeff, tempCoeffs, numCoeff, index);
+    // setCoefficient("QueenValue", eval.evalTrace.queenCoeff, tempCoeffs, numCoeff, index);
 
     // PAWNS
     setCoefficientArr("PAWN_TABLE", eval.evalTrace.pawnPstCoeff, tempCoeffs, numCoeff, index, 64);
@@ -512,7 +512,6 @@ double Tuner::computeK(double &bestErr) {
     std::cout << "**************************************" << std::endl << std::endl;
 
     return bestK;
-
 }
 
 
@@ -592,8 +591,6 @@ void Tuner::tune_adam(int epochs, int batchSize, double lr, double beta1, double
             }
             delete [] gradient;
         }
-
-        
 
     }
 

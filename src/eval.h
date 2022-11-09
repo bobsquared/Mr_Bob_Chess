@@ -2,6 +2,7 @@
 #include "defs.h"
 #include "magic_bitboards.h"
 #include "bitboard.h"
+#include "nnue/KPNNUE.h"
 
 
 
@@ -110,7 +111,7 @@ public:
     KingSafetyTrace kingSafetyTrace;
     #endif
 
-    Eval();
+    Eval(KPNNUE &model);
     ~Eval();
     int evaluate(Bitboard &board, ThreadSearch *th);
     int evaluateKP(Bitboard &board, ThreadSearch *th);
@@ -134,6 +135,8 @@ private:
         PawnHash(uint64_t pawnKey, int score) :
             pawnKey(pawnKey), score(score) {};
     };
+
+    KPNNUE &model;
 
     PawnHash *pawnHash;
     uint64_t numPawnHashes;

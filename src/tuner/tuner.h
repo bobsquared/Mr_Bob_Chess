@@ -5,7 +5,6 @@
 #include "../bitboard.h"
 #include "../eval.h"
 #include "../search.h"
-#include "../nnue/KPNNUE.h"
 #include <vector>
 
 
@@ -13,9 +12,9 @@ class Tuner {
 
 public:
     Tuner();
-    Tuner(Eval &evalObject, Bitboard &b, std::string fileName);
+    Tuner(Eval &evalObject, Bitboard &b, KPNNUE &model, std::string fileName);
     void printParams();
-    void getFile(std::string fileName, Bitboard &b);
+    void getFile(std::string fileName);
     void tune_adam(int epochs, int batchSize, double lr, double beta1, double beta2);
     
 
@@ -64,7 +63,6 @@ private:
         KSFeatures ksFeatures;
         int evalME;
         int16_t eval;
-        int KPeval;
         int16_t phase;
         int16_t scaleEval;
         int16_t nParams;
@@ -75,10 +73,10 @@ private:
         bool sideToMove;
 
         EvalInfo() :
-            evalME(0), eval(0), KPeval(0), phase(0), scaleEval(0), nParams(0), result(0), sideToMove(false) {}
+            evalME(0), eval(0),  phase(0), scaleEval(0), nParams(0), result(0), sideToMove(false) {}
 
-        EvalInfo(int eval, int evalME, int KPeval, int phase, int16_t scaleEval, int16_t nParams, float result, bool sideToMove) :
-            evalME(evalME), eval(eval), KPeval(KPeval), phase(phase), scaleEval(scaleEval), nParams(nParams), result(result), sideToMove(sideToMove) {}
+        EvalInfo(int eval, int evalME, int phase, int16_t scaleEval, int16_t nParams, float result, bool sideToMove) :
+            evalME(evalME), eval(eval), phase(phase), scaleEval(scaleEval), nParams(nParams), result(result), sideToMove(sideToMove) {}
     };
 
     struct CoefficientPrint {
@@ -94,6 +92,8 @@ private:
 
     int dataSize;
     int numParams;
+    KPNNUE &model;
+    Bitboard &board;
     Eval &eval;
     std::vector<CoefficientPrint> eio;
     EvalInfo *evalInfo;
@@ -111,5 +111,6 @@ private:
     double sigmoid(double K, double S);
     double computeK(double &bestErr);
     void updateGradient(double K, double **gradient, int index);
+    void updateGradientKP(double K, double ***grad, double **bias, int index);
 
 };

@@ -80,6 +80,11 @@ uint64_t Zobrist::hashBoardPawns(uint64_t *pieces) {
                 ret ^= table[i][j];
                 break;
             }
+
+            if (pieces[10 + j] & shiftI) {
+                ret ^= table[i][10 + j];
+                break;
+            }
         }
     }
 

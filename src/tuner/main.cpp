@@ -12,8 +12,9 @@ int main() {
 
     magics = new Magics();
     Bitboard board = Bitboard();
-    Eval eval = Eval();
-
-    Tuner tuner = Tuner(eval, board, "../texeldata.fen");
-    tuner.tune_adam(10000, 8192, 0.002, 0.9, 0.999);
+    
+    KPNNUE model = KPNNUE("../nnue/networks/test13/dog_32.bin");
+    Eval eval = Eval(model);
+    Tuner tuner = Tuner(eval, board, model, "../texeldata.fen");
+    tuner.tune_adam(10000, 8192, 0.001, 0.9, 0.999);
 }

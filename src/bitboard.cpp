@@ -391,7 +391,7 @@ void Bitboard::make_move(MOVE move) {
         move_quiet(from, to, fromPiece, i1i2);
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
 
-        if (fromPiece == toMove) {
+        if (fromPiece == toMove || fromPiece == (toMove + 10)) {
             zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
         }
     }
@@ -446,7 +446,7 @@ void Bitboard::make_move(MOVE move) {
             pieces[fromPiece] ^= i1i2;
             zobrist->hashBoard_capture(posKey, from, to, fromPiece, toPiece);
 
-            if (fromPiece == toMove) {
+            if (fromPiece == toMove || fromPiece == 10 + toMove) {
                 if (toPiece == !toMove) {
                     zobrist->hashBoard_capture(pawnKey, from, to, fromPiece, toPiece);
                 }
@@ -493,6 +493,7 @@ void Bitboard::make_move(MOVE move) {
         move_quiet(from, to, fromPiece, i1i2);
         move_quiet(to + 1, to - 1, 6 + toMove, 1ULL << (to - 1) | 1ULL << (to + 1));
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
+        zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
         zobrist->hashBoard_quiet(posKey, to + 1, to - 1, 6 + toMove);
     }
     else if (moveFlags == QUEEN_CASTLE_FLAG) {
@@ -501,6 +502,7 @@ void Bitboard::make_move(MOVE move) {
         move_quiet(from, to, fromPiece, i1i2);
         move_quiet(to - 2, to + 1, 6 + toMove, 1ULL << (to - 2) | 1ULL << (to + 1));
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
+        zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
         zobrist->hashBoard_quiet(posKey, to - 2, to + 1, 6 + toMove);
     }
 
@@ -1283,9 +1285,6 @@ std::string Bitboard::posToFEN() {
 
 
 
-
-
-#ifdef TUNER
 // Take a FEN position as a string and set the posiiton.
 void Bitboard::setPosFen(std::string fen) {
 
@@ -1331,10 +1330,11 @@ void Bitboard::setPosFen(std::string fen) {
             material[piece % 2] += pieceValues[piece / 2];
             zobrist->hashBoard_square(posKey, lineOffset, piece);
 
-            if (piece / 2 == 0) {
+            if (piece / 2 == 0 || piece / 2 == 5) {
                 zobrist->hashBoard_square(pawnKey, lineOffset, piece);
             }
-            else if (piece / 2 == 5) {
+
+            if (piece / 2 == 5) {
                 kingLoc[piece - 10] = lineOffset;
             }
 
@@ -1402,164 +1402,6 @@ void Bitboard::setPosFen(std::string fen) {
     fullMoves = std::isdigit(fen[posIndex + 1])? 10 * (fen[posIndex] - 48) + (fen[posIndex + 1] - 48) : fen[posIndex] - 48;
 
 }
-
-
-#else
-// Take a FEN position as a string and set the posiiton.
-void Bitboard::setPosFen(std::string fen) {
-
-    // Clear all bitboards
-    color[0] = 0;
-    color[1] = 0;
-    occupied = 0;
-
-    for (int i = 0; i < 12; i++) {
-        pieces[i] = 0;
-    }
-
-    int lineOffset = 0;
-    size_t posIndex = fen.find(" ");
-
-    for (size_t i = 0; i < fen.length(); i++) {
-
-        if (posIndex == i) {
-            break;
-        }
-        else if (fen.find("/", i) == i) {
-            lineOffset++;
-        }
-        else if (fen.find("2", i) == i) {
-            lineOffset -= 1;
-        }
-        else if (fen.find("3", i) == i) {
-            lineOffset -= 2;
-        }
-        else if (fen.find("4", i) == i) {
-            lineOffset -= 3;
-        }
-        else if (fen.find("5", i) == i) {
-            lineOffset -= 4;
-        }
-        else if (fen.find("6", i) == i) {
-            lineOffset -= 5;
-        }
-        else if (fen.find("7", i) == i) {
-            lineOffset -= 6;
-        }
-        else if (fen.find("8", i) == i) {
-            lineOffset -= 7;
-        }
-        else if (fen.find("P", i) == i) {
-            pieces[0] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-        }
-        else if (fen.find("p", i) == i) {
-            pieces[1] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-        }
-        else if (fen.find("N", i) == i) {
-            pieces[2] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-        }
-        else if (fen.find("n", i) == i) {
-            pieces[3] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-        }
-        else if (fen.find("B", i) == i) {
-            pieces[4] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-        }
-        else if (fen.find("b", i) == i) {
-            pieces[5] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-        }
-        else if (fen.find("R", i) == i) {
-            pieces[6] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-        }
-        else if (fen.find("r", i) == i) {
-            pieces[7] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-        }
-        else if (fen.find("Q", i) == i) {
-            pieces[8] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-        }
-        else if (fen.find("q", i) == i) {
-            pieces[9] |= 1ULL << (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-        }
-        else if (fen.find("K", i) == i) {
-            int kloc = (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-            pieces[10] |= 1ULL << kloc;
-            kingLoc[0] = kloc;
-        }
-        else if (fen.find("k", i) == i) {
-            int kloc = (((i - lineOffset) % 8) + 8 * (7 - (i - lineOffset) / 8));
-            pieces[11] |= 1ULL << kloc;
-            kingLoc[1] = kloc;
-        }
-    }
-
-    color[0] = pieces[0] | pieces[2] | pieces[4] | pieces[6] | pieces[8] | pieces[10];
-    color[1] = pieces[1] | pieces[3] | pieces[5] | pieces[7] | pieces[9] | pieces[11];
-    occupied = color[0] | color[1];
-    InitPieceAt();
-    InitMaterial();
-    InitPieceCount();
-
-
-    if (fen.find("w", posIndex) == posIndex + 1) {
-        toMove = false;
-    }
-    else if (fen.find("b", posIndex) == posIndex + 1) {
-        toMove = true;
-    }
-
-    castleRights = 0;
-    size_t posIndex2 = std::string::npos;
-    size_t tempIndex = fen.find("K", posIndex);
-
-    if (tempIndex != std::string::npos) {
-        posIndex2 = tempIndex;
-        castleRights |= 8;
-    }
-
-    tempIndex = fen.find("Q", posIndex);
-    if (tempIndex != std::string::npos) {
-        posIndex2 = tempIndex;
-        castleRights |= 4;
-    }
-
-    tempIndex = fen.find("k", posIndex);
-    if (tempIndex != std::string::npos) {
-        posIndex2 = tempIndex;
-        castleRights |= 2;
-    }
-
-    tempIndex = fen.find("q", posIndex);
-    if (tempIndex != std::string::npos) {
-        posIndex2 = tempIndex;
-        castleRights |= 1;
-    }
-
-    if (posIndex2 != std::string::npos) {
-        posIndex = posIndex2;
-    }
-    else {
-        posIndex = fen.find("-", posIndex);
-    }
-
-    enpassantSq = TO_NUM[fen.substr(posIndex + 2, 2)];
-
-    std::smatch m;
-    if (std::regex_search(fen, m, fenNumbers)) {
-        halfMoves = std::stoi(m[1]);
-        fullMoves = std::stoi(m[2]);
-    }
-    else {
-        halfMoves = 0;
-        fullMoves = 1;
-    }
-
-    posKey = zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove);
-    pawnKey = zobrist->hashBoardPawns(pieces);
-
-}
-#endif
-
-
-
 
 
 

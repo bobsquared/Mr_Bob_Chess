@@ -222,7 +222,7 @@ int KSOffset = 122;
 
 
 
-Eval::Eval() {
+Eval::Eval(KPNNUE &model) : model(model) {
     InitPieceBoards();
     InitKingZoneMask();
     InitPassedPawnsMask();
@@ -726,6 +726,9 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
     // assert(board.kingLoc[0] == bitScan(board.pieces[10]));
     // assert(board.kingLoc[1] == bitScan(board.pieces[11]));
     #endif
+
+    // int retm = (board.toMove? -model.evaluate(board) : model.evaluate(board))  + (board.toMove? -MGVAL(tempoBonus) : MGVAL(tempoBonus));
+    // return retm;
 
     InitializeEval(board, th);
 
