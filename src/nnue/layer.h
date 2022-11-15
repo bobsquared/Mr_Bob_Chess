@@ -19,22 +19,22 @@ public:
     int getNumInputs();
     int getNumOutputs();
 
-    double* linear(double *output, double *input);
-    double* Relu(double *output, double *input);
-    void updateWeights(double **dCdW, double *dCdB, double lr, double beta1, double beta2, int batchSize, int batch);
+    float* linear(float *output, float *input);
+    float* Relu(float *output, float *input);
+    void updateWeights(float **dCdW, float *dCdB, float lr, float beta1, float beta2, int batchSize, int batch);
 
-    void DRelu(double *output[]);
-    double DMeanSquaredError(int16_t expected);
-    double* getActivations();
-    double* getForwards();
-    double** getWeights();
-    double* getBiases();
-    double MeanSquaredError(int16_t expected);
+    void DRelu(float *output[]);
+    float DMeanSquaredError(int16_t expected);
+    float* getActivations();
+    float* getForwards();
+    float** getWeights();
+    float* getBiases();
+    float MeanSquaredError(int16_t expected);
     void writeToBinary(std::fstream &file);
     void readFromBinary(std::fstream &file);
-    double sigmoidW(double x);
-    double *Sigmoid(double *output, double *input);
-    double DSigmoid();
+    float sigmoidW(float x);
+    float *Sigmoid(float *output, float *input);
+    float DSigmoid();
 
     friend std::ostream& operator<< (std::ostream &out, const Layer &data);
     
@@ -44,23 +44,23 @@ private:
     int numInputs;
     int numOutputs;
 
-    double **weights; // [col][row] [in][out]
-    double *biases;
+    float **weights; // [col][row] [in][out]
+    float *biases;
 
-    double *alpha;
+    float *alpha;
 
-    double **momentW;
-    double *momentB;
+    float **momentW;
+    float *momentB;
 
-    double **vW;
-    double *vB;
+    float **vW;
+    float *vB;
 
-    double *activations;
-    double *forwards;
+    float *activations;
+    float *forwards;
     
 
     
-    void Dlinear(double *output, double *input);
+    void Dlinear(float *output, float *input);
     
 
     

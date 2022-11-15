@@ -1,3 +1,6 @@
+#ifndef KPNNUE_H
+#define KPNNUE_H
+
 #include "layer.h"
 #include "../bitboard.h"
 #include <omp.h>
@@ -16,35 +19,36 @@ public:
     KPNNUE(std::string fileName);
     KPNNUE(int networkSize, int *sizes);
     ~KPNNUE();
-    double nnue_evaluate(Bitboard &board);
-    void backpropagate(int phase, double *X, int16_t Y, double ***grad, double **bias, double *loss);
-    void testBackPropagate();
-    void updateWeights(double ***grad, double **bias, double lr, double beta1, double beta2, int batch);
-    double forwardpropagate(int phase, double *input);
+    
     void trainNetwork(int dataSize, Bitboard &board, std::string *fens, int16_t *expected, std::string fileName);
-    void writeToBinary(std::string fileName);
-    void readFromBinary(std::string fileName);
     int evaluate(std::string fen, Bitboard &board);
     int evaluate(Bitboard &board);
-    void setupBoardDouble(Bitboard &board, double *output);
-    double*** createGradientWeights();
-    double** createGradientBias();
-    void deleteGradientWeights(double*** grad);
-    void deleteGradientBias(double** bias);
-
-    void setupBoardFen(Bitboard &board, std::string fens, double *input);
-
-    int batchSize;
-
 
 private:
     int init_epoch;
-    
+    int batchSize;
     int size;
     Layer **layers;
-
-
+    float *features;
     
     int getPhase(Bitboard &board);
+    void backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bias);
+    void updateWeights(float ***grad, float **bias, float lr, float beta1, float beta2, int batch);
+    void forwardpropagate(float *input);
+    void writeToBinary(std::string fileName);
+    void readFromBinary(std::string fileName);
+
+    float*** createGradientWeights();
+    float** createGradientBias();
+    void deleteGradientWeights(float*** grad);
+    void deleteGradientBias(float** bias);
+
+    void setupBoardFen(Bitboard &board, std::string fens, float *input);
+    void setupBoardFloat(Bitboard &board, float *output);
+
+    float* updateAccumulatorTrainer(Bitboard &b);
+    float *updateAccumulator(Bitboard &b);
     
 };
+
+#endif

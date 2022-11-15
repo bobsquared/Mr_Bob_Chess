@@ -10,40 +10,40 @@ Layer::Layer(std::fstream &file) {
 
 Layer::Layer(int nInputs, int nOutputs) {
     std::default_random_engine generator;
-    std::normal_distribution<double> distribution(0.0, sqrt( 2.0 / nInputs));
+    std::normal_distribution<float> distribution(0.0, sqrt( 2.0 / nInputs));
 
     numInputs = nInputs;
     numOutputs = nOutputs;
     t = 1;
 
-    biases = new double[numOutputs]; 
+    biases = new float[numOutputs]; 
     for (int i = 0; i < numOutputs; i++) {
         biases[i] = distribution(generator);
     }
 
-    alpha = new double[numOutputs](); 
-    momentB = new double[numOutputs](); 
-    vB = new double[numOutputs](); 
+    alpha = new float[numOutputs](); 
+    momentB = new float[numOutputs](); 
+    vB = new float[numOutputs](); 
 
-    activations = new double[numOutputs](); 
-    forwards = new double[numOutputs](); 
+    activations = new float[numOutputs](); 
+    forwards = new float[numOutputs](); 
 
-    weights = new double*[numInputs];
+    weights = new float*[numInputs];
     for (int i = 0; i < numInputs; i++) {
-        weights[i] = new double[numOutputs];
+        weights[i] = new float[numOutputs];
         for (int j = 0; j < numOutputs; j++) {
             weights[i][j] = distribution(generator);
         }
     }
 
-    momentW = new double*[numInputs];
+    momentW = new float*[numInputs];
     for (int i = 0; i < numInputs; i++) {
-        momentW[i] = new double[numOutputs]();
+        momentW[i] = new float[numOutputs]();
     }
 
-    vW = new double*[numInputs];
+    vW = new float*[numInputs];
     for (int i = 0; i < numInputs; i++) {
-        vW[i] = new double[numOutputs]();
+        vW[i] = new float[numOutputs]();
     }
 
 }
@@ -97,26 +97,26 @@ int Layer::getNumOutputs() {
     return numOutputs;
 }
 
-double* Layer::getActivations() {
+float* Layer::getActivations() {
     return activations;
 }
 
 
-double* Layer::getForwards() {
+float* Layer::getForwards() {
     return forwards;
 }
 
 
-double** Layer::getWeights() {
+float** Layer::getWeights() {
     return weights;
 }
 
 
-double* Layer::getBiases() {
+float* Layer::getBiases() {
     return biases;
 }
 
-void Layer::updateWeights(double **grad, double *bias, double lr, double beta1, double beta2, int batchSize, int batch) {
+void Layer::updateWeights(float **grad, float *bias, float lr, float beta1, float beta2, int batchSize, int batch) {
 
     for (int i = 0; i < numOutputs; i++) {
 
@@ -125,8 +125,8 @@ void Layer::updateWeights(double **grad, double *bias, double lr, double beta1, 
             momentW[j][i] = beta1 * momentW[j][i] + (1 - beta1) * grad[j][i] / batchSize;
             vW[j][i] = beta2 * vW[j][i] + (1 - beta2) * std::pow(grad[j][i] / batchSize, 2);
 
-            double mhat = momentW[j][i] / (1 - std::pow(beta1, batch + 1));
-            double vhat = vW[j][i] / (1 - std::pow(beta2, batch + 1));
+            float mhat = momentW[j][i] / (1 - std::pow(beta1, batch + 1));
+            float vhat = vW[j][i] / (1 - std::pow(beta2, batch + 1));
 
             weights[j][i] = weights[j][i] - lr * mhat / (sqrt(vhat) + 1e-8);
         }
@@ -134,8 +134,8 @@ void Layer::updateWeights(double **grad, double *bias, double lr, double beta1, 
         momentB[i] = beta1 * momentB[i] + (1 - beta1) * bias[i] / batchSize;
         vB[i] = beta2 * vB[i] + (1 - beta2) * std::pow(bias[i] / batchSize, 2);
 
-        double mhat = momentB[i] / (1 - std::pow(beta1, t + 1));
-        double vhat = vB[i] / (1 - std::pow(beta2, t + 1));
+        float mhat = momentB[i] / (1 - std::pow(beta1, t + 1));
+        float vhat = vB[i] / (1 - std::pow(beta2, t + 1));
             
         biases[i] = biases[i] - lr * mhat / (sqrt(vhat) + 1e-8);
 
@@ -143,7 +143,7 @@ void Layer::updateWeights(double **grad, double *bias, double lr, double beta1, 
     t++;
 }
 
-double* Layer::linear(double *output, double *input) {
+float* Layer::linear(float *output, float *input) {
     for (int i = 0; i < numOutputs; i++) {
         output[i] = biases[i];
     }
@@ -163,9 +163,9 @@ double* Layer::linear(double *output, double *input) {
 }
 
 
-double* Layer::Relu(double *output, double *input) {
+float* Layer::Relu(float *output, float *input) {
     for (int i = 0; i < numOutputs; i++) {
-        output[i] = std::min(1.0, std::max(input[i], 0.0));
+        output[i] = std::min(1.0f, std::max(input[i], 0.0f));
         activations[i] = output[i];
     }
     return output + numOutputs;
@@ -173,19 +173,19 @@ double* Layer::Relu(double *output, double *input) {
 
 
 
-void Layer::DRelu(double *output[]) {
+void Layer::DRelu(float *output[]) {
     for (int i = 0; i < numOutputs; i++) {
         (*output)[i] = (forwards[i] > 0.0 && forwards[i] < 1.0);
     }
 }
 
 
-double Layer::sigmoidW(double x) {
+float Layer::sigmoidW(float x) {
     return 1.0 / (1.0 + exp(-x / 400));
 }
 
 
-double* Layer::Sigmoid(double *output, double *input) {
+float* Layer::Sigmoid(float *output, float *input) {
     for (int i = 0; i < numOutputs; i++) {
         output[i] = sigmoidW(input[i]);
         activations[i] = output[i];
@@ -196,19 +196,19 @@ double* Layer::Sigmoid(double *output, double *input) {
 
 
 
-double Layer::DSigmoid() {
+float Layer::DSigmoid() {
     return sigmoidW(activations[0]) * (1.0 - sigmoidW(activations[0]));
 }
 
 
 // expected -> The expected value
 // input -> The value that we got
-double Layer::MeanSquaredError(int16_t expected) {
+float Layer::MeanSquaredError(int16_t expected) {
     return pow(sigmoidW(activations[0]) - sigmoidW(expected), 2);
 }
 
 
-double Layer::DMeanSquaredError(int16_t expected) {
+float Layer::DMeanSquaredError(int16_t expected) {
     return sigmoidW(activations[0]) - sigmoidW(expected);
 }
 
@@ -270,50 +270,50 @@ void Layer::readFromBinary(std::fstream &file) {
     file.read(reinterpret_cast<char *>(&numOutputs), sizeof(numOutputs));
 
     // write weights and biases
-    weights = new double*[numInputs];
+    weights = new float*[numInputs];
     for (int i = 0; i < numInputs; i++) {
-        weights[i] = new double[numOutputs];
+        weights[i] = new float[numOutputs];
         for (int j = 0; j <  numOutputs; j++) {
             file.read(reinterpret_cast<char *>(&weights[i][j]), sizeof(weights[i][j]));
         }
     }
 
-    biases = new double[numOutputs];
+    biases = new float[numOutputs];
     for (int i = 0; i <  numOutputs; i++) {
         file.read(reinterpret_cast<char *>(&biases[i]), sizeof(biases[i]));
     }
 
 
     // write optimizer parameters
-    momentW = new double*[numInputs];
+    momentW = new float*[numInputs];
     for (int i = 0; i < numInputs; i++) {
-        momentW[i] = new double[numOutputs];
+        momentW[i] = new float[numOutputs];
         for (int j = 0; j <  numOutputs; j++) {
             file.read(reinterpret_cast<char *>(&momentW[i][j]), sizeof(momentW[i][j]));
         }
     }
 
-    momentB = new double[numOutputs];
+    momentB = new float[numOutputs];
     for (int i = 0; i <  numOutputs; i++) {
         file.read(reinterpret_cast<char *>(&momentB[i]), sizeof(momentB[i]));
     }
 
-    vW = new double*[numInputs];
+    vW = new float*[numInputs];
     for (int i = 0; i < numInputs; i++) {
-        vW[i] = new double[numOutputs];
+        vW[i] = new float[numOutputs];
         for (int j = 0; j <  numOutputs; j++) {
             file.read(reinterpret_cast<char *>(&vW[i][j]), sizeof(vW[i][j]));
         }
     }
 
-    vB = new double[numOutputs];
+    vB = new float[numOutputs];
     for (int i = 0; i <  numOutputs; i++) {
         file.read(reinterpret_cast<char *>(&vB[i]), sizeof(vB[i]));
     }
 
     // feed forward data
-    activations = new double[numOutputs];
-    forwards = new double[numOutputs];
+    activations = new float[numOutputs];
+    forwards = new float[numOutputs];
 
     for (int i = 0; i <  numOutputs; i++) {
         file.read(reinterpret_cast<char *>(&activations[i]), sizeof(activations[i]));

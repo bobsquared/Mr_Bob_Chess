@@ -1,12 +1,17 @@
+
+
 #include "KPNNUE.h"
 
 
 KPNNUE::KPNNUE(std::string fileName) {
     readFromBinary(fileName);
+
+    features = new float[layers[0]->getNumOutputs()] ();
 }
 
 
 KPNNUE::KPNNUE(int networkSize, int *sizes) {
+    
     init_epoch = 0;
     size = networkSize - 1;
 
@@ -14,6 +19,8 @@ KPNNUE::KPNNUE(int networkSize, int *sizes) {
     for (int i = 0; i < networkSize - 1; i++) {
         layers[i] = new Layer(sizes[i], sizes[i + 1]);
     }
+
+    features = new float[layers[0]->getNumOutputs()] ();
 }
 
 
@@ -24,64 +31,83 @@ KPNNUE::~KPNNUE() {
         delete layers[i];
     }
     delete [] layers;
+    delete [] features;
 
 }
 
 
 
-double KPNNUE::nnue_evaluate(Bitboard &board) {
-    
+float* KPNNUE::updateAccumulator(Bitboard &b) {
+    float **weights = layers[0]->getWeights();
+    float *biases = layers[0]->getBiases();
+    std::vector<Accumulator::Features> *addAccumulate = b.getAddFeatures();
+    std::vector<Accumulator::Features> *removeAccumulate = b.getRemoveFeatures();
 
-    // |***************Want to replace with own way to parse ***********|
-    // for (int i = 0; i < M; i++) {
-    //     input[i] = accumulator[stm][i];
-    //     input[M + i] = accumulator[!stm][i];
-    // }
-    double input[256] = {0.0};
-
-    for (int i = 0; i < 64; i++) {
-        input[i] = ((1 << i) & board.pieces[0]) != 0;
-        input[64 + i] = ((1 << i) & board.pieces[1]) != 0;
-        input[128 + i] = ((1 << i) & board.pieces[10]) != 0;
-        input[192 + i] = ((1 << i) & board.pieces[11]) != 0;
+    if (b.getResetFlag()) {
+        for (int j = 0; j < layers[0]->getNumOutputs(); j++) {
+            features[j] = biases[j];
+        }
+        b.setResetFlag(false);
     }
 
-
-
-    double buffer[1024];
-    double *curr_output = buffer;
-    double *curr_input = input;
-    double *next_output;
-
-    for (int i = 0; i < size - 1; i++) {
-        // Evaluate one layer and move both input and output forward.
-        // Last output becomes the next input.
-        next_output = layers[i]->linear(curr_output, input); // in 256 out 16
-        curr_input = curr_output;
-        curr_output = next_output;
-
-        next_output = layers[i]->Relu(curr_output, curr_input); // in 16 out 16
-        curr_input = curr_output;
-        curr_output = next_output;
+    while (!addAccumulate->empty()) {
+        Accumulator::Features i = addAccumulate->back();
+        for (int j = 0; j < layers[0]->getNumOutputs(); j++) {
+            features[j] += weights[i.pieceType + i.location][j];
+        }
+        addAccumulate->pop_back();
     }
 
-    next_output = layers[size - 1]->linear(curr_output, curr_input); // in 8 out 1
+    while (!removeAccumulate->empty()) {
+        Accumulator::Features i = removeAccumulate->back();
+        for (int j = 0; j < layers[0]->getNumOutputs(); j++) {
+            features[j] -= weights[i.pieceType + i.location][j];
+        }
+        removeAccumulate->pop_back();
+    }
 
-    // We're done. The last layer should have put 1 value out under *curr_output.
-    return *curr_output;
+    return nullptr;
 }
 
 
 
-double KPNNUE::forwardpropagate(int phase, double *input) {
-    double buffer[1024];
-    double *curr_output = buffer;
-    double *curr_input = input;
-    double *next_output;
+// Handle update differently if training
+float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
+    float **weights = layers[0]->getWeights();
+    float *biases = layers[0]->getBiases();
+    std::vector<Accumulator::Features> *addAccumulate = b.getAddFeatures();
+
+    for (int j = 0; j < layers[0]->getNumOutputs(); j++) {
+        features[j] = biases[j];
+    }
+
+    for (Accumulator::Features i : *addAccumulate) {
+        for (int j = 0; j < layers[0]->getNumOutputs(); j++) {
+            features[j] += weights[i.pieceType + i.location][j];
+        }
+    }
+
+    return nullptr;
+}
+
+
+
+void KPNNUE::forwardpropagate(float *input) {
+    float buffer[1024];
+    float *curr_output = buffer;
+    float *curr_input = input;
+    float *next_output;
+    float *forwards = layers[0]->getForwards();
+
+    for (int i = 0; i < layers[0]->getNumOutputs(); i++) {
+        forwards[i] = input[i];
+    }
+
+    next_output = layers[0]->Relu(curr_output, curr_input); // in 8 out 8
+    curr_input = curr_output;
+    curr_output = next_output;
     
-    for (int k = 0; k < size - 1; k++) {
-        // Evaluate one layer and move both input and output forward.
-        // Last output becomes the next input.
+    for (int k = 1; k < size - 1; k++) {
         next_output = layers[k]->linear(curr_output, curr_input); // in 256 out 8
         curr_input = curr_output;
         curr_output = next_output;
@@ -93,18 +119,16 @@ double KPNNUE::forwardpropagate(int phase, double *input) {
     }
 
     next_output = layers[size - 1]->linear(curr_output, curr_input); // in 8 out 1
-    int phaseTotal = (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
-
-    return ((curr_output[0] * (256 - phaseTotal)) + (curr_output[1] * phaseTotal)) / 256;
+    
 }
 
 
 
-void KPNNUE::backpropagate(int phase, double *X, int16_t Y, double ***grad, double **bias, double *loss = nullptr) {
+void KPNNUE::backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bias) {
     
-    double **y = new double*[size];
+    float **y = new float*[size];
     for (int i = 0; i < size; i++) {
-        y[i] = new double[layers[i]->getNumOutputs()]();
+        y[i] = new float[layers[i]->getNumOutputs()]();
     }
 
     for (int i = size - 1; i >= 0; i--) {
@@ -112,25 +136,19 @@ void KPNNUE::backpropagate(int phase, double *X, int16_t Y, double ***grad, doub
         Layer *layer = layers[i];
         const int nOutputs = layer->getNumOutputs();
         
-        double *dAdZ = new double[nOutputs];
+        float *dAdZ = new float[nOutputs];
         
-        if (loss != nullptr && i == size - 1) {
-            y[i][0] = loss[0];
-            y[i][1] = loss[1];
-            dAdZ[0] = 1.0;
-            dAdZ[1] = 1.0;
-        }
-        else if (i == size - 1) {
-            y[i][0] = layer->DMeanSquaredError(0, Y);
-            dAdZ[0] = layer->DSigmoid(0);
+        if (i == size - 1) {
+            y[i][0] = layer->DMeanSquaredError(Y);
+            dAdZ[0] = layer->DSigmoid();
         }
         else {
             layer->DRelu(&dAdZ);
         }
         
         if (i != 0) {
-            double *dZdW = layers[i - 1]->getActivations();
-            double **dZdA = layer->getWeights();
+            float *dZdW = layers[i - 1]->getActivations();
+            float **dZdA = layer->getWeights();
 
             for (int j = 0; j < layer->getNumInputs(); j++) {
                 for (int k = 0; k < nOutputs; k++) {
@@ -138,15 +156,26 @@ void KPNNUE::backpropagate(int phase, double *X, int16_t Y, double ***grad, doub
                     bias[i][k] += dAdZ[k] * y[i][k];
                     y[i - 1][j] += dZdA[j][k] * dAdZ[k] * y[i][k];
                 }
-            }  
+            }
+
+            for (int k = 0; k < nOutputs; k++) {
+                bias[i][k] += dAdZ[k] * y[i][k];
+            }
+
         }
         else {
-            for (int j = 0; j < layer->getNumInputs(); j++) {
+            std::vector<Accumulator::Features> *addFeatures = board.getAddFeatures();
+            while (!addFeatures->empty()) {
+                Accumulator::Features j = addFeatures->back();
+                int index = j.pieceType + j.location;
                 for (int k = 0; k < nOutputs; k++) {
-                    grad[i][j][k] += X[j] * dAdZ[k] * y[i][k];
-                    bias[i][k] += dAdZ[k] * y[i][k];
+                    grad[i][index][k] += dAdZ[k] * y[i][k];
                 }
-               
+                addFeatures->pop_back();
+            }
+
+            for (int k = 0; k < nOutputs; k++) {
+                bias[i][k] += dAdZ[k] * y[i][k];
             }
         }
         
@@ -161,7 +190,7 @@ void KPNNUE::backpropagate(int phase, double *X, int16_t Y, double ***grad, doub
 
 
 
-void KPNNUE::updateWeights(double ***grad, double **bias, double lr, double beta1, double beta2, int batch) {
+void KPNNUE::updateWeights(float ***grad, float **bias, float lr, float beta1, float beta2, int batch) {
     for (int i = 0; i < size; i++) {
         layers[i]->updateWeights(grad[i], bias[i], lr, beta1, beta2, batchSize, batch);
     }
@@ -182,7 +211,7 @@ int KPNNUE::getPhase(Bitboard &board) {
 
 
 
-void KPNNUE::setupBoardFen(Bitboard &board, std::string fen, double *output) {
+void KPNNUE::setupBoardFen(Bitboard &board, std::string fen, float *output) {
     board.setPosFen(fen);
 
     for (int i = 0; i < 12; i++) {
@@ -197,7 +226,7 @@ void KPNNUE::setupBoardFen(Bitboard &board, std::string fen, double *output) {
 
 
 
-void KPNNUE::setupBoardDouble(Bitboard &board, double *output) {
+void KPNNUE::setupBoardFloat(Bitboard &board, float *output) {
 
     for (int i = 0; i < 12; i++) {
         uint64_t piece = board.pieces[i];
@@ -211,36 +240,33 @@ void KPNNUE::setupBoardDouble(Bitboard &board, double *output) {
 
 
 int KPNNUE::evaluate(std::string fen, Bitboard &board) {
-    double input[768] = {0.0};
-    setupBoardFen(board, fen, input);
-    
-    int ret = forwardpropagate(getPhase(board), input);
-    double *temp = layers[size - 1]->getForwards();
+    board.setPosFen(fen);
+    updateAccumulator(board);
+    forwardpropagate(features);
+    float *temp = layers[size - 1]->getForwards();
     return temp[0];
 }
 
 
 int KPNNUE::evaluate(Bitboard &board) {
-    double input[768] = {0.0};
-    setupBoardDouble(board, input);
-    
-    int ret = forwardpropagate(getPhase(board), input);
-    double *temp = layers[size - 1]->getForwards();
+    updateAccumulator(board);
+    forwardpropagate(features);
+    float *temp = layers[size - 1]->getForwards();
     return temp[0];
 }
 
 
 
-double*** KPNNUE::createGradientWeights() {
-    double ***grad = new double**[size];
+float*** KPNNUE::createGradientWeights() {
+    float ***grad = new float**[size];
 
     for (int i = 0; i < size; i++) {
         int inputs = layers[i]->getNumInputs();
         int outputs = layers[i]->getNumOutputs();
 
-        grad[i] = new double*[inputs];
+        grad[i] = new float*[inputs];
         for (int j = 0; j < inputs; j++) {
-            grad[i][j] = new double[outputs]{0};
+            grad[i][j] = new float[outputs]{0};
         }
 
     }
@@ -249,11 +275,11 @@ double*** KPNNUE::createGradientWeights() {
 
 
 
-double** KPNNUE::createGradientBias() {
-    double **bias = new double*[size];
+float** KPNNUE::createGradientBias() {
+    float **bias = new float*[size];
 
     for (int i = 0; i < size; i++) {
-        bias[i] = new double[layers[i]->getNumOutputs()]{0};
+        bias[i] = new float[layers[i]->getNumOutputs()]{0};
     }
 
     return bias;
@@ -261,7 +287,7 @@ double** KPNNUE::createGradientBias() {
 
 
 
-void KPNNUE::deleteGradientWeights(double*** grad) {
+void KPNNUE::deleteGradientWeights(float*** grad) {
     for (int i = 0; i < size; i++) {
         for (int j = 0; j < layers[i]->getNumInputs(); j++) {
             delete [] grad[i][j];
@@ -274,7 +300,7 @@ void KPNNUE::deleteGradientWeights(double*** grad) {
 
 
 
-void KPNNUE::deleteGradientBias(double** bias) {
+void KPNNUE::deleteGradientBias(float** bias) {
     for (int i = 0; i < size; i++) {
         delete [] bias[i];
     }
@@ -287,31 +313,16 @@ void KPNNUE::deleteGradientBias(double** bias) {
 void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int16_t *expected, std::string fileName) {
     int validateSize = 0;
     int trainSize = dataSize - validateSize;
-    batchSize = 8192;
+    batchSize = 16384;
 
     double err_train = 0.0;
     double err_validate = 0.0;
 
     for (int i = validateSize; i < dataSize; i++) {
-        double input[768] = {0.0};
-        setupBoardFen(board, fens[i], input);
-
-        int phase = getPhase(board);
-        forwardpropagate(phase, input);
-
-        int phaseTotal = (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
-        err_train += layers[size - 1]->MeanSquaredError(phaseTotal, expected[i]);
-    } 
-
-    for (int i = 0; i < validateSize; i++) {
-        double input[768] = {0.0};
-        setupBoardFen(board, fens[i], input);
-
-        int phase = getPhase(board);
-        forwardpropagate(phase, input);
-
-        int phaseTotal = (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
-        err_validate += layers[size - 1]->MeanSquaredError(phaseTotal, expected[i]);
+        board.setPosFen(fens[i]);
+        updateAccumulator(board);
+        forwardpropagate(features);
+        err_train += layers[size - 1]->MeanSquaredError(expected[i]);
     } 
 
     std::cout << "Loss_train: " << err_train / trainSize << std::endl;
@@ -324,8 +335,8 @@ void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int1
 
         std::cout << "Epoch: " << epoch << std::endl;
         for (int batch = 0; batch < (trainSize / batchSize) + 1; batch++) {
-            double ***grad = createGradientWeights();
-            double **bias = createGradientBias();
+            float ***grad = createGradientWeights();
+            float **bias = createGradientBias();
 
             if (batch % (((trainSize / batchSize) / 20) + 1) == 0) {
                 std::cout << "Batch [" << batch << " / " << (trainSize / batchSize) + 1 << "]  -  " << batch * 100 / ((trainSize / batchSize) + 1)<< "%" << std::endl;
@@ -335,16 +346,12 @@ void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int1
             int end = std::min(validateSize + (batch + 1) * batchSize, dataSize);
 
             for (int i = start; i < end; i++) {
-                double input[768] = {0.0};
-                setupBoardFen(board, fens[i], input);
+                board.setPosFen(fens[i]);
+                updateAccumulatorTrainer(board);
+                forwardpropagate(features);
 
-                int phase = getPhase(board);
-
-                forwardpropagate(phase, input);
-                backpropagate(phase, input, expected[i], grad, bias);
-
-                int phaseTotal = (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
-                err_train += layers[size - 1]->MeanSquaredError(phaseTotal, expected[i]);
+                backpropagate(board, expected[i], grad, bias);
+                err_train += layers[size - 1]->MeanSquaredError(expected[i]);
             } 
 
             updateWeights(grad, bias, 0.001, 0.9, 0.999, batch + epoch * batchSize);
@@ -354,23 +361,10 @@ void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int1
 
         }
 
-        for (int i = 0; i < validateSize; i++) {
-            double input[768] = {0.0};
-            setupBoardFen(board, fens[i], input);
-
-            int phase = getPhase(board);
-            forwardpropagate(phase, input);
-
-            int phaseTotal = (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
-            err_validate += layers[size - 1]->MeanSquaredError(phaseTotal, expected[i]);
-        } 
-
         std::cout << "test: ";
         for (int i = 0; i < 10; i++) {
-            double input[768] = {0.0};
-            setupBoardFen(board, fens[i], input);
-            double tester = forwardpropagate(getPhase(board), input);
-
+            board.setPosFen(fens[i]);
+            int tester = evaluate(board);
             std::cout << tester << " ";
         }
         std::cout << std::endl;
