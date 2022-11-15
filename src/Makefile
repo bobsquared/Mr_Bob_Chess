@@ -29,7 +29,7 @@ ifeq ($(debug_zobrist), yes)
 CXXFLAGS += -DDEBUGHASH
 endif
 
-CXX := bitboard.cpp magic_bitboards.cpp defs.cpp dumb7flooding.cpp movegen.cpp perft.cpp eval.cpp search.cpp uci.cpp movepick.cpp zobrist_hashing.cpp transpositionTable.cpp timeman.cpp nnue/layer.cpp nnue/KPNNUE.cpp
+CXX := bitboard.cpp magic_bitboards.cpp defs.cpp dumb7flooding.cpp movegen.cpp perft.cpp eval.cpp search.cpp uci.cpp movepick.cpp zobrist_hashing.cpp transpositionTable.cpp timeman.cpp nnue/layer.cpp nnue/KPNNUE.cpp nnue/accumulator.cpp
 
 openbench: $(CXX)
 	g++ -O3 -o $(EXE) $(OBCXXFLAGS) main.cpp $(CXX)

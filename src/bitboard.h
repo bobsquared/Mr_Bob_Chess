@@ -1,8 +1,11 @@
+
 #pragma once
+#include <vector>
 #include <regex>
 #include "defs.h"
 #include "magic_bitboards.h"
 #include "zobrist_hashing.h"
+#include "nnue/accumulator.h"
 
 
 // Castling flags
@@ -39,6 +42,10 @@ public:
 
     Bitboard();
     Bitboard(const Bitboard &b);
+    std::vector<Accumulator::Features>* getAddFeatures();
+    std::vector<Accumulator::Features>* getRemoveFeatures();
+    bool getResetFlag();
+    void setResetFlag(bool f);
 
     void printPretty();
     std::string getPv();
@@ -79,6 +86,8 @@ public:
 
 private:
 
+    Accumulator acc;
+
     // Material location
     uint64_t whitePawns;
     uint64_t blackPawns;
@@ -104,6 +113,7 @@ private:
     uint8_t rookCastleFlagMask[64];
 
     // Initialization functions
+    void InitFeatures();
     void InitBlackPawnAttacks();
     void InitWhitePawnAttacks();
     void InitKnightMoves();
@@ -123,9 +133,5 @@ private:
     uint64_t getLeastValuablePiece(uint64_t attadef, bool col, int &piece);
 
     bool isAttackedCastleMask(uint64_t bitboard);
-
-
-
-
 
 };
