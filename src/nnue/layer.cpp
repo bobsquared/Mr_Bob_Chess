@@ -111,6 +111,11 @@ double** Layer::getWeights() {
     return weights;
 }
 
+
+double* Layer::getBiases() {
+    return biases;
+}
+
 void Layer::updateWeights(double **grad, double *bias, double lr, double beta1, double beta2, int batchSize, int batch) {
 
     for (int i = 0; i < numOutputs; i++) {
@@ -160,7 +165,7 @@ double* Layer::linear(double *output, double *input) {
 
 double* Layer::Relu(double *output, double *input) {
     for (int i = 0; i < numOutputs; i++) {
-        output[i] = std::max(input[i], 0.0);
+        output[i] = std::min(1.0, std::max(input[i], 0.0));
         activations[i] = output[i];
     }
     return output + numOutputs;
@@ -170,13 +175,13 @@ double* Layer::Relu(double *output, double *input) {
 
 void Layer::DRelu(double *output[]) {
     for (int i = 0; i < numOutputs; i++) {
-        (*output)[i] = (forwards[i] > 0.0);
+        (*output)[i] = (forwards[i] > 0.0 && forwards[i] < 1.0);
     }
 }
 
 
 double Layer::sigmoidW(double x) {
-    return 1.0 / (1.0 + exp(-2.53 * x / 400));
+    return 1.0 / (1.0 + exp(-x / 400));
 }
 
 
@@ -191,67 +196,67 @@ double* Layer::Sigmoid(double *output, double *input) {
 
 
 
-double Layer::DSigmoid(int phaseTotal) {
+double Layer::DSigmoid() {
     return sigmoidW(activations[0]) * (1.0 - sigmoidW(activations[0]));
 }
 
 
 // expected -> The expected value
 // input -> The value that we got
-double Layer::MeanSquaredError(int phaseTotal, int16_t expected) {
-    return pow(sigmoidW(activations[0]) - expected, 2);
+double Layer::MeanSquaredError(int16_t expected) {
+    return pow(sigmoidW(activations[0]) - sigmoidW(expected), 2);
 }
 
 
-double Layer::DMeanSquaredError(int phaseTotal, int16_t expected) {
-    return sigmoidW(activations[0]) - expected;
+double Layer::DMeanSquaredError(int16_t expected) {
+    return sigmoidW(activations[0]) - sigmoidW(expected);
 }
 
 void Layer::writeToBinary(std::fstream &file) {
 
     // write number of inputs outputs
-    file.write(reinterpret_cast<const char *>(&numInputs), sizeof(int));
-    file.write(reinterpret_cast<const char *>(&numOutputs), sizeof(int));
+    file.write(reinterpret_cast<const char *>(&numInputs), sizeof(numInputs));
+    file.write(reinterpret_cast<const char *>(&numOutputs), sizeof(numOutputs));
 
     // write weights and biases
     for (int i = 0; i < numInputs; i++) {
         for (int j = 0; j < numOutputs; j++) {
-            file.write(reinterpret_cast<const char *>(&weights[i][j]), sizeof(double));
+            file.write(reinterpret_cast<const char *>(&weights[i][j]), sizeof(weights[i][j]));
         }
     }
 
     for (int i = 0; i < numOutputs; i++) {
-        file.write(reinterpret_cast<const char *>(&biases[i]), sizeof(double));
+        file.write(reinterpret_cast<const char *>(&biases[i]), sizeof(biases[i]));
     }
 
     // write optimizer parameters
     for (int i = 0; i < numInputs; i++) {
         for (int j = 0; j < numOutputs; j++) {
-            file.write(reinterpret_cast<const char *>(&momentW[i][j]), sizeof(double));
+            file.write(reinterpret_cast<const char *>(&momentW[i][j]), sizeof(momentW[i][j]));
         }
     }
 
     for (int i = 0; i < numOutputs; i++) {
-        file.write(reinterpret_cast<const char *>(&momentB[i]), sizeof(double));
+        file.write(reinterpret_cast<const char *>(&momentB[i]), sizeof(momentB[i]));
     }
 
     for (int i = 0; i < numInputs; i++) {
         for (int j = 0; j < numOutputs; j++) {
-            file.write(reinterpret_cast<const char *>(&vW[i][j]), sizeof(double));
+            file.write(reinterpret_cast<const char *>(&vW[i][j]), sizeof(vW[i][j]));
         }
     }
 
     for (int i = 0; i < numOutputs; i++) {
-        file.write(reinterpret_cast<const char *>(&vB[i]), sizeof(double));
+        file.write(reinterpret_cast<const char *>(&vB[i]), sizeof(vB[i]));
     }
 
     // // feed forward data
     for (int i = 0; i < numOutputs; i++) {
-        file.write(reinterpret_cast<const char *>(&activations[i]), sizeof(double));
+        file.write(reinterpret_cast<const char *>(&activations[i]), sizeof(activations[i]));
     }
 
     for (int i = 0; i < numOutputs; i++) {
-        file.write(reinterpret_cast<const char *>(&forwards[i]), sizeof(double));
+        file.write(reinterpret_cast<const char *>(&forwards[i]), sizeof(forwards[i]));
     }
 
 }
@@ -269,13 +274,13 @@ void Layer::readFromBinary(std::fstream &file) {
     for (int i = 0; i < numInputs; i++) {
         weights[i] = new double[numOutputs];
         for (int j = 0; j <  numOutputs; j++) {
-            file.read(reinterpret_cast<char *>(&weights[i][j]), sizeof(double));
+            file.read(reinterpret_cast<char *>(&weights[i][j]), sizeof(weights[i][j]));
         }
     }
 
     biases = new double[numOutputs];
     for (int i = 0; i <  numOutputs; i++) {
-        file.read(reinterpret_cast<char *>(&biases[i]), sizeof(double));
+        file.read(reinterpret_cast<char *>(&biases[i]), sizeof(biases[i]));
     }
 
 
@@ -284,26 +289,26 @@ void Layer::readFromBinary(std::fstream &file) {
     for (int i = 0; i < numInputs; i++) {
         momentW[i] = new double[numOutputs];
         for (int j = 0; j <  numOutputs; j++) {
-            file.read(reinterpret_cast<char *>(&momentW[i][j]), sizeof(double));
+            file.read(reinterpret_cast<char *>(&momentW[i][j]), sizeof(momentW[i][j]));
         }
     }
 
     momentB = new double[numOutputs];
     for (int i = 0; i <  numOutputs; i++) {
-        file.read(reinterpret_cast<char *>(&momentB[i]), sizeof(double));
+        file.read(reinterpret_cast<char *>(&momentB[i]), sizeof(momentB[i]));
     }
 
     vW = new double*[numInputs];
     for (int i = 0; i < numInputs; i++) {
         vW[i] = new double[numOutputs];
         for (int j = 0; j <  numOutputs; j++) {
-            file.read(reinterpret_cast<char *>(&vW[i][j]), sizeof(double));
+            file.read(reinterpret_cast<char *>(&vW[i][j]), sizeof(vW[i][j]));
         }
     }
 
     vB = new double[numOutputs];
     for (int i = 0; i <  numOutputs; i++) {
-        file.read(reinterpret_cast<char *>(&vB[i]), sizeof(double));
+        file.read(reinterpret_cast<char *>(&vB[i]), sizeof(vB[i]));
     }
 
     // feed forward data
@@ -311,11 +316,11 @@ void Layer::readFromBinary(std::fstream &file) {
     forwards = new double[numOutputs];
 
     for (int i = 0; i <  numOutputs; i++) {
-        file.read(reinterpret_cast<char *>(&activations[i]), sizeof(double));
+        file.read(reinterpret_cast<char *>(&activations[i]), sizeof(activations[i]));
     }
 
     for (int i = 0; i <  numOutputs; i++) {
-        file.read(reinterpret_cast<char *>(&forwards[i]), sizeof(double));
+        file.read(reinterpret_cast<char *>(&forwards[i]), sizeof(forwards[i]));
     }
 
 }

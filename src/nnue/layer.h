@@ -1,3 +1,6 @@
+#ifndef LAYER_H
+#define LAYER_H
+
 #include <algorithm>
 #include <cmath>
 #include <stdlib.h>
@@ -21,16 +24,17 @@ public:
     void updateWeights(double **dCdW, double *dCdB, double lr, double beta1, double beta2, int batchSize, int batch);
 
     void DRelu(double *output[]);
-    double DMeanSquaredError(int phaseTotal, int16_t expected);
+    double DMeanSquaredError(int16_t expected);
     double* getActivations();
     double* getForwards();
     double** getWeights();
-    double MeanSquaredError(int phaseTotal, int16_t expected);
+    double* getBiases();
+    double MeanSquaredError(int16_t expected);
     void writeToBinary(std::fstream &file);
     void readFromBinary(std::fstream &file);
     double sigmoidW(double x);
     double *Sigmoid(double *output, double *input);
-    double DSigmoid(int phaseTotal);
+    double DSigmoid();
 
     friend std::ostream& operator<< (std::ostream &out, const Layer &data);
     
@@ -62,3 +66,5 @@ private:
     
     
 };
+
+#endif
