@@ -44,6 +44,7 @@ public:
     Bitboard(const Bitboard &b);
     std::vector<Accumulator::Features>* getAddFeatures();
     std::vector<Accumulator::Features>* getRemoveFeatures();
+    float* getFeatures();
     bool getResetFlag();
     void setResetFlag(bool f);
 

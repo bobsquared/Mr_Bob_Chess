@@ -78,6 +78,12 @@ std::vector<Accumulator::Features>* Bitboard::getRemoveFeatures() {
 }
 
 
+
+float* Bitboard::getFeatures() {
+    return acc.getFeatures();
+}
+
+
 bool Bitboard::getResetFlag() {
     return acc.resetFlag;
 }

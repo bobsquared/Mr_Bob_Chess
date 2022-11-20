@@ -5,9 +5,6 @@
 
 KPNNUE::KPNNUE(std::string fileName) {
     readFromBinary(fileName);
-
-    int nouts = layers[0]->getNumOutputs();
-    features = new float[nouts + (8 - (nouts % 8))] ();
 }
 
 
@@ -21,8 +18,6 @@ KPNNUE::KPNNUE(int networkSize, int *sizes) {
         layers[i] = new Layer(sizes[i], sizes[i + 1], i == 0);
     }
 
-    int nouts = layers[0]->getNumOutputs();
-    features = new float[nouts + (8 - (nouts % 8))] ();
 }
 
 
@@ -33,7 +28,6 @@ KPNNUE::~KPNNUE() {
         delete layers[i];
     }
     delete [] layers;
-    delete [] features;
 
 }
 
@@ -42,6 +36,7 @@ KPNNUE::~KPNNUE() {
 float* KPNNUE::updateAccumulator(Bitboard &b) {
     float **weights = layers[0]->getWeights();
     float *biases = layers[0]->getBiases();
+    float *features = b.getFeatures();
     std::vector<Accumulator::Features> *addAccumulate = b.getAddFeatures();
     std::vector<Accumulator::Features> *removeAccumulate = b.getRemoveFeatures();
     int numOutputs = layers[0]->getNumOutputs();
@@ -88,6 +83,7 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
 float* KPNNUE::updateAccumulator(Bitboard &b) {
     float **weights = layers[0]->getWeights();
     float *biases = layers[0]->getBiases();
+    float *features = b.getFeatures();
     std::vector<Accumulator::Features> *addAccumulate = b.getAddFeatures();
     std::vector<Accumulator::Features> *removeAccumulate = b.getRemoveFeatures();
 
@@ -124,6 +120,7 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
 float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
     float **weights = layers[0]->getWeights();
     float *biases = layers[0]->getBiases();
+    float *features = b.getFeatures();
     std::vector<Accumulator::Features> *addAccumulate = b.getAddFeatures();
     int numOutputs = layers[0]->getNumOutputs();
     int num_chunks = numOutputs / 8 + (numOutputs % 8 != 0);
@@ -152,6 +149,7 @@ float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
 float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
     float **weights = layers[0]->getWeights();
     float *biases = layers[0]->getBiases();
+    float *features = b.getFeatures();
     std::vector<Accumulator::Features> *addAccumulate = b.getAddFeatures();
 
     for (int j = 0; j < layers[0]->getNumOutputs(); j++) {
@@ -171,7 +169,7 @@ float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
 
 
 
-void KPNNUE::forwardpropagate(float *input) {
+int KPNNUE::forwardpropagate(float *input) {
     float buffer[1024];
     float *curr_output = buffer;
     float *curr_input = input;
@@ -207,6 +205,7 @@ void KPNNUE::forwardpropagate(float *input) {
     }
 
     next_output = layers[size - 1]->linear(curr_output, curr_input); // in 8 out 1
+    return *curr_output;
     
 }
 
@@ -367,17 +366,13 @@ void KPNNUE::setupBoardFloat(Bitboard &board, float *output) {
 int KPNNUE::evaluate(std::string fen, Bitboard &board) {
     board.setPosFen(fen);
     updateAccumulator(board);
-    forwardpropagate(features);
-    float *temp = layers[size - 1]->getForwards();
-    return temp[0];
+    return forwardpropagate(board.getFeatures());
 }
 
 
 int KPNNUE::evaluate(Bitboard &board) {
     updateAccumulator(board);
-    forwardpropagate(features);
-    float *temp = layers[size - 1]->getForwards();
-    return temp[0];
+    return forwardpropagate(board.getFeatures());
 }
 
 
@@ -446,7 +441,7 @@ void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int1
     for (int i = validateSize; i < dataSize; i++) {
         board.setPosFen(fens[i]);
         updateAccumulator(board);
-        forwardpropagate(features);
+        forwardpropagate(board.getFeatures());
         err_train += layers[size - 1]->MeanSquaredError(expected[i]);
     } 
 
@@ -473,7 +468,7 @@ void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int1
             for (int i = start; i < end; i++) {
                 board.setPosFen(fens[i]);
                 updateAccumulatorTrainer(board);
-                forwardpropagate(features);
+                forwardpropagate(board.getFeatures());
 
                 backpropagate(board, expected[i], grad, bias);
                 err_train += layers[size - 1]->MeanSquaredError(expected[i]);

@@ -35,7 +35,7 @@ private:
     int getPhase(Bitboard &board);
     void backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bias);
     void updateWeights(float ***grad, float **bias, float lr, float beta1, float beta2, int batch);
-    void forwardpropagate(float *input);
+    int forwardpropagate(float *input);
     void writeToBinary(std::string fileName);
     void readFromBinary(std::string fileName);
 
