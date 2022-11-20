@@ -3,6 +3,7 @@
 
 #include "layer.h"
 #include "../bitboard.h"
+#include <immintrin.h>
 #include <omp.h>
 
 #define PAWNPHASE   0

@@ -7,20 +7,22 @@
 #include <iostream>
 #include <fstream>
 #include <random>
+#include <cassert>
+#include <immintrin.h>
 
 
 class Layer {
 
 public:
     Layer(std::fstream &file);
-    Layer(int nInputs, int nOutputs);
+    Layer(int nInputs, int nOutputs, bool isL0);
     ~Layer();
 
     int getNumInputs();
     int getNumOutputs();
 
     float* linear(float *output, float *input);
-    float* Relu(float *output, float *input);
+    float* ClippedRelu(float *output, float *input);
     void updateWeights(float **dCdW, float *dCdB, float lr, float beta1, float beta2, int batchSize, int batch);
 
     void DRelu(float *output[]);
@@ -40,6 +42,7 @@ public:
     
 
 private:
+    bool l0;
     int t;
     int numInputs;
     int numOutputs;

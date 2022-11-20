@@ -2,12 +2,13 @@
 debug = no
 debug_zobrist = no
 popcount = yes
+avx2 = yes
 native = no
 EXE = ../bob
 
 
-CXXFLAGS := -Wall -Wextra -std=c++11 -static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
-OBCXXFLAGS := -Wall -Wextra -std=c++11 -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+CXXFLAGS := -Wall -Wextra -std=c++17 -static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+OBCXXFLAGS := -Wall -Wextra -std=c++17 -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
 
 
 ifeq ($(debug), no)
@@ -18,6 +19,11 @@ endif
 ifeq ($(popcount), yes)
 CXXFLAGS += -msse3 -mpopcnt -DPOPCOUNT
 OBCXXFLAGS += -msse3 -mpopcnt -DPOPCOUNT
+endif
+
+ifeq ($(avx2), yes)
+CXXFLAGS += -mavx2
+OBCXXFLAGS += -mavx2
 endif
 
 ifeq ($(native), yes)

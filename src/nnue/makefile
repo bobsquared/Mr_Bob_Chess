@@ -1,5 +1,5 @@
 CXXFLAGS := -Wall -Wextra -std=c++11 -static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
-CXXFLAGS += -msse3 -mpopcnt -DPOPCOUNT
+CXXFLAGS += -mavx2 -msse3 -mpopcnt -DPOPCOUNT
 
 all:
 	g++ -O3 -o network nnue.cpp main.cpp layer.cpp KPNNUE.cpp

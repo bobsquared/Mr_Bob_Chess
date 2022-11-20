@@ -21,7 +21,7 @@ int lmrReduction[64][64];           /**< A 2D array of reduction values for LMR 
 TimeManager tm;                     /**< The time manager determines when to stop the search given time parameters.*/
 
 
-KPNNUE model = KPNNUE("nnue/networks/test14/dog_184.bin");
+KPNNUE model = KPNNUE("nnue/networks/test25/dog_90.bin");
 Eval *eval = new Eval(model);                         /**< The evaluator to score the positions*/
 TranspositionTable *tt = new TranspositionTable; /**< The transposition table to store info on the position*/
 MovePick *movePick = new MovePick;               /**< The move picker gives a score to each generated move*/

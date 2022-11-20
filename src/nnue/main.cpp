@@ -25,12 +25,12 @@ int main(int argc, char **argv) {
     }
     else {
         Trainer trainer = Trainer();
-        // trainer.getFile("KP_d6_40M_NEW.epd");
-        trainer.getFileSigmoid("../texeldata.fen");
-        // KPNNUE model = KPNNUE("networks/test8/dog_38.bin");
-        int modelSize[45] = {768, 8, 8, 1};
+        trainer.getFile("NNUE_d8_70M_r.epd");
+        // trainer.getFileSigmoid("../texeldata.fen");
+        // KPNNUE model = KPNNUE("networks/test25/dog_47.bin");
+        int modelSize[45] = {768, 256, 8, 1};
         KPNNUE model = KPNNUE(3, modelSize);
-        trainer.train(model, "networks/test14/dog");
+        trainer.train(model, "networks/test26/dog");
     }
     
 

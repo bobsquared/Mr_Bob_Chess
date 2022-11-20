@@ -6,7 +6,8 @@
 KPNNUE::KPNNUE(std::string fileName) {
     readFromBinary(fileName);
 
-    features = new float[layers[0]->getNumOutputs()] ();
+    int nouts = layers[0]->getNumOutputs();
+    features = new float[nouts + (8 - (nouts % 8))] ();
 }
 
 
@@ -17,10 +18,11 @@ KPNNUE::KPNNUE(int networkSize, int *sizes) {
 
     layers = new Layer*[networkSize - 1];
     for (int i = 0; i < networkSize - 1; i++) {
-        layers[i] = new Layer(sizes[i], sizes[i + 1]);
+        layers[i] = new Layer(sizes[i], sizes[i + 1], i == 0);
     }
 
-    features = new float[layers[0]->getNumOutputs()] ();
+    int nouts = layers[0]->getNumOutputs();
+    features = new float[nouts + (8 - (nouts % 8))] ();
 }
 
 
@@ -36,6 +38,52 @@ KPNNUE::~KPNNUE() {
 }
 
 
+#ifdef __AVX2__
+float* KPNNUE::updateAccumulator(Bitboard &b) {
+    float **weights = layers[0]->getWeights();
+    float *biases = layers[0]->getBiases();
+    std::vector<Accumulator::Features> *addAccumulate = b.getAddFeatures();
+    std::vector<Accumulator::Features> *removeAccumulate = b.getRemoveFeatures();
+    int numOutputs = layers[0]->getNumOutputs();
+    int num_chunks = numOutputs / 8 + (numOutputs % 8 != 0);
+    __m256 r[32];
+
+    if (b.getResetFlag()) {
+        for (int j = 0; j < num_chunks; j++) {
+            r[j] = _mm256_loadu_ps(&biases[j * 8]);
+        }
+        b.setResetFlag(false);
+    }
+    else {
+        for (int j = 0; j < num_chunks; j++) {
+            r[j] = _mm256_loadu_ps(&features[j * 8]);
+        }
+    }
+
+    while (!addAccumulate->empty()) {
+        Accumulator::Features i = addAccumulate->back();
+        for (int j = 0; j < num_chunks; j++) {
+            r[j] = _mm256_add_ps(r[j], _mm256_loadu_ps(&weights[i.pieceType + i.location][j * 8]));
+        }
+        addAccumulate->pop_back();
+    }
+
+    while (!removeAccumulate->empty()) {
+        Accumulator::Features i = removeAccumulate->back();
+        for (int j = 0; j < num_chunks; j++) {
+            r[j] = _mm256_sub_ps(r[j], _mm256_loadu_ps(&weights[i.pieceType + i.location][j * 8]));
+        }
+        removeAccumulate->pop_back();
+    }
+
+    for (int j = 0; j < num_chunks; j++) {
+        _mm256_storeu_ps(&features[j * 8], r[j]);
+    }
+
+    return nullptr;
+}
+
+#else
 
 float* KPNNUE::updateAccumulator(Bitboard &b) {
     float **weights = layers[0]->getWeights();
@@ -68,8 +116,37 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
 
     return nullptr;
 }
+#endif
 
 
+#ifdef __AVX2__
+// Handle update differently if training
+float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
+    float **weights = layers[0]->getWeights();
+    float *biases = layers[0]->getBiases();
+    std::vector<Accumulator::Features> *addAccumulate = b.getAddFeatures();
+    int numOutputs = layers[0]->getNumOutputs();
+    int num_chunks = numOutputs / 8 + (numOutputs % 8 != 0);
+    __m256 r[32];
+
+    for (int j = 0; j < num_chunks; j++) {
+        r[j] = _mm256_loadu_ps(&biases[j * 8]);
+    }
+
+    for (Accumulator::Features i : *addAccumulate) {
+        for (int j = 0; j < num_chunks; j++) {
+            r[j] = _mm256_add_ps(r[j], _mm256_loadu_ps(&weights[i.pieceType + i.location][j * 8]));
+        }
+    }
+
+    for (int j = 0; j < num_chunks; j++) {
+        _mm256_storeu_ps(&features[j * 8], r[j]);
+    }
+
+    return nullptr;
+}
+
+#else
 
 // Handle update differently if training
 float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
@@ -90,6 +167,8 @@ float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
     return nullptr;
 }
 
+#endif
+
 
 
 void KPNNUE::forwardpropagate(float *input) {
@@ -98,12 +177,21 @@ void KPNNUE::forwardpropagate(float *input) {
     float *curr_input = input;
     float *next_output;
     float *forwards = layers[0]->getForwards();
+    int nOuts = layers[0]->getNumOutputs();
 
+    #ifdef __AVX2__
+    int num_batches = nOuts / 8 + (nOuts % 8 != 0);
+    for (int i = 0; i < num_batches; i++) {
+        __m256 reg = _mm256_loadu_ps(&input[i * 8]);
+        _mm256_storeu_ps(&forwards[i * 8], reg);
+    }
+    #else
     for (int i = 0; i < layers[0]->getNumOutputs(); i++) {
         forwards[i] = input[i];
     }
+    #endif
 
-    next_output = layers[0]->Relu(curr_output, curr_input); // in 8 out 8
+    next_output = layers[0]->ClippedRelu(curr_output, curr_input); // in 8 out 8
     curr_input = curr_output;
     curr_output = next_output;
     
@@ -112,7 +200,7 @@ void KPNNUE::forwardpropagate(float *input) {
         curr_input = curr_output;
         curr_output = next_output;
 
-        next_output = layers[k]->Relu(curr_output, curr_input); // in 8 out 8
+        next_output = layers[k]->ClippedRelu(curr_output, curr_input); // in 8 out 8
         curr_input = curr_output;
         curr_output = next_output;
         
@@ -128,15 +216,18 @@ void KPNNUE::backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bi
     
     float **y = new float*[size];
     for (int i = 0; i < size; i++) {
-        y[i] = new float[layers[i]->getNumOutputs()]();
+        int nOutputs = layers[i]->getNumOutputs();
+        int nOutputsPadded = nOutputs + (8 - (nOutputs % 8));
+        y[i] = new float[nOutputsPadded]();
     }
 
     for (int i = size - 1; i >= 0; i--) {
         
         Layer *layer = layers[i];
         const int nOutputs = layer->getNumOutputs();
+        int nOutputsPadded = nOutputs + (8 - (nOutputs % 8));
         
-        float *dAdZ = new float[nOutputs];
+        float *dAdZ = new float[nOutputsPadded];
         
         if (i == size - 1) {
             y[i][0] = layer->DMeanSquaredError(Y);
@@ -154,13 +245,22 @@ void KPNNUE::backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bi
                 for (int k = 0; k < nOutputs; k++) {
                     grad[i][j][k] += dZdW[j] * dAdZ[k] * y[i][k];
                     bias[i][k] += dAdZ[k] * y[i][k];
-                    y[i - 1][j] += dZdA[j][k] * dAdZ[k] * y[i][k];
+                    y[i - 1][j] += dZdA[k][j] * dAdZ[k] * y[i][k];
                 }
             }
 
+            #ifdef __AVX2__
+            int num_chunks = nOutputs / 8 + (nOutputs % 8 != 0);
+            for (int k = 0; k < num_chunks; k++) {
+                __m256 b = _mm256_loadu_ps(&bias[i][k * 8]);
+                b = _mm256_add_ps(b, _mm256_mul_ps(_mm256_loadu_ps(&dAdZ[k * 8]), _mm256_loadu_ps(&y[i][k * 8])));
+                _mm256_storeu_ps(&bias[i][k * 8], b);
+            }
+            #else
             for (int k = 0; k < nOutputs; k++) {
                 bias[i][k] += dAdZ[k] * y[i][k];
             }
+            #endif
 
         }
         else {
@@ -168,15 +268,40 @@ void KPNNUE::backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bi
             while (!addFeatures->empty()) {
                 Accumulator::Features j = addFeatures->back();
                 int index = j.pieceType + j.location;
+
+                #ifdef __AVX2__
+                int num_chunks = nOutputs / 8 + (nOutputs % 8 != 0);
+
+                for (int k = 0; k < num_chunks; k++) {
+                    __m256 dAdZv = _mm256_loadu_ps(&dAdZ[k * 8]);
+                    __m256 yv = _mm256_loadu_ps(&y[i][k * 8]);
+                    __m256 gv = _mm256_loadu_ps(&grad[i][index][k * 8]);
+
+                    gv = _mm256_add_ps(gv, _mm256_mul_ps(dAdZv, yv));
+                    _mm256_storeu_ps(&grad[i][index][k * 8], gv);
+                }
+                
+                #else
                 for (int k = 0; k < nOutputs; k++) {
                     grad[i][index][k] += dAdZ[k] * y[i][k];
                 }
+                #endif
+
                 addFeatures->pop_back();
             }
 
+            #ifdef __AVX2__
+            int num_chunks = nOutputs / 8 + (nOutputs % 8 != 0);
+            for (int k = 0; k < num_chunks; k++) {
+                __m256 b = _mm256_loadu_ps(&bias[i][k * 8]);
+                b = _mm256_add_ps(b, _mm256_mul_ps(_mm256_loadu_ps(&dAdZ[k * 8]), _mm256_loadu_ps(&y[i][k * 8])));
+                _mm256_storeu_ps(&bias[i][k * 8], b);
+            }
+            #else
             for (int k = 0; k < nOutputs; k++) {
                 bias[i][k] += dAdZ[k] * y[i][k];
             }
+            #endif
         }
         
         delete [] y[i];
