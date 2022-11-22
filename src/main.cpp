@@ -66,6 +66,7 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    std::regex setNNUEFile("setoption\\sname\\snnue\\svalue\\s(.+)");
     std::regex setHash("setoption\\sname\\shash\\svalue\\s(\\d+)");
     std::regex setThreads("setoption\\sname\\sthreads\\svalue\\s(\\d+)");
     std::regex setMultiPv("setoption\\sname\\smultipv\\svalue\\s(\\d+)");
@@ -83,6 +84,7 @@ int main(int argc, char* argv[]) {
 
     // Initial print
     uci.startMessage();
+    uci.setNNUEFileDefault();
 
     // Forever loop of awesomeness
     while (std::getline(std::cin, command)) {
@@ -112,6 +114,13 @@ int main(int argc, char* argv[]) {
         // Print engine info, with manditory uciok at the end
         if (command == "uci") {
             uci.uciCommand();
+            continue;
+        }
+
+        // set nnue
+        if (std::regex_search(lowerCommand, m, setNNUEFile)) {
+            exit_thread_flag = true;
+            uci.setNNUEFile(m[1]);
             continue;
         }
 

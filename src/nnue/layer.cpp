@@ -24,7 +24,6 @@ Layer::Layer(int nInputs, int nOutputs, bool isL0) {
         biases[i] = distribution(generator);
     }
 
-    alpha = new float[numOutputs](); 
     momentB = new float[numOutputs](); 
     vB = new float[numOutputs](); 
 
@@ -67,9 +66,6 @@ Layer::~Layer() {
     delete [] biases;
     biases = nullptr;
 
-    delete [] alpha;
-    alpha = nullptr;
-
     delete [] momentB;
     momentB = nullptr;
 
@@ -83,15 +79,13 @@ Layer::~Layer() {
     forwards = nullptr;
 
     if (l0) {
-        int numInputsPadded = numInputs + (8 - (numInputs % 8));
-        for (int i = 0; i < numInputsPadded; i++) {
+        for (int i = 0; i < numInputs; i++) {
             delete [] weights[i];
             weights[i] = nullptr;
         }
     }
     else {
-        int numOutputsPadded = numOutputs + (8 - (numOutputs % 8));
-        for (int i = 0; i < numOutputsPadded; i++) {
+        for (int i = 0; i < numOutputs; i++) {
             delete [] weights[i];
             weights[i] = nullptr;
         }
@@ -146,7 +140,6 @@ void Layer::updateWeights(float **grad, float *bias, float lr, float beta1, floa
 
     for (int i = 0; i < numOutputs; i++) {
 
-        // alpha[i] = lr * sqrt(1 - std::pow(beta2, batch + 1)) / (1 - std::pow(beta1, batch + 1));
         for (int j = 0; j < numInputs; j++) {
             momentW[j][i] = beta1 * momentW[j][i] + (1 - beta1) * grad[j][i] / batchSize;
             vW[j][i] = beta2 * vW[j][i] + (1 - beta2) * std::pow(grad[j][i] / batchSize, 2);

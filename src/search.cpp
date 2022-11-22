@@ -21,8 +21,8 @@ int lmrReduction[64][64];           /**< A 2D array of reduction values for LMR 
 TimeManager tm;                     /**< The time manager determines when to stop the search given time parameters.*/
 
 
-KPNNUE model = KPNNUE("nnue/networks/test25/dog_90.bin");
-Eval *eval = new Eval(model);                         /**< The evaluator to score the positions*/
+KPNNUE *model = nullptr;
+Eval *eval = new Eval();                         /**< The evaluator to score the positions*/
 TranspositionTable *tt = new TranspositionTable; /**< The transposition table to store info on the position*/
 MovePick *movePick = new MovePick;               /**< The move picker gives a score to each generated move*/
 MoveGen *moveGen = new MoveGen;                  /**< The move generator generates all pseudo legal moves in a given position*/
@@ -53,8 +53,23 @@ void cleanUpSearch() {
     delete tt;
     delete movePick;
     delete moveGen;
+    delete model;
     delete eval;
     delete [] thread;
+}
+
+
+
+/**
+* Set the eval network
+*
+* @param[in] file File location.
+*/
+void setNNUE(const std::string file) {
+    if (model != nullptr) {
+        delete model;
+    }
+    model = new KPNNUE(file);
 }
 
 
@@ -192,7 +207,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
 
     bool inCheck = b.InCheck();
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
-    int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, th);
+    int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, model, th);
 
     if (!inCheck) {
         stand_pat = staticEval;
@@ -343,7 +358,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     bool isCheck = b.InCheck();
-    int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, th));
+    int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, model, th));
     bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
     bool ttFailLow = (ttRet && hashedBoard.flag == UPPER_BOUND);
     bool ttFailHigh = (ttRet && hashedBoard.flag == LOWER_BOUND);
@@ -676,7 +691,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
 
 
     // Initialize evaluation stack
-    int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, th));
+    int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, model, th));
     th->searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
 
 

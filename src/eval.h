@@ -111,9 +111,9 @@ public:
     KingSafetyTrace kingSafetyTrace;
     #endif
 
-    Eval(KPNNUE &model);
+    Eval();
     ~Eval();
-    int evaluate(Bitboard &board, ThreadSearch *th);
+    int evaluate(Bitboard &board, KPNNUE *model, ThreadSearch *th);
     int evaluateKP(Bitboard &board, ThreadSearch *th);
     void InitPieceBoards();
     void InitOutpostMask();
@@ -135,8 +135,6 @@ private:
         PawnHash(uint64_t pawnKey, int score) :
             pawnKey(pawnKey), score(score) {};
     };
-
-    KPNNUE &model;
 
     PawnHash *pawnHash;
     uint64_t numPawnHashes;

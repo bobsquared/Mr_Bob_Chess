@@ -50,8 +50,6 @@ private:
     float **weights; // [col][row] [in][out]
     float *biases;
 
-    float *alpha;
-
     float **momentW;
     float *momentB;
 

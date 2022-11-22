@@ -15,10 +15,26 @@ void UCI::uciCommand() {
     std::cout << "id author " << AUTHOR << std::endl;
     std::cout << std::endl;
 
+    std::cout << "option name NNUE type string default " << DEFAULT_NETWORK << std::endl;
     std::cout << "option name Hash type spin default 256 min 1 max 131072" << std::endl;
     std::cout << "option name Threads type spin default 1 min 1 max 256" << std::endl;
     std::cout << "option name MultiPV type spin default 1 min 1 max 256" << std::endl;
     std::cout << "uciok" << std::endl;
+}
+
+
+// Set nnue
+void UCI::setNNUEFileDefault() {
+    setNNUE(DEFAULT_NETWORK);
+    std::cout << "NNUE loaded: " << DEFAULT_NETWORK << std::endl;
+}
+
+
+
+// Set nnue
+void UCI::setNNUEFile(std::string filename) {
+    setNNUE(filename);
+    std::cout << "NNUE loaded: " << filename << std::endl;
 }
 
 

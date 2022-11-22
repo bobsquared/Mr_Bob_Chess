@@ -222,7 +222,7 @@ int KSOffset = 122;
 
 
 
-Eval::Eval(KPNNUE &model) : model(model) {
+Eval::Eval() {
     InitPieceBoards();
     InitKingZoneMask();
     InitPassedPawnsMask();
@@ -678,7 +678,7 @@ int Eval::scaleEndgame(Bitboard &board, int eval) {
 
 
 // Evaluate the position
-int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
+int Eval::evaluate(Bitboard &board, KPNNUE *model, ThreadSearch *th) {
 
     // Asserts for debugging mode
     #ifndef NDEBUG
@@ -727,7 +727,7 @@ int Eval::evaluate(Bitboard &board, ThreadSearch *th) {
     // assert(board.kingLoc[1] == bitScan(board.pieces[11]));
     #endif
 
-    int retm = (board.toMove? -model.evaluate(board) : model.evaluate(board))  + (board.toMove? -15 : 15);
+    int retm = (board.toMove? -model->evaluate(board) : model->evaluate(board))  + (board.toMove? -15 : 15);
     return retm;
 
     InitializeEval(board, th);

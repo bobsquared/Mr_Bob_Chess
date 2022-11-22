@@ -45,6 +45,7 @@ extern ThreadSearch *thread;
 extern int nThreads;
 
 extern void cleanUpSearch();
+extern void setNNUE(const std::string file);
 extern void setNumThreads(const int numThreads);
 extern void setTTSize(int hashSize);
 extern void setMultiPVSearch(int pvs);
