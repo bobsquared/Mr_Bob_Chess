@@ -1060,6 +1060,10 @@ int search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
         if (bestMove != prevBestMove && depth > 4) {
             continue;
         }
+
+        if (tm.outOfTimeRootThreshold()) {
+            break;
+        }
         
         // Print search info if time runs out before next iteration
         if (stopable &&  (exit_thread_flag || tm.outOfTimeRoot())) {

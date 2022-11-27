@@ -61,6 +61,14 @@ int TimeManager::getTimePassed() {
 
 
 
+bool TimeManager::outOfTimeRootThreshold() {
+    std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+    int diff = std::chrono::duration_cast<std::chrono::milliseconds> (t2 - initTime).count();
+    return ((double) diff) / timeLeft > 0.75;
+}
+
+
+
 bool TimeManager::outOfTime() {
     std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
     int diff = std::chrono::duration_cast<std::chrono::milliseconds> (t2 - initTime).count();

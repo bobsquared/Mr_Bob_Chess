@@ -15,6 +15,7 @@ public:
     int getTimePassed();
     bool outOfTime();
     bool outOfTimeRoot();
+    bool outOfTimeRootThreshold();
     void setTimer(int numMoves);
 
 
