@@ -458,7 +458,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
                 // Late move pruning
                 if (depth <= 8 && quietsSearched > lateMoveMargin[improving][std::max(1, depth - 2 * ttFailLow)]) {
-                    break;
+                    continue;
                 }
 
                 // History move pruning
