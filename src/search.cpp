@@ -409,6 +409,36 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
             }
         }
+
+        // Probcut
+        int probBeta = beta + 240;
+        if (depth > 4 && !(hashed && hashedBoard.depth >= depth - 3 && hashedBoard.score < probBeta) && std::abs(beta) < MATE_VALUE_MAX) {
+            MoveList moveList;
+            MOVE move;
+
+            moveGen->generate_captures_promotions(moveList, b);
+            movePick->scoreMovesQS(moveList, b, hashedBoard.move);
+            while (moveList.get_next_move(move)) {
+
+                // Skip the move it is not legal
+                if (!b.isLegal(move)) {
+                    continue;
+                }
+
+                b.make_move(move);
+                int score = -qsearch(b, th, -1, -probBeta, -probBeta + 1, ply);
+
+                if (score >= probBeta) {
+                    score = -pvSearch(b, th, depth - 4, -probBeta, -probBeta + 1, true, ply + 1);
+                }
+                b.undo_move(move); 
+
+                if (score >= probBeta) {
+                    tt->saveTT(th, move, score, staticEval, depth - 3, LOWER_BOUND, posKey, ply);
+                    return score;
+                }
+            }
+        }
     }
     
 
