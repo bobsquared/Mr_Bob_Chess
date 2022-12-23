@@ -1,7 +1,7 @@
 
 #include <vector>
 
-#define MAX_L1 256
+#define MAX_L1 512
 
 class Accumulator {
 

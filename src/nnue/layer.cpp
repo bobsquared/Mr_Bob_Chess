@@ -32,17 +32,24 @@ Layer::Layer(int nInputs, int nOutputs, bool isL0) {
 
     if (l0) {
         weights = new float*[numInputsPadded];
+        for (int i = 0; i < numInputsPadded; i++) {
+            weights[i] = new float[numOutputsPadded] ();
+        }
+
         for (int i = 0; i < numInputs; i++) {
-            weights[i] = new float[numOutputsPadded];
             for (int j = 0; j < numOutputs; j++) {
                 weights[i][j] = distribution(generator);
             }
         }
+
     }
     else {
         weights = new float*[numOutputsPadded];
+        for (int i = 0; i < numOutputsPadded; i++) {
+            weights[i] = new float[numInputsPadded] ();
+        }
+
         for (int i = 0; i < numOutputs; i++) {
-            weights[i] = new float[numInputsPadded];
             for (int j = 0; j < numInputs; j++) {
                 weights[i][j] = distribution(generator);
             }
@@ -286,7 +293,7 @@ void Layer::DRelu(float *output[]) {
 
 
 float Layer::sigmoidW(float x) {
-    return 1.0 / (1.0 + exp(-x / 400));
+    return 1.0 / (1.0 + exp(-x / 412));
 }
 
 
@@ -323,18 +330,20 @@ void Layer::writeToBinary(std::fstream &file) {
     file.write(reinterpret_cast<const char *>(&l0), sizeof(l0));
     file.write(reinterpret_cast<const char *>(&numInputs), sizeof(numInputs));
     file.write(reinterpret_cast<const char *>(&numOutputs), sizeof(numOutputs));
+    int numInputsPadded = numInputs + (8 - (numInputs % 8));
+    int numOutputsPadded = numOutputs + (8 - (numOutputs % 8));
 
     // write weights and biases
     if (l0) {
-        for (int i = 0; i < numInputs; i++) {
-            for (int j = 0; j < numOutputs; j++) {
+        for (int i = 0; i < numInputsPadded; i++) {
+            for (int j = 0; j < numOutputsPadded; j++) {
                 file.write(reinterpret_cast<const char *>(&weights[i][j]), sizeof(weights[i][j]));
             }
         }
     }
     else {
-        for (int i = 0; i < numOutputs; i++) {
-            for (int j = 0; j < numInputs; j++) {
+        for (int i = 0; i < numOutputsPadded; i++) {
+            for (int j = 0; j < numInputsPadded; j++) {
                 file.write(reinterpret_cast<const char *>(&weights[i][j]), sizeof(weights[i][j]));
             }
         }
@@ -391,18 +400,18 @@ void Layer::readFromBinary(std::fstream &file) {
     // write weights and biases
     if (l0) {
         weights = new float*[numInputsPadded];
-        for (int i = 0; i < numInputs; i++) {
+        for (int i = 0; i < numInputsPadded; i++) {
             weights[i] = new float[numOutputsPadded];
-            for (int j = 0; j <  numOutputs; j++) {
+            for (int j = 0; j <  numOutputsPadded; j++) {
                 file.read(reinterpret_cast<char *>(&weights[i][j]), sizeof(weights[i][j]));
             }
         }
     }
     else {
         weights = new float*[numOutputsPadded];
-        for (int i = 0; i < numOutputs; i++) {
+        for (int i = 0; i < numOutputsPadded; i++) {
             weights[i] = new float[numInputsPadded];
-            for (int j = 0; j <  numInputs; j++) {
+            for (int j = 0; j <  numInputsPadded; j++) {
                 file.read(reinterpret_cast<char *>(&weights[i][j]), sizeof(weights[i][j]));
             }
         }

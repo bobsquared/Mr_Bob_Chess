@@ -2,7 +2,7 @@
 
 
 Accumulator::Accumulator() {
-    features = new float[MAX_L1 + 8];
+    features = new float[MAX_L1 + 8] ();
     resetFlag = false;
     addFeatures = new std::vector<Features>();
     removeFeatures = new std::vector<Features>();
