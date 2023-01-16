@@ -473,6 +473,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         int moveTo = get_move_to(move);
         int hist = isQuiet? th->history[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
         int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo] : 0);
+        int seeScore = 0;
 
         if (singMove == move) {
             continue;
@@ -504,7 +505,8 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             }
 
             // SEE pruning
-            if (depth <= 5 && b.seeCapture(move) < seePruningMargin[isQuiet][depth]) {
+            seeScore = b.seeCapture(move);
+            if (depth <= 5 && seeScore < seePruningMargin[isQuiet][depth]) {
                 continue;
             }
         }
@@ -526,7 +528,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         // Singular extensions
         if ((depth >= 8 || (extLevel <= 3 && depth >= 4)) && !extension && hashedBoard.move == move && hashedBoard.flag != UPPER_BOUND 
             && hashedBoard.depth >= depth - 3 && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
-            int singVal = hashedBoard.score - (1 + isPv) * depth;
+            int singVal = hashedBoard.score - (2 + isPv) * depth;
 
             th->searchStack[ply].singMove = move;
             score = pvSearch(b, th, depth / 2 - 1, singVal - 1, singVal, false, ply);
@@ -554,6 +556,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)] * (100 + extLevel) / 100; // Base reduction
 
             lmr -= isQuiet && isKiller(th, ply, move); // Don't reduce as much for killer moves
+            lmr -= !isQuiet && seeScore > 0;
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500; // Increase/decrease depth based on histories
@@ -907,7 +910,7 @@ int getSearchedScore(int eval) {
 void setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int eval) {
     printInfo.nodes = getTotalNodesSearched();
     printInfo.totalTime = tm.getTimePassed();
-    printInfo.nps = (uint64_t) ((double) printInfo.nodes * 1000.0) / ((double) printInfo.totalTime + 1);
+    printInfo.nps = (uint64_t) (printInfo.nodes * 1000) / ((double) printInfo.totalTime + 1);
     printInfo.depth = depth;
     printInfo.seldepth = getSeldepth();
     printInfo.score = getSearchedScore(eval);
@@ -1083,7 +1086,7 @@ int search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
         }
 
         // Do not print the search info if the time ran out during a search
-        if (stopable && (exit_thread_flag || tm.outOfTime())) {
+        if (stopable && (exit_thread_flag || (id == 0 && tm.outOfTime()))) {
             break;
         }
 
@@ -1091,12 +1094,12 @@ int search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
             continue;
         }
 
-        if (tm.outOfTimeRootThreshold()) {
+        if (id == 0 && tm.outOfTimeRootThreshold()) {
             break;
         }
         
         // Print search info if time runs out before next iteration
-        if (stopable &&  (exit_thread_flag || tm.outOfTimeRoot())) {
+        if (stopable &&  (exit_thread_flag || (id == 0 && tm.outOfTimeRoot()))) {
             break;
         }
 

@@ -61,11 +61,6 @@ int main(int argc, char* argv[]) {
     UCI uci = UCI();
     uci.newGameCommand();
 
-    if (argc > 1 && strcmp(argv[1], "bench") == 0) {
-        Bench(pos);
-        return 0;
-    }
-
     std::regex setNNUEFile("setoption\\sname\\snnue\\svalue\\s(.+)");
     std::regex setHash("setoption\\sname\\shash\\svalue\\s(\\d+)");
     std::regex setThreads("setoption\\sname\\sthreads\\svalue\\s(\\d+)");
@@ -85,6 +80,11 @@ int main(int argc, char* argv[]) {
     // Initial print
     uci.startMessage();
     uci.setNNUEFileDefault();
+
+    if (argc > 1 && strcmp(argv[1], "bench") == 0) {
+        Bench(pos);
+        return 0;
+    }
 
     // Forever loop of awesomeness
     while (std::getline(std::cin, command)) {
