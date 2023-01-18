@@ -742,7 +742,11 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
-        int cmh = prevMove != NO_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[get_move_from(move)] / 2][get_move_to(move)] : 0;
+        bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
+        int moveFrom = get_move_from(move);
+        int moveTo = get_move_to(move);
+        int hist = isQuiet? th->history[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
+        int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[moveFrom] / 2][moveTo] : 0);
         b.make_move(move); // Make the move
 
         // First move search at full depth and full window
@@ -757,9 +761,9 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
             }
         }
         // Late move reductions
-        else if (depth >= 3 && numMoves > 2 && (move & CAPTURE_FLAG) == 0 && (move & PROMOTION_FLAG) == 0) {
+        else if (depth >= 3 && numMoves > 2) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
-            lmr -= (th->history[!b.getSideToMove()][get_move_from(move)][get_move_to(move)] + cmh) / 1500;
+            lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500; // Increase/decrease depth based on histories
             lmr--;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
