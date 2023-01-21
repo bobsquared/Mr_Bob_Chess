@@ -69,6 +69,9 @@ void Trainer::getFile(std::string fileName) {
 
     std::ifstream Myfile(fileName);
     while (std::getline(Myfile, tempFen)) {
+        // if (count == 4687500) {
+        //     break;
+        // }
         count++;
     }
 
@@ -85,14 +88,16 @@ void Trainer::getFile(std::string fileName) {
         if (count % (dataSize / 10) == 0) {
             std::cout << count << std::endl;
         }
+
+        // if (count == 4687500) {
+        //     break;
+        // }
         
         size_t delimiter = tempFen.find(stringDelimiter);
         fen = tempFen.substr(0, delimiter);
         score = std::stoi(tempFen.substr(delimiter + stringDelimiter.size(), tempFen.size() - delimiter - stringDelimiter.size()));
         score = static_cast<int16_t>(score);
         fens[count] = fen;
-
-        board.setPosFen(fen);
         cps[count] = score;
 
 
@@ -150,9 +155,26 @@ void Trainer::getFileSigmoid(std::string fileName) {
 
 
 void Trainer::train(KPNNUE &model, std::string fileName) {
-
     model.trainNetwork(dataSize, board, fens, cps, fileName);
+}
 
+
+
+void Trainer::createLossCSV(int nModels, std::string directoryName) {
+    std::ofstream myfile;
+    myfile.open ("loss.csv");
+    myfile << "epoch,loss\n";
+
+    for (int i = 1; i < nModels; i++) {
+        std::cout << "Testing Model Number: " << i << std::endl;
+        KPNNUE model = KPNNUE(directoryName + std::to_string(i) +  ".bin");
+        double loss = model.bulkLoss(dataSize, board, fens, cps);
+        
+        myfile << i << "," << loss << "\n";
+    }
+
+    myfile.close();
+    
 }
 
 

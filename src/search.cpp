@@ -1012,7 +1012,7 @@ int search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
             stopable = true;
         }
 
-        moveList = MoveList(moveListOriginal);
+        moveList = moveListOriginal;
         for (int pv = 1; pv < multiPv + 1; pv++) {
             while (true) {
 

@@ -24,6 +24,7 @@ public:
     ~KPNNUE();
     
     void trainNetwork(int dataSize, Bitboard &board, std::string *fens, int16_t *expected, std::string fileName);
+    double bulkLoss(int dataSize, Bitboard &board, std::string *fens, int16_t *expected);
     int evaluate(std::string fen, Bitboard &board);
     int evaluate(Bitboard &board);
 

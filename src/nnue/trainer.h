@@ -32,6 +32,7 @@ public:
     void getFile(std::string name);
     void getFileSigmoid(std::string fileName);
     void train(KPNNUE &model, std::string fileName);
+    void createLossCSV(int nModels, std::string fileName);
 
 private:
     int dataSize;

@@ -174,10 +174,12 @@ int KPNNUE::forwardpropagate(float *input) {
     float *curr_output = buffer;
     float *curr_input = input;
     float *next_output;
-    float *forwards = layers[0]->getForwards();
-    int nOuts = layers[0]->getNumOutputs();
+    
 
     #ifdef NNUE_TRAINER
+    float *forwards = layers[0]->getForwards();
+    int nOuts = layers[0]->getNumOutputs();
+    
     #ifdef __AVX2__
     int num_batches = nOuts / 8 + (nOuts % 8 != 0);
     for (int i = 0; i < num_batches; i++) {
@@ -185,7 +187,7 @@ int KPNNUE::forwardpropagate(float *input) {
         _mm256_storeu_ps(&forwards[i * 8], reg);
     }
     #else
-    for (int i = 0; i < layers[0]->getNumOutputs(); i++) {
+    for (int i = 0; i < nOuts; i++) {
         forwards[i] = input[i];
     }
     #endif
@@ -501,6 +503,21 @@ void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int1
 
     delete [] indexarr;
     
+}
+
+
+
+double KPNNUE::bulkLoss(int dataSize, Bitboard &board, std::string *fens, int16_t *expected) {
+    double err = 0.0;
+
+    for (int i = 0; i < dataSize; i++) {
+        board.setPosFen(fens[i]);
+        updateAccumulator(board);
+        forwardpropagate(board.getFeatures());
+        err += layers[size - 1]->MeanSquaredError(expected[i]);
+    } 
+
+    return err / dataSize;
 }
 
 
