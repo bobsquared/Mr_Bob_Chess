@@ -3,6 +3,8 @@
 
 #include "layer.h"
 #include "../bitboard.h"
+#include <random>
+#include <algorithm>
 #include <immintrin.h>
 #include <omp.h>
 

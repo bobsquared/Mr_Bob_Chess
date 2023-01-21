@@ -221,8 +221,11 @@ float* Layer::linear(float *output, float *input) {
 
         hi = _mm_add_ps(bias, _mm_add_ps(hi, lo));
         _mm_storeu_ps(&output[i * 4], hi);
+
+        #ifdef NNUE_TRAINER
         _mm_storeu_ps(&forwards[i * 4], hi);
         _mm_storeu_ps(&activations[i * 4], hi);
+        #endif
     }
 
     return output + numOutputs;
@@ -265,7 +268,10 @@ float* Layer::ClippedRelu(float *output, float *input) {
         reg = _mm256_min_ps(reg, regones);
 
         _mm256_storeu_ps(&output[i * 8], reg);
+
+        #ifdef NNUE_TRAINER
         _mm256_storeu_ps(&activations[i * 8], reg);
+        #endif
     }
     
     return output + numOutputs;

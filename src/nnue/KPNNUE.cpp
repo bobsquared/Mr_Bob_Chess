@@ -177,6 +177,7 @@ int KPNNUE::forwardpropagate(float *input) {
     float *forwards = layers[0]->getForwards();
     int nOuts = layers[0]->getNumOutputs();
 
+    #ifdef NNUE_TRAINER
     #ifdef __AVX2__
     int num_batches = nOuts / 8 + (nOuts % 8 != 0);
     for (int i = 0; i < num_batches; i++) {
@@ -187,6 +188,7 @@ int KPNNUE::forwardpropagate(float *input) {
     for (int i = 0; i < layers[0]->getNumOutputs(); i++) {
         forwards[i] = input[i];
     }
+    #endif
     #endif
 
     next_output = layers[0]->ClippedRelu(curr_output, curr_input); // in 8 out 8
@@ -415,10 +417,24 @@ void KPNNUE::deleteGradientBias(float** bias) {
 
 
 
+int* createIndexArray(int dataSize) {
+    int *ret = new int[dataSize];
+    for (int i = 0; i < dataSize; i++) {
+        ret[i] = i;
+    }
+    return ret;
+}
+
+
+
 void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int16_t *expected, std::string fileName) {
     int validateSize = 0;
+    int rseed = 72828000;
     int trainSize = dataSize - validateSize;
     batchSize = 16384;
+
+    std::mt19937 g(rseed);
+    int *indexarr = createIndexArray(dataSize);
 
     double err_train = 0.0;
     double err_validate = 0.0;
@@ -435,10 +451,11 @@ void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int1
 
     for (int epoch = init_epoch + 1; epoch < 100000; epoch++) {
 
+        std::shuffle(&indexarr[0], &indexarr[dataSize], g);
         err_train = 0.0;
         err_validate = 0.0;
 
-        std::cout << "Epoch: " << epoch << std::endl;
+        std::cout << "Epoch: " << epoch << ", lr: " << "0.001" << std::endl;
         for (int batch = 0; batch < (trainSize / batchSize) + 1; batch++) {
             float ***grad = createGradientWeights();
             float **bias = createGradientBias();
@@ -451,12 +468,13 @@ void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int1
             int end = std::min(validateSize + (batch + 1) * batchSize, dataSize);
 
             for (int i = start; i < end; i++) {
-                board.setPosFen(fens[i]);
+                int index = indexarr[i];
+                board.setPosFen(fens[index]);
                 updateAccumulatorTrainer(board);
                 forwardpropagate(board.getFeatures());
 
-                backpropagate(board, expected[i], grad, bias);
-                err_train += layers[size - 1]->MeanSquaredError(expected[i]);
+                backpropagate(board, expected[index], grad, bias);
+                err_train += layers[size - 1]->MeanSquaredError(expected[index]);
             } 
 
             updateWeights(grad, bias, 0.001, 0.9, 0.999, batch + epoch * batchSize);
@@ -480,8 +498,9 @@ void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int1
         writeToBinary(fileName + "_" + std::to_string(epoch) + ".bin");
            
     }
+
+    delete [] indexarr;
     
- 
 }
 
 
