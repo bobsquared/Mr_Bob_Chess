@@ -155,7 +155,6 @@ struct ZobristVal {
 
 struct MoveInfo {
     uint64_t posKey;
-    uint64_t pawnKey;
     int captureType;
     int enpassantSq;
     int halfMoves;
@@ -167,10 +166,10 @@ struct MoveInfo {
     }
 
     MoveInfo() :
-        posKey(0), pawnKey(0), captureType(-1), enpassantSq(0), halfMoves(0), move(NO_MOVE), castleRights(15) {}
+        posKey(0), captureType(-1), enpassantSq(0), halfMoves(0), move(NO_MOVE), castleRights(15) {}
 
-    MoveInfo(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey, uint64_t pawnKey, MOVE move) :
-        posKey(posKey), pawnKey(pawnKey), captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), move(move), castleRights(castleRights) {}
+    MoveInfo(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey, MOVE move) :
+        posKey(posKey), captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), move(move), castleRights(castleRights) {}
 
 };
 

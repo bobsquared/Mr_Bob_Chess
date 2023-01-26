@@ -207,7 +207,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
 
     bool inCheck = b.InCheck();
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
-    int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, model, th);
+    int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, model);
 
     if (!inCheck) {
         stand_pat = staticEval;
@@ -358,7 +358,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     bool isCheck = b.InCheck();
-    int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, model, th));
+    int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, model));
     bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
     bool ttFailLow = (ttRet && hashedBoard.flag == UPPER_BOUND);
     bool ttFailHigh = (ttRet && hashedBoard.flag == LOWER_BOUND);
@@ -724,7 +724,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
 
 
     // Initialize evaluation stack
-    int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, model, th));
+    int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, model));
     th->searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
 
 

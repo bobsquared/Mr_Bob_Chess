@@ -43,7 +43,6 @@ Bitboard::Bitboard(const Bitboard &b) {
     std::copy(b.pieceAt, b.pieceAt + 64, pieceAt);
     std::copy(b.pieces, b.pieces + 12, pieces);
     std::copy(b.color, b.color + 2, color);
-    std::copy(b.material, b.material + 2, material);
     std::copy(b.pieceCount, b.pieceCount + 12, pieceCount);
 
     moveHistory.count = b.moveHistory.count;
@@ -59,7 +58,6 @@ Bitboard::Bitboard(const Bitboard &b) {
     std::copy(b.moveHistory.move, b.moveHistory.move + b.moveHistory.count, moveHistory.move);
 
     posKey = b.getPosKey();
-    pawnKey = b.getPawnKey();
 
     InitRookCastleFlags(whiteRooks, blackRooks);
     InitFeatures();
@@ -126,12 +124,10 @@ void Bitboard::reset() {
     castleRights = 15;
 
     toMove = false;
-    InitMaterial();
     InitPieceAt();
     InitPieceCount();
     moveHistory.clear();
     posKey = zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove);
-    pawnKey = zobrist->hashBoardPawns(pieces);
     kingLoc[0] = bitScan(pieces[10]);
     kingLoc[1] = bitScan(pieces[11]);
 
@@ -314,24 +310,6 @@ void Bitboard::InitRookCastleFlags(uint64_t whiteRooks, uint64_t blackRooks) {
 
 
 
-// Initialize material scores
-void Bitboard::InitMaterial() {
-    material[0] = count_population(pieces[0]) * pieceValues[0];
-    material[0] += count_population(pieces[2]) * pieceValues[1];
-    material[0] += count_population(pieces[4]) * pieceValues[2];
-    material[0] += count_population(pieces[6]) * pieceValues[3];
-    material[0] += count_population(pieces[8]) * pieceValues[4];
-    material[0] += count_population(pieces[10]) * pieceValues[5];
-
-    material[1] = count_population(pieces[1]) * pieceValues[0];
-    material[1] += count_population(pieces[3]) * pieceValues[1];
-    material[1] += count_population(pieces[5]) * pieceValues[2];
-    material[1] += count_population(pieces[7]) * pieceValues[3];
-    material[1] += count_population(pieces[9]) * pieceValues[4];
-    material[1] += count_population(pieces[11]) * pieceValues[5];
-}
-
-
 
 /************************************************************************************************
 **  Moves section
@@ -355,7 +333,7 @@ void Bitboard::move_quiet(int from, int to, int piece, uint64_t i1i2) {
 // Make null move.
 void Bitboard::make_null_move() {
     toMove = !toMove;
-    moveHistory.insert(MoveInfo(0, enpassantSq, halfMoves, castleRights, posKey, pawnKey, NULL_MOVE));
+    moveHistory.insert(MoveInfo(0, enpassantSq, halfMoves, castleRights, posKey, NULL_MOVE));
 
     if (enpassantSq) {
         zobrist->hashBoard_enpassant(posKey, enpassantSq);
@@ -375,7 +353,6 @@ void Bitboard::undo_null_move() {
     castleRights = moveInfo.castleRights;
     enpassantSq = moveInfo.enpassantSq;
     posKey = moveInfo.posKey;
-    pawnKey = moveInfo.pawnKey;
     return;
 }
 
@@ -399,7 +376,6 @@ void Bitboard::make_move(MOVE move) {
     int hmoves = halfMoves;
     int enSq = enpassantSq;
     uint64_t prevPosKey = posKey;
-    uint64_t prevPawnKey = pawnKey;
     int moveFlags = move & MOVE_FLAGS;
     uint8_t cflag = toMove? CASTLE_FLAG_BLACK : CASTLE_FLAG_WHITE;
 
@@ -436,10 +412,6 @@ void Bitboard::make_move(MOVE move) {
         assert(toPiece == -1);
         move_quiet(from, to, fromPiece, i1i2);
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
-
-        if (fromPiece == toMove || fromPiece == (toMove + 10)) {
-            zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
-        }
     }
     else if (moveFlags == ENPASSANT_FLAG) {
         assert(toPiece == -1);
@@ -448,14 +420,11 @@ void Bitboard::make_move(MOVE move) {
 
         uint64_t toCap = to + (toMove * 2 - 1) * 8;
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
-        zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
         zobrist->hashBoard_square(posKey, toCap, !toMove);
-        zobrist->hashBoard_square(pawnKey, toCap, !toMove);
         color[!toMove] ^= 1ULL << toCap;
         pieces[!toMove] ^= 1ULL << toCap;
         occupied ^= 1ULL << toCap;
         pieceAt[toCap] = -1;
-        material[!toMove] -= pieceValues[0];
         pieceCount[!toMove]--;
         acc.accumulate_remove(!toMove, toCap);
     }
@@ -472,7 +441,6 @@ void Bitboard::make_move(MOVE move) {
         pieceAt[from] = -1;
         pieces[toPiece] ^= i2;
         occupied ^= i1;
-        material[!toMove] -= pieceValues[toPiece / 2];
         pieceCount[toPiece]--;
         acc.accumulate_remove(fromPiece, from);
         acc.accumulate_remove(toPiece, to);
@@ -484,11 +452,9 @@ void Bitboard::make_move(MOVE move) {
             pieces[fromPiece] ^= i1;
             pieces[promotePiece] ^= i2;
             pieceAt[to] = promotePiece;
-            material[toMove] += pieceValues[pieceVal] - pieceValues[0];
             pieceCount[toMove]--;
             pieceCount[promotePiece]++;
             zobrist->hashBoard_capture_promotion(posKey, from, to, fromPiece, toPiece, promotePiece);
-            zobrist->hashBoard_square(pawnKey, from, toMove);
             acc.accumulate_add(promotePiece, to);
         }
         else {
@@ -496,18 +462,6 @@ void Bitboard::make_move(MOVE move) {
             pieces[fromPiece] ^= i1i2;
             zobrist->hashBoard_capture(posKey, from, to, fromPiece, toPiece);
             acc.accumulate_add(fromPiece, to);
-
-            if (fromPiece == toMove || fromPiece == 10 + toMove) {
-                if (toPiece == !toMove) {
-                    zobrist->hashBoard_capture(pawnKey, from, to, fromPiece, toPiece);
-                }
-                else {
-                    zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
-                }
-            }
-            else if (toPiece == !toMove) {
-                zobrist->hashBoard_square(pawnKey, to, !toMove);
-            }
         }
 
         halfMoves = 0;
@@ -518,7 +472,6 @@ void Bitboard::make_move(MOVE move) {
         enpassantSq = to + (toMove * 2 - 1) * 8;
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
         zobrist->hashBoard_enpassant(posKey, enpassantSq);
-        zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
     }
     else if (move & PROMOTION_FLAG) {
         assert(toPiece == -1);
@@ -532,11 +485,9 @@ void Bitboard::make_move(MOVE move) {
         int promotePiece = pieceVal * 2 + toMove;
         pieces[promotePiece] ^= i2;
         pieceAt[to] = promotePiece;
-        material[toMove] += pieceValues[pieceVal] - pieceValues[0];
         pieceCount[toMove]--;
         pieceCount[promotePiece]++;
         zobrist->hashBoard_promotion(posKey, from, to, fromPiece, promotePiece);
-        zobrist->hashBoard_square(pawnKey, from, toMove);
         acc.accumulate_add(promotePiece, to);
         acc.accumulate_remove(fromPiece, from);
     }
@@ -546,7 +497,6 @@ void Bitboard::make_move(MOVE move) {
         move_quiet(from, to, fromPiece, i1i2);
         move_quiet(to + 1, to - 1, 6 + toMove, 1ULL << (to - 1) | 1ULL << (to + 1));
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
-        zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
         zobrist->hashBoard_quiet(posKey, to + 1, to - 1, 6 + toMove);
     }
     else if (moveFlags == QUEEN_CASTLE_FLAG) {
@@ -555,13 +505,12 @@ void Bitboard::make_move(MOVE move) {
         move_quiet(from, to, fromPiece, i1i2);
         move_quiet(to - 2, to + 1, 6 + toMove, 1ULL << (to - 2) | 1ULL << (to + 1));
         zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
-        zobrist->hashBoard_quiet(pawnKey, from, to, fromPiece);
         zobrist->hashBoard_quiet(posKey, to - 2, to + 1, 6 + toMove);
     }
 
     toMove = !toMove;
     zobrist->hashBoard_turn(posKey);
-    moveHistory.insert(MoveInfo(toPiece, enSq, hmoves, crights, prevPosKey, prevPawnKey, move));
+    moveHistory.insert(MoveInfo(toPiece, enSq, hmoves, crights, prevPosKey, move));
 }
 
 
@@ -585,7 +534,6 @@ void Bitboard::undo_move(MOVE move) {
     castleRights = moveInfo.castleRights;
     enpassantSq = moveInfo.enpassantSq;
     posKey = moveInfo.posKey;
-    pawnKey = moveInfo.pawnKey;
 
     fullMoves -= toMove;
 
@@ -605,7 +553,6 @@ void Bitboard::undo_move(MOVE move) {
         pieces[!toMove] ^= 1ULL << toCap;
         occupied ^= 1ULL << toCap;
         pieceAt[toCap] = !toMove;
-        material[!toMove] += pieceValues[0];
         pieceCount[!toMove]++;
         acc.accumulate_add(!toMove, toCap);
     }
@@ -616,7 +563,6 @@ void Bitboard::undo_move(MOVE move) {
         pieces[moveInfo.captureType] ^= i2;
         pieceAt[to] = moveInfo.captureType;
         occupied ^= i1;
-        material[!toMove] += pieceValues[moveInfo.captureType / 2];
         pieceCount[moveInfo.captureType]++;
         acc.accumulate_add(moveInfo.captureType, to);
 
@@ -626,7 +572,6 @@ void Bitboard::undo_move(MOVE move) {
             pieceAt[from] = toMove;
             pieces[toMove] ^= i1;
             pieces[promotePiece] ^= i2;
-            material[toMove] -= pieceValues[pieceVal] - pieceValues[0];
             pieceCount[toMove]++;
             pieceCount[promotePiece]--;
             acc.accumulate_remove(promotePiece, to);
@@ -654,7 +599,6 @@ void Bitboard::undo_move(MOVE move) {
         int pieceVal = (moveFlags - 7);
         int promotePiece = pieceVal * 2 + toMove;
         pieces[promotePiece] ^= i2;
-        material[toMove] -= pieceValues[pieceVal] - pieceValues[0];
         pieceCount[toMove]++;
         pieceCount[promotePiece]--;
         acc.accumulate_remove(promotePiece, to);
@@ -1023,12 +967,6 @@ uint64_t Bitboard::getPosKey() const {
 
 
 
-// Return the current pawn key
-uint64_t Bitboard::getPawnKey() const {
-    return pawnKey;
-}
-
-
 
 // A debugging function for zobrist hashing.
 // A position key is created from scratch, and is compared to the iterative position key for confirmation.
@@ -1037,7 +975,6 @@ void Bitboard::debugZobristHash() {
         std::cout << posKey << " " << zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove) << std::endl;
     }
     assert (posKey == zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove));
-    assert (pawnKey == zobrist->hashBoardPawns(pieces));
 }
 
 
@@ -1355,10 +1292,6 @@ void Bitboard::setPosFen(std::string fen) {
     occupied = 0;
 
     posKey = 0;
-    pawnKey = 0;
-
-    material[0] = 0;
-    material[1] = 0;
 
     halfMoves = 0;
     fullMoves = 1;
@@ -1389,13 +1322,8 @@ void Bitboard::setPosFen(std::string fen) {
             pieces[piece] |= 1ULL << lineOffset;
             pieceCount[piece]++;
             pieceAt[lineOffset] = piece;
-            material[piece % 2] += pieceValues[piece / 2];
             zobrist->hashBoard_square(posKey, lineOffset, piece);
             acc.accumulate_add(piece, lineOffset);
-
-            if (piece / 2 == 0 || piece / 2 == 5) {
-                zobrist->hashBoard_square(pawnKey, lineOffset, piece);
-            }
 
             if (piece / 2 == 5) {
                 kingLoc[piece - 10] = lineOffset;

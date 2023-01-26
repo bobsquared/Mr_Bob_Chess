@@ -35,7 +35,6 @@ public:
     int fullMoves;
     int halfMoves;
     int kingLoc[2];
-    int material[2];
     int pieceCount[12];
     uint8_t castleRights;
     bool toMove;
@@ -70,7 +69,6 @@ public:
     void insertCounterMove(ThreadSearch *th, MOVE move);
 
     uint64_t getPosKey() const;
-    uint64_t getPawnKey() const;
     void debugZobristHash();
 
     bool nullMoveable();
@@ -105,7 +103,6 @@ private:
 
     // Move info
     uint64_t posKey;
-    uint64_t pawnKey;
 
     const std::string pieceIndex = "PpNnBbRrQqKk";
     const int pvals[6] = {100, 450, 450, 650, 1250, 5000};
@@ -123,7 +120,6 @@ private:
     void InitKingMoves();
     void InitPieceAt();
     void InitRookCastleFlags(uint64_t whiteRooks, uint64_t blackRooks);
-    void InitMaterial();
     void InitPieceCount();
 
     // Move helpers
