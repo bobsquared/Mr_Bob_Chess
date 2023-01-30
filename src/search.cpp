@@ -554,8 +554,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         // Late move reductions
         else if (depth >= 3 && numMoves > isPv) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)] * (100 + extLevel) / 100; // Base reduction
-            int reduced = lmr;
-
+            
             lmr -= isQuiet && isKiller(th, ply, move); // Don't reduce as much for killer moves
             lmr -= !isQuiet && seeScore > 0;
             lmr += !improving; // Reduce if evaluation is improving
@@ -563,12 +562,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr -= !isPv && hashedBoard.flag == UPPER_BOUND; // expected fail-lows
             lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500; // Increase/decrease depth based on histories
             lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
-
-            reduced = lmr - reduced;
-            if (reduced >= depth) {
-                b.undo_move(move);
-                continue;
-            }
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
