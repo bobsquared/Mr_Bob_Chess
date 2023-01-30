@@ -468,7 +468,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     moveGen->generate_all_moves(moveList, b); // Generate moves
     movePick->scoreMoves(moveList, b, th, ply, hashedBoard.move);
     while (moveList.get_next_move(move)) {
-        bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
+        bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
         int hist = isQuiet? th->history[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
@@ -625,7 +625,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     // Update Histories
-    if (alpha >= beta && ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0)) {
+    if (alpha >= beta && isQuietMove(bestMove)) {
         insertKiller(th, ply, bestMove);
         b.insertCounterMove(th, bestMove);
         int bestMoveFrom = get_move_from(bestMove);
@@ -662,7 +662,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
     
     if (alpha >= beta) {
-        if ((bestMove & (CAPTURE_FLAG | PROMOTION_FLAG)) != 0) {
+        if (isCaptureOrPromotionMove(bestMove)) {
             int bestMoveFrom = get_move_from(bestMove);
             int bestMoveTo = get_move_to(bestMove);
 
@@ -750,7 +750,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
-        bool isQuiet = (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
+        bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
         int hist = isQuiet? th->history[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];

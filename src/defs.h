@@ -293,6 +293,10 @@ extern uint64_t knightAttacks(uint64_t knights);
 extern int count_population(uint64_t bitboard);
 extern int check_bit(uint64_t bitboard);
 extern void printBoard(const uint64_t board);
+extern bool isCaptureMove(const MOVE move);
+extern bool isCaptureOrPromotionMove(const MOVE move);
+extern bool isQuietMove(const MOVE move);
+
 
 extern int get_move_from(MOVE move);
 extern int get_move_to(MOVE move);

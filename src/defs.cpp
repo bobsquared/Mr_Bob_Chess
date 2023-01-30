@@ -237,3 +237,18 @@ void printBoard(const uint64_t board) {
     }
 
 }
+
+
+bool isCaptureMove(const MOVE move) {
+    return move & CAPTURE_FLAG;
+}
+
+
+bool isCaptureOrPromotionMove(const MOVE move) {
+    return move & (CAPTURE_FLAG | PROMOTION_FLAG);
+}
+
+
+bool isQuietMove(const MOVE move) {
+    return (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
+}
