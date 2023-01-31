@@ -789,7 +789,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
             tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
         }
         // Late move reductions
-        else if (depth >= 3 && numMoves > 2) {
+        else if (depth >= 3 && numMoves > 1) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
             lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500; // Increase/decrease depth based on histories
             lmr--;
