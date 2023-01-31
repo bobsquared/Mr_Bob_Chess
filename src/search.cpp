@@ -727,11 +727,50 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
     // Initialize evaluation stack
     int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, model));
     th->searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
-
+    int quietsSearched = 0;
 
     while (moveList.get_next_move(move)) {
 
         int tempRet;
+
+        bool isQuiet = isQuietMove(move);
+        int moveFrom = get_move_from(move);
+        int moveTo = get_move_to(move);
+        int hist = isQuiet? th->history[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
+        int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[moveFrom] / 2][moveTo] : 0);
+        int seeScore = 0;
+
+        if (numMoves > 0 && ret > -MATE_VALUE_MAX) {
+            if (isQuiet) {
+
+                // Futility pruning
+                if (!inCheck && depth <= 8 && staticEval + 185 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
+                    continue;
+                }
+
+                // Late move pruning
+                if (depth <= 8 && quietsSearched > lateMoveMargin[0][std::max(1, depth)]) {
+                    continue;
+                }
+
+                // History move pruning
+                if (depth <= 3 && quietsSearched >= 3 && hist < depth * depth * -100) {
+                    continue;
+                }
+
+                // Counter move history pruning
+                if (depth <= 3 && quietsSearched >= 3 && cmh < depth * depth * -125) {
+                    continue;
+                }
+
+            }
+
+            // SEE pruning
+            seeScore = b.seeCapture(move);
+            if (depth <= 5 && seeScore < seePruningMargin[isQuiet][depth]) {
+                continue;
+            }
+        }
 
         // Check for legality
         if (!b.isLegal(move)) {
@@ -743,23 +782,11 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
-        bool isQuiet = isQuietMove(move);
-        int moveFrom = get_move_from(move);
-        int moveTo = get_move_to(move);
-        int hist = isQuiet? th->history[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
-        int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[moveFrom] / 2][moveTo] : 0);
         b.make_move(move); // Make the move
 
         // First move search at full depth and full window
         if (numMoves == 0) {
             tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
-            if (tempRet <= alpha) {
-                numMoves++;
-                bestMove = move;
-                ret = tempRet;
-                b.undo_move(move);
-                break;
-            }
         }
         // Late move reductions
         else if (depth >= 3 && numMoves > 2) {
@@ -804,6 +831,10 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
                     break;
                 }
             }
+        }
+
+        if (isQuiet) {
+            quietsSearched++;
         }
 
     }
