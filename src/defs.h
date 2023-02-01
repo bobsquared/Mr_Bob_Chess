@@ -210,28 +210,10 @@ struct SearchStack {
 
 // Info each thread has
 struct ThreadSearch {
-    //evals
-    uint64_t attacksKnight[2] = {};
-    uint64_t attacksBishop[2] = {};
-    uint64_t attacksRook[2] = {};
-    uint64_t attacksQueen[2] = {};
-    uint64_t unsafeSquares[2] = {};
-
-    uint64_t mobilityUnsafeSquares[2] = {};
-    uint64_t minorUnsafe[2] = {};
-    uint64_t queenUnsafe[2] = {};
-    uint64_t tempUnsafe[2] = {};
-
-    uint64_t pawnAttAll[2] = {};
-    uint64_t knightAttAll[2] = {};
-
     uint64_t ttWrites;
     uint64_t nodes;
 
     SearchStack searchStack[MAX_PLY] = {};
-    int KSAttackersWeight[2] = {};
-    int KSAttacks[2] = {};
-    int KSAttackersCount[2] = {};
     int seldepth;
 
     int history[2][64][64] = {};
