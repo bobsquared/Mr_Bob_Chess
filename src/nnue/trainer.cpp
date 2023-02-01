@@ -101,52 +101,6 @@ void Trainer::getFile(std::string fileName) {
 
 
 
-
-void Trainer::getFileSigmoid(std::string fileName) {
-
-    std::string tempFen;
-    std::string fen;
-    std::string stringDelimiter = " [";
-
-    float score;
-    int count = 0;
-
-    std::ifstream Myfile(fileName);
-    while (std::getline(Myfile, tempFen)) {
-        count++;
-    }
-
-    Myfile.clear();
-    Myfile.seekg(0, std::ios::beg);
-
-    fens = new std::string[count];
-    cps = new int16_t[count];
-    dataSize = count;
-
-    count = 0;
-    while (std::getline(Myfile, tempFen)) {
-
-        if (count % (dataSize / 10) == 0) {
-            std::cout << count << std::endl;
-        }
-        
-        size_t delimiter = tempFen.find(stringDelimiter);
-        fen = tempFen.substr(0, delimiter);
-        score = std::stoi(tempFen.substr(delimiter + stringDelimiter.size(), 3));
-        score = static_cast<int16_t>(score);
-        fens[count] = fen;
-
-        board.setPosFen(fen);
-        cps[count] = score;
-
-
-        count++;
-    }
-
-}
-
-
-
 void Trainer::train(KPNNUE &model, std::string fileName, int epochs, int batchSize, double lr) {
     model.trainNetwork(dataSize, board, fens, cps, fileName, epochs, batchSize, lr);
 }
