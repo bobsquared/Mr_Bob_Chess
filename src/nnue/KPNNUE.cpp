@@ -78,6 +78,52 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
     return nullptr;
 }
 
+#elif defined(__SSE2__)
+float* KPNNUE::updateAccumulator(Bitboard &b) {
+    float **weights = layers[0]->getWeights();
+    float *biases = layers[0]->getBiases();
+    float *features = b.getFeatures();
+    std::vector<Accumulator::Features> *addAccumulate = b.getAddFeatures();
+    std::vector<Accumulator::Features> *removeAccumulate = b.getRemoveFeatures();
+    int numOutputs = layers[0]->getNumOutputs();
+    int num_chunks = numOutputs / 4 + (numOutputs % 4 != 0);
+    __m128 r[64];
+
+    if (b.getResetFlag()) {
+        for (int j = 0; j < num_chunks; j++) {
+            r[j] = _mm_loadu_ps(&biases[j * 4]);
+        }
+        b.setResetFlag(false);
+    }
+    else {
+        for (int j = 0; j < num_chunks; j++) {
+            r[j] = _mm_loadu_ps(&features[j * 4]);
+        }
+    }
+
+    while (!addAccumulate->empty()) {
+        Accumulator::Features i = addAccumulate->back();
+        for (int j = 0; j < num_chunks; j++) {
+            r[j] = _mm_add_ps(r[j], _mm_loadu_ps(&weights[i.pieceType + i.location][j * 4]));
+        }
+        addAccumulate->pop_back();
+    }
+
+    while (!removeAccumulate->empty()) {
+        Accumulator::Features i = removeAccumulate->back();
+        for (int j = 0; j < num_chunks; j++) {
+            r[j] = _mm_sub_ps(r[j], _mm_loadu_ps(&weights[i.pieceType + i.location][j * 4]));
+        }
+        removeAccumulate->pop_back();
+    }
+
+    for (int j = 0; j < num_chunks; j++) {
+        _mm_storeu_ps(&features[j * 4], r[j]);
+    }
+
+    return nullptr;
+}
+
 #else
 
 float* KPNNUE::updateAccumulator(Bitboard &b) {
@@ -179,7 +225,7 @@ int KPNNUE::forwardpropagate(float *input) {
     #ifdef NNUE_TRAINER
     float *forwards = layers[0]->getForwards();
     int nOuts = layers[0]->getNumOutputs();
-    
+
     #ifdef __AVX2__
     int num_batches = nOuts / 8 + (nOuts % 8 != 0);
     for (int i = 0; i < num_batches; i++) {
@@ -429,11 +475,21 @@ int* createIndexArray(int dataSize) {
 
 
 
-void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int16_t *expected, std::string fileName) {
+void KPNNUE::trainNetwork
+(
+    int dataSize, 
+    Bitboard &board, 
+    std::string *fens, 
+    int16_t *expected, 
+    std::string fileName, 
+    int epochs, 
+    int bs, 
+    double lr
+) {
     int validateSize = 0;
     int rseed = 72828000;
     int trainSize = dataSize - validateSize;
-    batchSize = 16384;
+    batchSize = bs;
 
     std::mt19937 g(rseed);
     int *indexarr = createIndexArray(dataSize);
@@ -451,13 +507,13 @@ void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int1
     std::cout << "Loss_train: " << err_train / trainSize << std::endl;
     std::cout << "Loss_validate: " << err_validate / validateSize << std::endl << std::endl;
 
-    for (int epoch = init_epoch + 1; epoch < 100000; epoch++) {
+    for (int epoch = init_epoch + 1; epoch < epochs + 1; epoch++) {
 
         std::shuffle(&indexarr[0], &indexarr[dataSize], g);
         err_train = 0.0;
         err_validate = 0.0;
 
-        std::cout << "Epoch: " << epoch << ", lr: " << "0.001" << std::endl;
+        std::cout << "Epoch: " << epoch << ", lr: " << lr << std::endl;
         for (int batch = 0; batch < (trainSize / batchSize) + 1; batch++) {
             float ***grad = createGradientWeights();
             float **bias = createGradientBias();
@@ -479,7 +535,7 @@ void KPNNUE::trainNetwork(int dataSize, Bitboard &board, std::string *fens, int1
                 err_train += layers[size - 1]->MeanSquaredError(expected[index]);
             } 
 
-            updateWeights(grad, bias, 0.001, 0.9, 0.999, batch + epoch * batchSize);
+            updateWeights(grad, bias, lr, 0.9, 0.999, batch + epoch * batchSize);
 
             deleteGradientWeights(grad);
             deleteGradientBias(bias);

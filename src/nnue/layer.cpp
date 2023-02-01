@@ -231,6 +231,68 @@ float* Layer::linear(float *output, float *input) {
     return output + numOutputs;
 }
 
+#elif defined(__SSE2__)
+float* Layer::linear(float *output, float *input) {
+
+    assert(!l0);
+    int input_chunk_size = (numInputs % 4 != 0) + numInputs / 4;
+    int output_chunk_size = (numOutputs % 4 != 0) + numOutputs / 4;
+
+    for (int i = 0; i < output_chunk_size; i++) {
+
+        __m128 s1= _mm_setzero_ps();
+        __m128 s2= _mm_setzero_ps();
+        __m128 s3= _mm_setzero_ps();
+        __m128 s4= _mm_setzero_ps();
+
+        int outIndex1 = i * 4;
+        int outIndex2 = i * 4 + 1;
+        int outIndex3 = i * 4 + 2;
+        int outIndex4 = i * 4 + 3;
+
+        for (int j = 0; j < input_chunk_size; j++) {
+            int inIndex = j * 4;
+            __m128 x = _mm_loadu_ps(&input[inIndex]);
+
+            __m128 w1 = _mm_loadu_ps(&weights[outIndex1][inIndex]);
+            __m128 w2 = _mm_loadu_ps(&weights[outIndex2][inIndex]);
+            __m128 w3 = _mm_loadu_ps(&weights[outIndex3][inIndex]);
+            __m128 w4 = _mm_loadu_ps(&weights[outIndex4][inIndex]);
+
+            s1 = _mm_add_ps(s1, _mm_mul_ps(x, w1));
+            s2 = _mm_add_ps(s2, _mm_mul_ps(x, w2));
+            s3 = _mm_add_ps(s3, _mm_mul_ps(x, w3));
+            s4 = _mm_add_ps(s4, _mm_mul_ps(x, w4));
+        }
+
+        __m128 r1 = _mm_movehl_ps(s1, s2);
+        __m128 r2 = _mm_movelh_ps(s2, s1);
+        s1 = _mm_add_ps(r1, r2);
+
+        r1 = _mm_movehl_ps(s3, s4);
+        r2 = _mm_movelh_ps(s4, s3);
+        s2 = _mm_add_ps(r1, r2);
+
+        s1 = _mm_shuffle_ps(s1, s1, _MM_SHUFFLE(1, 3, 0, 2));
+        s2 = _mm_shuffle_ps(s2, s2, _MM_SHUFFLE(1, 3, 0, 2));
+        r1 = _mm_movehl_ps(s2, s1);
+        r2 = _mm_movelh_ps(s1, s2);
+        s1 = _mm_add_ps(r1, r2);
+
+        __m128 bias = _mm_loadu_ps(&biases[i * 4]);
+
+        s1 = _mm_add_ps(bias, s1);
+        _mm_store_ps(&output[i * 4], s1);
+
+        #ifdef NNUE_TRAINER
+        _mm_storeu_ps(&forwards[i * 4], s1);
+        _mm_storeu_ps(&activations[i * 4], s1);
+        #endif
+    }
+
+    return output + numOutputs;
+}
+
 #else 
 
 float* Layer::linear(float *output, float *input) {
@@ -277,6 +339,29 @@ float* Layer::ClippedRelu(float *output, float *input) {
     return output + numOutputs;
 }
 
+#elif defined(__SSE2__)
+
+float* Layer::ClippedRelu(float *output, float *input) {
+    int num_chunks = numOutputs / 4 + (numOutputs % 4 != 0);
+
+    __m128 regzeroes = _mm_setzero_ps();
+    __m128 regones = _mm_set1_ps(1);
+
+    for (int i = 0; i < num_chunks; i++) {
+        __m128 reg = _mm_loadu_ps(&input[i * 4]);
+        reg = _mm_max_ps(reg, regzeroes);
+        reg = _mm_min_ps(reg, regones);
+
+        _mm_storeu_ps(&output[i * 4], reg);
+
+        #ifdef NNUE_TRAINER
+        _mm_storeu_ps(&activations[i * 4], reg);
+        #endif
+    }
+    
+    return output + numOutputs;
+}
+
 #else
 
 float* Layer::ClippedRelu(float *output, float *input) {
@@ -299,7 +384,7 @@ void Layer::DRelu(float *output[]) {
 
 
 float Layer::sigmoidW(float x) {
-    return 1.0 / (1.0 + exp(-x / 412));
+    return 1.0 / (1.0 + exp(-x / 385));
 }
 
 

@@ -69,9 +69,6 @@ void Trainer::getFile(std::string fileName) {
 
     std::ifstream Myfile(fileName);
     while (std::getline(Myfile, tempFen)) {
-        // if (count == 4687500) {
-        //     break;
-        // }
         count++;
     }
 
@@ -88,10 +85,6 @@ void Trainer::getFile(std::string fileName) {
         if (count % (dataSize / 10) == 0) {
             std::cout << count << std::endl;
         }
-
-        // if (count == 4687500) {
-        //     break;
-        // }
         
         size_t delimiter = tempFen.find(stringDelimiter);
         fen = tempFen.substr(0, delimiter);
@@ -154,8 +147,8 @@ void Trainer::getFileSigmoid(std::string fileName) {
 
 
 
-void Trainer::train(KPNNUE &model, std::string fileName) {
-    model.trainNetwork(dataSize, board, fens, cps, fileName);
+void Trainer::train(KPNNUE &model, std::string fileName, int epochs, int batchSize, double lr) {
+    model.trainNetwork(dataSize, board, fens, cps, fileName, epochs, batchSize, lr);
 }
 
 
