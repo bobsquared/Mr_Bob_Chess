@@ -389,7 +389,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
         // Null move pruning
         if (canNullMove && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
-            int R = 3 + depth / (7 - improving) + std::min((staticEval - beta) / 300, 3);
+            int R = 3 + depth / 4 + std::min((staticEval - beta) / 300, 3);
             th->searchStack[ply + 1].extLevel = extLevel;
 
             b.make_null_move();
@@ -556,7 +556,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         else if (depth >= 3 && numMoves > isPv) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)] * (100 + extLevel) / 100; // Base reduction
 
-            lmr -= isQuiet && isKiller(th, ply, move); // Don't reduce as much for killer moves
+            lmr -= isKiller(th, ply, move); // Don't reduce as much for killer moves
             lmr -= !isQuiet && seeScore > 0;
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
