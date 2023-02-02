@@ -75,15 +75,17 @@ void TranspositionTable::saveTT(ThreadSearch *th, MOVE move, int score, int stat
 
 // Probe the transposition table
 // Currently using: Always Replace
-bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, int alpha, int beta, int ply) {
+bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply) {
 
     bool ret = false;
+
+    // Store the hash table value
+    hashedBoard = hashTable[key % numHashes];
+
     if (hashTable[key % numHashes].posKey == key) {
 
         ret = true;
-        // Store the hash table value
-        hashedBoard = hashTable[key % numHashes];
-
+        ttMove = hashedBoard.move;
         hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
 
         // Ensure hashedBoard depth >= current depth

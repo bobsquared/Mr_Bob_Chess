@@ -351,7 +351,8 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    bool hashed = hasSingMove? false : tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
+    MOVE ttMove = NO_MOVE;
+    bool hashed = hasSingMove? false : tt->probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
 
     if (ttRet && !isPv) {
         return hashedBoard.score;
@@ -381,7 +382,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         // Reverse futility pruning
-        int rfpMargin = 125 - extLevelMax + hashLevel - 12 * (hashedBoard.flag != UPPER_BOUND);
+        int rfpMargin = 125 - extLevelMax + hashLevel - 12 * (hashed && hashedBoard.flag != UPPER_BOUND);
         if (depth <= 7 && staticEval - rfpMargin * (depth - improving) >= beta && std::abs(staticEval) < MATE_VALUE_MAX) {
             return staticEval;
         }
@@ -417,7 +418,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             MOVE move;
 
             moveGen->generate_captures_promotions(moveList, b);
-            movePick->scoreMovesQS(moveList, b, hashedBoard.move);
+            movePick->scoreMovesQS(moveList, b, ttMove);
             while (moveList.get_next_move(move)) {
 
                 // Skip the move it is not legal
@@ -466,7 +467,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     int prevPiece = b.pieceAt[prevMoveTo] / 2;
 
     moveGen->generate_all_moves(moveList, b); // Generate moves
-    movePick->scoreMoves(moveList, b, th, ply, hashedBoard.move);
+    movePick->scoreMoves(moveList, b, th, ply, ttMove);
     while (moveList.get_next_move(move)) {
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
@@ -526,7 +527,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         // Singular extensions
-        if ((depth >= 8 || (extLevel <= 3 && depth >= 4)) && !extension && hashedBoard.move == move && hashedBoard.flag != UPPER_BOUND 
+        if ((depth >= 8 || (extLevel <= 3 && depth >= 4)) && !extension && ttMove == move && hashedBoard.flag != UPPER_BOUND 
             && hashedBoard.depth >= depth - 3 && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
             int singVal = hashedBoard.score - (2 + isPv) * depth;
 
@@ -626,7 +627,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         int piece = b.pieceAt[bestMoveFrom] / 2;
         int histScalar = 32;
 
-        if (bestMove == hashedBoard.move) {
+        if (bestMove == ttMove) {
             histScalar += 8;
         }
 
@@ -717,7 +718,8 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
-    bool hashed = tt->probeTT(posKey, hashedBoard, depth, ttRet, alpha, beta, ply);
+    MOVE ttMove = NO_MOVE;
+    bool hashed = tt->probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
 
 
     MOVE prevMove = b.moveHistory.count > 0? b.moveHistory.move[b.moveHistory.count - 1].move :  NO_MOVE;

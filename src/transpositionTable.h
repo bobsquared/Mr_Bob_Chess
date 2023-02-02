@@ -23,7 +23,7 @@ public:
     void setSize(int hashSize);
 
     void saveTT(ThreadSearch *th, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply);
-    bool probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, int alpha, int beta, int ply);
+    bool probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply);
     bool probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, bool &ttRet, int alpha, int beta, int ply);
     int getHashFull(uint64_t writes);
     void clearHashTable();
