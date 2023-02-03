@@ -390,7 +390,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
         // Null move pruning
         if (canNullMove && staticEval >= beta && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
-            int R = 3 + depth / 4 + std::min((staticEval - beta) / 300, 3);
+            int R = 3 + depth / (7 - improving) + std::min((staticEval - beta) / 300, 3);
             th->searchStack[ply + 1].extLevel = extLevel;
 
             b.make_null_move();
