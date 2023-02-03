@@ -521,9 +521,9 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         int score;
         int extension = 0;
 
-        // Check extension and passed pawn extension
+        // Check extension, passed pawn extension and recapture extensions
         if ((isCheck && (extLevel <= 5 || !isQuiet)) || (b.getPiece(moveFrom) == 0 && b.getRankFromSideToMove(moveTo) == 6)
-            || (isPv && prevMoveTo == get_move_to(move)) || (ttRet && hashedBoard.move == ttFailHigh)) {
+            || (isPv && prevMoveTo == get_move_to(move))) {
             extension = 1;
         }
 
