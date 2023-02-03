@@ -53,7 +53,6 @@ void TranspositionTable::setTTAge(int age) {
 
 
 // Save the position into the transposition table
-// Currently using: Always Replace
 void TranspositionTable::saveTT(ThreadSearch *th, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply) {
     uint64_t posKey = key % numHashes;
 
@@ -109,15 +108,16 @@ bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int dept
 
 // Probe the transposition table
 // Currently using: Always Replace
-bool TranspositionTable::probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, bool &ttRet, int alpha, int beta, int ply) {
+bool TranspositionTable::probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply) {
 
     bool ret = false;
+
+    // Store the hash table value
+    hashedBoard = hashTable[key % numHashes];
+
     if (hashTable[key % numHashes].posKey == key) {
 
         ret = true;
-        // Store the hash table value
-        hashedBoard = hashTable[key % numHashes];
-
         hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
 
         alpha = hashedBoard.flag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound

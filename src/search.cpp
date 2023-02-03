@@ -197,9 +197,10 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
+    MOVE ttMove = NO_MOVE;
     int prevAlpha = alpha;
 
-    bool hashed = tt->probeTTQsearch(posKey, hashedBoard, ttRet, alpha, beta, ply);
+    bool hashed = tt->probeTTQsearch(posKey, hashedBoard, ttRet, ttMove, alpha, beta, ply);
 
     if (ttRet) {
         return hashedBoard.score;
@@ -231,7 +232,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
     int prevMoveTo = get_move_to(prevMove);
 
     inCheck? moveGen->generate_all_moves(moveList, b) : moveGen->generate_captures_promotions(moveList, b);
-    movePick->scoreMovesQS(moveList, b, hashedBoard.move);
+    movePick->scoreMovesQS(moveList, b, ttMove);
     while (moveList.get_next_move(move)) {
 
         if (!inCheck) {
