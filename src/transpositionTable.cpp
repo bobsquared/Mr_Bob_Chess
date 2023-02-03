@@ -63,7 +63,7 @@ void TranspositionTable::saveTT(ThreadSearch *th, MOVE move, int score, int stat
         th->ttWrites++;
         hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, flag, key, halfMove);
     }
-    else if (halfMove != tt.halfMove || flag == 0 || depth >= tt.depth - 2 || (flag != 0 && depth >= tt.depth)) {
+    else if (halfMove != tt.halfMove || flag == 0 || (tt.flag != 0 && depth >= tt.depth - 2) || depth >= tt.depth) {
         hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, flag, key, halfMove);
     }
 
@@ -118,6 +118,7 @@ bool TranspositionTable::probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, b
     if (hashTable[key % numHashes].posKey == key) {
 
         ret = true;
+        ttMove = hashedBoard.move;
         hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
 
         alpha = hashedBoard.flag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
