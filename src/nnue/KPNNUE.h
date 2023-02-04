@@ -34,7 +34,7 @@ public:
         int batchSize, 
         double lr
     );
-    
+
     double bulkLoss(int dataSize, Bitboard &board, std::string *fens, int16_t *expected);
     int evaluate(std::string fen, Bitboard &board);
     int evaluate(Bitboard &board);
@@ -51,7 +51,7 @@ private:
     void updateWeights(float ***grad, float **bias, float lr, float beta1, float beta2, int batch);
     int forwardpropagate(float *input);
     void writeToBinary(std::string fileName);
-    void readFromBinary(std::string fileName);
+    bool readFromBinary(std::string fileName);
 
     float*** createGradientWeights();
     float** createGradientBias();

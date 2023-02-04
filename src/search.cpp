@@ -363,7 +363,6 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, model));
     bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
     bool ttFailLow = (ttRet && hashedBoard.flag == UPPER_BOUND);
-    bool ttFailHigh = (ttRet && hashedBoard.flag == LOWER_BOUND);
     int extLevel = th->searchStack[ply].extLevel;
     int extLevelMax = std::min(20, extLevel);
     int hashLevel = th->searchStack[ply].hashLevel;

@@ -3,8 +3,14 @@
 #include "KPNNUE.h"
 
 
-KPNNUE::KPNNUE(std::string fileName) {
-    readFromBinary(fileName);
+KPNNUE::KPNNUE(std::string fileName) {  
+    bool isGood = readFromBinary(fileName);
+    if (isGood) {
+        std::cout << "NNUE loaded: " << fileName << std::endl;
+    }
+    else {
+        std::cout << "Failed to load NNUE: " << fileName << std::endl;
+    }
 }
 
 
@@ -594,17 +600,24 @@ void KPNNUE::writeToBinary(std::string fileName) {
 
 
 
-void KPNNUE::readFromBinary(std::string fileName) {
+bool KPNNUE::readFromBinary(std::string fileName) {
+
+    bool isGood = false;
     std::fstream myFile;
     myFile.open(fileName, std::ios::in | std::ios::binary);
-    myFile.read(reinterpret_cast<char *>(&init_epoch), sizeof(init_epoch));
-    myFile.read(reinterpret_cast<char *>(&batchSize), sizeof(batchSize));
-    myFile.read(reinterpret_cast<char *>(&size), sizeof(size));
-    
-    layers = new Layer*[size];
-    for (int i = 0; i < size; i++) {
-        layers[i] = new Layer(myFile);
+    if (myFile.good()) {
+        myFile.read(reinterpret_cast<char *>(&init_epoch), sizeof(init_epoch));
+        myFile.read(reinterpret_cast<char *>(&batchSize), sizeof(batchSize));
+        myFile.read(reinterpret_cast<char *>(&size), sizeof(size));
+        
+        layers = new Layer*[size];
+        for (int i = 0; i < size; i++) {
+            layers[i] = new Layer(myFile);
+        }
+
+        isGood = true;
     }
 
     myFile.close();
+    return isGood;
 }

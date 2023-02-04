@@ -26,7 +26,6 @@ void UCI::uciCommand() {
 // Set nnue
 void UCI::setNNUEFileDefault() {
     setNNUE(DEFAULT_NETWORK);
-    std::cout << "NNUE loaded: " << DEFAULT_NETWORK << std::endl;
 }
 
 
@@ -34,7 +33,6 @@ void UCI::setNNUEFileDefault() {
 // Set nnue
 void UCI::setNNUEFile(std::string filename) {
     setNNUE(filename);
-    std::cout << "NNUE loaded: " << filename << std::endl;
 }
 
 
