@@ -1,7 +1,8 @@
 
 debug = no
+debug_gdb = no
 debug_zobrist = no
-popcount = yes
+popcount = no
 avx2 = yes
 native = no
 EXE = ../bob
@@ -16,6 +17,11 @@ CXXFLAGS += -DNDEBUG
 OBCXXFLAGS += -DNDEBUG
 endif
 
+ifeq ($(debug_gdb), yes)
+CXXFLAGS += -g
+OBCXXFLAGS += -g
+endif
+
 ifeq ($(popcount), yes)
 CXXFLAGS += -msse3 -mpopcnt -DPOPCOUNT
 OBCXXFLAGS += -msse3 -mpopcnt -DPOPCOUNT
@@ -24,6 +30,9 @@ endif
 ifeq ($(avx2), yes)
 CXXFLAGS += -mavx2
 OBCXXFLAGS += -mavx2
+else
+CXXFLAGS += -msse2
+OBCXXFLAGS += -msse2
 endif
 
 ifeq ($(native), yes)
