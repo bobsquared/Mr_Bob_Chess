@@ -458,6 +458,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     int quietsSearched = 0;
     int noisysSearched = 0;
     int numMoves = 0;
+    bool isSingular = false;
     MoveList moveList;
     MOVE quiets[MAX_NUM_MOVES];
     MOVE noisys[MAX_NUM_MOVES];
@@ -537,6 +538,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
             if (score < singVal) {
                 extension = 1;
+                isSingular = true;
             }
             else if (singVal >= beta) {
                 return singVal;
@@ -561,6 +563,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= hashed && !isPv && hashedBoard.flag == UPPER_BOUND && hashedBoard.depth >= depth - 2; // expected fail-lows
+            lmr += isSingular;
             lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500; // Increase/decrease depth based on histories
             lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
 
