@@ -742,7 +742,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
         int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[moveFrom] / 2][moveTo] : 0);
         int seeScore = 0;
 
-        if (numMoves > 0 && ret > -MATE_VALUE_MAX) {
+        if (numMoves > 1 && ret > -MATE_VALUE_MAX) {
             if (isQuiet) {
 
                 // Futility pruning
