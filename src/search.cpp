@@ -243,8 +243,15 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
                 continue;
             }
 
-            if (prevMoveTo != get_move_to(move) && see + staticEval >= beta + 200 + std::max(-150, (10 * depth))) {
-                return see + staticEval;
+            if (prevMoveTo != get_move_to(move)) {
+                int seeEval = see + staticEval;
+                if (seeEval >= beta + 200 + std::max(-150, (10 * depth))) {
+                    return seeEval;
+                }
+
+                if (seeEval >= beta && stand_pat > prevAlpha && numMoves > 0) {
+                    return seeEval;
+                }
             }
         }
 
