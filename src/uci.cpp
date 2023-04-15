@@ -19,6 +19,11 @@ void UCI::uciCommand() {
     std::cout << "option name Hash type spin default 256 min 1 max 131072" << std::endl;
     std::cout << "option name Threads type spin default 1 min 1 max 256" << std::endl;
     std::cout << "option name MultiPV type spin default 1 min 1 max 256" << std::endl;
+
+    std::cout << "option name rfp type spin default 136 min 1 max 500" << std::endl;
+    std::cout << "option name razor type spin default 392 min 1 max 1000" << std::endl;
+    std::cout << "option name probcut type spin default 251 min 1 max 1000" << std::endl;
+    std::cout << "option name futility type spin default 328 min 1 max 1000" << std::endl;
     std::cout << "uciok" << std::endl;
 }
 
@@ -43,6 +48,34 @@ void UCI::setHash(int hashSize) {
     for (int id = 0; id < nThreads; id++) {
         thread[id].ttWrites = 0;
     }
+}
+
+
+
+// Set rfp
+void UCI::setRFP(int value) {
+    setRFPsearch(value);
+}
+
+
+
+// Set rfp
+void UCI::setRazor(int value) {
+    setRazorsearch(value);
+}
+
+
+
+// Set rfp
+void UCI::setProbcut(int value) {
+    setProbcutsearch(value);
+}
+
+
+
+// Set rfp
+void UCI::setFutility(int value) {
+    setFutilitysearch(value);
 }
 
 

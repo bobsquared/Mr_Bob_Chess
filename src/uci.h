@@ -18,6 +18,11 @@ public:
     void setHash(int hashSize);
     void setMultiPV(int pvs);
 
+    void setRFP(int value);
+    void setRazor(int value);
+    void setProbcut(int value);
+    void setFutility(int value);
+
 private:
 
     const std::string NAME = "Mr Bob";

@@ -33,6 +33,12 @@ const int seePruningMargin[2][6] = {{0, -100, -175, -275, -400, -600}, {0, -125,
 const int lateMoveMargin[2][9] = {{0, 3, 5, 7, 10, 14, 20, 26, 32}, {0, 6, 9, 13, 19, 27, 35, 43, 50}};    /**< Margins for late move pruning in pvSearch*/
 
 
+int rfpVal = 136;
+int razorVal = 392;
+int probcutVal = 251;
+int futilityVal = 328;
+
+
 /**
 * Initialize the late move reduction array
 */
@@ -113,6 +119,50 @@ void setTTSize(int hashSize) {
 */
 void clearTT() {
     tt->clearHashTable();
+}
+
+
+
+/**
+* Set the rfp value
+*
+* @param[in] value The value you want to set to.
+*/
+void setRFPsearch(const int value) {
+    rfpVal = value;
+}
+
+
+
+/**
+* Set the razoring value
+*
+* @param[in] value The value you want to set to.
+*/
+void setRazorsearch(const int value) {
+    razorVal = value;
+}
+
+
+
+/**
+* Set the probcut value
+*
+* @param[in] value The value you want to set to.
+*/
+void setProbcutsearch(const int value) {
+    probcutVal = value;
+}
+
+
+
+/**
+* Set the futility value
+*
+* @param[in] value The value you want to set to.
+*/
+void setFutilitysearch(const int value) {
+    futilityVal = value;
 }
 
 
@@ -381,7 +431,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 
     if (!isPv && !isCheck && !hasSingMove) {
         // Razoring
-        if (depth <= 3 && staticEval + 275 * depth <= alpha) {
+        if (depth <= 3 && staticEval + razorVal * depth <= alpha) {
             int score = qsearch(b, th, -1, alpha, beta, ply);
             if (depth == 1 || score <= alpha) {
                 return score;
@@ -389,7 +439,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         // Reverse futility pruning
-        int rfpMargin = 125 - extLevelMax + hashLevel - 12 * (hashed && hashedBoard.flag != UPPER_BOUND);
+        int rfpMargin = rfpVal - extLevelMax + hashLevel - 12 * (hashed && hashedBoard.flag != UPPER_BOUND);
         if (depth <= 7 && staticEval - rfpMargin * (depth - improving) >= beta && std::abs(staticEval) < MATE_VALUE_MAX) {
             return staticEval;
         }
@@ -419,7 +469,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
         }
 
         // Probcut
-        int probBeta = beta + 240;
+        int probBeta = beta + probcutVal;
         if (depth > 4 && !(hashed && hashedBoard.depth >= depth - 3 && hashedBoard.score < probBeta) && std::abs(beta) < MATE_VALUE_MAX) {
             MoveList moveList;
             MOVE move;
@@ -491,7 +541,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             if (isQuiet) {
 
                 // Futility pruning
-                if (!isCheck && depth <= 8 && staticEval + (185 - extLevelMax) * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
+                if (!isCheck && depth <= 8 && staticEval + (futilityVal - extLevelMax) * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
                     continue;
                 }
 

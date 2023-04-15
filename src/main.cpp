@@ -64,6 +64,12 @@ int main(int argc, char* argv[]) {
     std::regex setHash("setoption\\sname\\shash\\svalue\\s(\\d+)");
     std::regex setThreads("setoption\\sname\\sthreads\\svalue\\s(\\d+)");
     std::regex setMultiPv("setoption\\sname\\smultipv\\svalue\\s(\\d+)");
+
+    std::regex setRFP("setoption\\sname\\srfp\\svalue\\s(\\d+)");
+    std::regex setRazor("setoption\\sname\\srazor\\svalue\\s(\\d+)");
+    std::regex setProbcut("setoption\\sname\\sprobcut\\svalue\\s(\\d+)");
+    std::regex setFutility("setoption\\sname\\sfutility\\svalue\\s(\\d+)");
+
     std::regex wtime(".*wtime\\s(\\d+).*");
     std::regex btime(".*btime\\s(\\d+).*");
 
@@ -141,6 +147,34 @@ int main(int argc, char* argv[]) {
         if (std::regex_search(lowerCommand, m, setMultiPv)) {
             exit_thread_flag = true;
             uci.setMultiPV(std::stoi(m[1]));
+            continue;
+        }
+
+        // set rfp
+        if (std::regex_search(lowerCommand, m, setRFP)) {
+            exit_thread_flag = true;
+            uci.setRFP(std::stoi(m[1]));
+            continue;
+        }
+
+        // set razor
+        if (std::regex_search(lowerCommand, m, setRazor)) {
+            exit_thread_flag = true;
+            uci.setRazor(std::stoi(m[1]));
+            continue;
+        }
+
+        // set probcut
+        if (std::regex_search(lowerCommand, m, setProbcut)) {
+            exit_thread_flag = true;
+            uci.setProbcut(std::stoi(m[1]));
+            continue;
+        }
+
+        // set futility
+        if (std::regex_search(lowerCommand, m, setFutility)) {
+            exit_thread_flag = true;
+            uci.setFutility(std::stoi(m[1]));
             continue;
         }
 
