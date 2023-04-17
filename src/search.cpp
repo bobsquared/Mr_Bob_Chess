@@ -37,6 +37,8 @@ int rfpVal = 136;
 int razorVal = 392;
 int probcutVal = 251;
 int futilityVal = 328;
+int historyLmrVal = 2084;
+int historyLmrNoisyVal = 2534;
 
 
 /**
@@ -163,6 +165,28 @@ void setProbcutsearch(const int value) {
 */
 void setFutilitysearch(const int value) {
     futilityVal = value;
+}
+
+
+
+/**
+* Set the history value
+*
+* @param[in] value The value you want to set to.
+*/
+void setHistoryLMRsearch(const int value) {
+    historyLmrVal = value;
+}
+
+
+
+/**
+* Set the history capture value
+*
+* @param[in] value The value you want to set to.
+*/
+void setHistoryLMRNoisysearch(const int value) {
+    historyLmrNoisyVal = value;
 }
 
 
@@ -617,7 +641,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= hashed && !isPv && hashedBoard.flag == UPPER_BOUND && hashedBoard.depth >= depth - 2; // expected fail-lows
-            lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500; // Increase/decrease depth based on histories
+            lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh) / historyLmrVal; // Increase/decrease depth based on histories
             lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
@@ -849,7 +873,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
         // Late move reductions
         else if (depth >= 3 && numMoves > 1) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
-            lmr -= (hist + (!isQuiet * 3000) + cmh) / 1500; // Increase/decrease depth based on histories
+            lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh) / historyLmrVal; // Increase/decrease depth based on histories
             lmr--;
 
             lmr = std::min(depth - 2, std::max(lmr, 0));

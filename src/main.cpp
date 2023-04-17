@@ -69,6 +69,8 @@ int main(int argc, char* argv[]) {
     std::regex setRazor("setoption\\sname\\srazor\\svalue\\s(\\d+)");
     std::regex setProbcut("setoption\\sname\\sprobcut\\svalue\\s(\\d+)");
     std::regex setFutility("setoption\\sname\\sfutility\\svalue\\s(\\d+)");
+    std::regex setHistLMR("setoption\\sname\\shistlmr\\svalue\\s(\\d+)");
+    std::regex setHistLMRNoisy("setoption\\sname\\shistlmrnoisy\\svalue\\s(\\d+)");
 
     std::regex wtime(".*wtime\\s(\\d+).*");
     std::regex btime(".*btime\\s(\\d+).*");
@@ -175,6 +177,20 @@ int main(int argc, char* argv[]) {
         if (std::regex_search(lowerCommand, m, setFutility)) {
             exit_thread_flag = true;
             uci.setFutility(std::stoi(m[1]));
+            continue;
+        }
+
+        // set futility
+        if (std::regex_search(lowerCommand, m, setHistLMR)) {
+            exit_thread_flag = true;
+            uci.setHistoryLMR(std::stoi(m[1]));
+            continue;
+        }
+
+        // set futility
+        if (std::regex_search(lowerCommand, m, setHistLMRNoisy)) {
+            exit_thread_flag = true;
+            uci.setHistoryLMRNoisy(std::stoi(m[1]));
             continue;
         }
 

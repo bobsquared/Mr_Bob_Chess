@@ -51,6 +51,8 @@ extern void setRFPsearch(const int value);
 extern void setRazorsearch(const int value);
 extern void setProbcutsearch(const int value);
 extern void setFutilitysearch(const int value);
+extern void setHistoryLMRsearch(const int value);
+extern void setHistoryLMRNoisysearch(const int value);
 extern void setTTSize(int hashSize);
 extern void setMultiPVSearch(int pvs);
 extern void clearTT();

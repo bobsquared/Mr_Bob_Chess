@@ -24,6 +24,8 @@ void UCI::uciCommand() {
     std::cout << "option name razor type spin default 392 min 1 max 1000" << std::endl;
     std::cout << "option name probcut type spin default 251 min 1 max 1000" << std::endl;
     std::cout << "option name futility type spin default 328 min 1 max 1000" << std::endl;
+    std::cout << "option name histlmr type spin default 2084 min 1 max 10000" << std::endl;
+    std::cout << "option name histlmrnoisy type spin default 2534 min 1 max 10000" << std::endl;
     std::cout << "uciok" << std::endl;
 }
 
@@ -76,6 +78,20 @@ void UCI::setProbcut(int value) {
 // Set rfp
 void UCI::setFutility(int value) {
     setFutilitysearch(value);
+}
+
+
+
+// Set rfp
+void UCI::setHistoryLMR(int value) {
+    setHistoryLMRsearch(value);
+}
+
+
+
+// Set rfp
+void UCI::setHistoryLMRNoisy(int value) {
+    setHistoryLMRNoisysearch(value);
 }
 
 
