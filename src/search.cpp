@@ -822,38 +822,6 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
         int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[moveFrom] / 2][moveTo] : 0);
         int seeScore = 0;
 
-        if (numMoves > 1 && ret > -MATE_VALUE_MAX) {
-            if (isQuiet) {
-
-                // Futility pruning
-                if (!inCheck && depth <= 8 && staticEval + 185 * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
-                    continue;
-                }
-
-                // Late move pruning
-                if (depth <= 8 && quietsSearched > lateMoveMargin[0][std::max(1, depth)]) {
-                    continue;
-                }
-
-                // History move pruning
-                if (depth <= 3 && quietsSearched >= 3 && hist < depth * depth * -100) {
-                    continue;
-                }
-
-                // Counter move history pruning
-                if (depth <= 3 && quietsSearched >= 3 && cmh < depth * depth * -125) {
-                    continue;
-                }
-
-            }
-
-            // SEE pruning
-            seeScore = b.seeCapture(move);
-            if (depth <= 5 && seeScore < seePruningMargin[isQuiet][depth]) {
-                continue;
-            }
-        }
-
         // Check for legality
         if (!b.isLegal(move)) {
             continue;
