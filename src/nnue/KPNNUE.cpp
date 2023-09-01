@@ -3,6 +3,12 @@
 #include "KPNNUE.h"
 
 
+
+KPNNUE::KPNNUE() {  
+    layers = nullptr;
+}
+
+
 KPNNUE::KPNNUE(std::string fileName) {  
     bool isGood = readFromBinary(fileName);
     if (isGood) {
@@ -36,6 +42,29 @@ KPNNUE::~KPNNUE() {
     delete [] layers;
 
 }
+
+
+
+void KPNNUE::setNetwork(std::string fileName) {  
+
+    if (layers != nullptr) {
+        for (int i = 0; i < size; i++) {
+            delete layers[i];
+        }
+        delete [] layers;
+        layers = nullptr;
+    }
+
+    bool isGood = readFromBinary(fileName);
+    if (isGood) {
+        std::cout << "NNUE loaded: " << fileName << std::endl;
+    }
+    else {
+        std::cout << "Failed to load NNUE: " << fileName << std::endl;
+    }
+
+}
+
 
 
 #ifdef __AVX2__

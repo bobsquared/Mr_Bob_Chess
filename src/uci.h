@@ -7,7 +7,7 @@
 class UCI {
 
 public:
-    UCI();
+    UCI(Search &s, KPNNUE *model);
     void startMessage();
     void uciCommand();
     void readyCommand();
@@ -31,5 +31,6 @@ private:
     const std::string VERSION = "v1.2.0";
     const std::string AUTHOR = "Vincent Yu";
     const std::string DEFAULT_NETWORK = "nets/bob_brain-041523e378.nnue";
-
+    Search &search;
+    KPNNUE *model;
 };

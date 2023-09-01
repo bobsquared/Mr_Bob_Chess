@@ -16,5 +16,12 @@ int main(int argc, char **argv) {
 
         std::cout << "Score: " << ret << std::endl;
     } 
+    else {
+        Trainer trainer = Trainer();
+        trainer.getFile("NNUE_d10_332M_rmn.epd");
+        int modelSize[45] = {768, 512, 8, 1};
+        KPNNUE model = KPNNUE(3, modelSize);
+        trainer.train(model, "networks/test46/dog", 1000, 16384, 0.001);
+    }
 
 }

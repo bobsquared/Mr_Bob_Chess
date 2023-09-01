@@ -9,42 +9,73 @@
 
 
 #include "search.h"
+#include <cmath>
+#include <thread>
 
 
-int totalTime;                      /**< Total time used to search an iteration.*/
-bool canPrintInfo = true;              /**< False to turn of info print statements.*/
-int nThreads = 1;                   /**< Number of threads to search, default is 1.*/
-int multiPv = 1;                   /**< Number of pvs to search, default is 1.*/
-bool stopable = false;              /**< Used to ensure that we search atleast a depth one 1.*/
-std::atomic<bool> exit_thread_flag; /**< True to stop the search.*/
-int lmrReduction[64][64];           /**< A 2D array of reduction values for LMR given depth and move count.*/
-TimeManager tm;                     /**< The time manager determines when to stop the search given time parameters.*/
+
+Search::Search(Eval *eval, TranspositionTable *tt, ThreadSearch *thread) : eval(eval), tt(tt), thread(thread) {
+    nThreads = 1;                   /**< Number of threads to search, default is 1.*/
+    multiPv = 1;                   /**< Number of pvs to search, default is 1.*/
+    stopable = false;              /**< Used to ensure that we search atleast a depth one 1.*/
+    canPrintInfo = true;
+
+    movePick = new MovePick;               /**< The move picker gives a score to each generated move*/
+    moveGen = new MoveGen;                  /**< The move generator generates all pseudo legal moves in a given position*/
+    InitLateMoveArray();
+}
 
 
-KPNNUE *model = nullptr;
-Eval *eval = new Eval();                         /**< The evaluator to score the positions*/
-TranspositionTable *tt = new TranspositionTable; /**< The transposition table to store info on the position*/
-MovePick *movePick = new MovePick;               /**< The move picker gives a score to each generated move*/
-MoveGen *moveGen = new MoveGen;                  /**< The move generator generates all pseudo legal moves in a given position*/
-ThreadSearch *thread = new ThreadSearch[1];      /**< An array of thread data up to 256 threads.*/
+
+ThreadSearch* Search::getThreads() {
+    return thread;
+}
 
 
-const int seePruningMargin[2][6] = {{0, -100, -175, -275, -400, -600}, {0, -125, -200, -275, -350, -425}}; /**< Margins for SEE pruning in pvSearch*/
-const int lateMoveMargin[2][9] = {{0, 3, 5, 7, 10, 14, 20, 26, 32}, {0, 6, 9, 13, 19, 27, 35, 43, 50}};    /**< Margins for late move pruning in pvSearch*/
+
+int Search::getNThreads() {
+    return nThreads;
+}
 
 
-int rfpVal = 136;
-int razorVal = 392;
-int probcutVal = 251;
-int futilityVal = 328;
-int historyLmrVal = 2084;
-int historyLmrNoisyVal = 2534;
+
+int Search::getTotalTime() {
+   return totalTime;
+}
+
+
+
+void Search::stopSearch() {
+    exit_thread_flag = true;
+}
+
+
+
+void Search::setSearch() {
+    exit_thread_flag = false;
+}
+
+
+
+void Search::willPrintInfo(bool b) {
+    canPrintInfo = b;
+}
+
+
+
+/**
+* Clear the transposition table
+*/
+void Search::clearTT() {
+    tt->clearHashTable();
+}
+
 
 
 /**
 * Initialize the late move reduction array
 */
-void InitLateMoveArray() {
+void Search::InitLateMoveArray() {
     for (int i = 0; i < 64; i++) {
         for (int j = 0; j < 64; j++) {
             lmrReduction[i][j] = (exp(3) * log(i) * log(j) + 72) / 54;
@@ -57,135 +88,66 @@ void InitLateMoveArray() {
 /**
 * Deallocate memory in the search file
 */
-void cleanUpSearch() {
+void Search::cleanUpSearch() {
     delete tt;
     delete movePick;
     delete moveGen;
-    delete model;
     delete eval;
     delete [] thread;
 }
 
 
 
-/**
-* Set the eval network
-*
-* @param[in] file File location.
-*/
-void setNNUE(const std::string file) {
-    if (model != nullptr) {
-        delete model;
-    }
-    model = new KPNNUE(file);
-}
-
-
-
-/**
-* Set the number of threads to search
-*
-* @param[in] numThreads The number of threads to search.
-*/
-void setNumThreads(const int numThreads) {
+void Search::setNumThreads(const int numThreads) {
     nThreads = numThreads;
     delete [] thread;
     thread = new ThreadSearch[numThreads];
 }
 
 
-/**
-* Set the number of pvs to search
-*
-* @param[in] pvs The number of pvs to search.
-*/
-void setMultiPVSearch(int pvs) {
+void Search::setMultiPVSearch(int pvs) {
     multiPv = pvs;
 }
 
 
 
-/**
-* Set the transposition table to a given size
-*
-* @param[in] hashSize The size of the transposition table to set in MB
-*/
-void setTTSize(int hashSize) {
+void Search::setTTSize(int hashSize) {
     tt->setSize(hashSize);
 }
 
 
 
-/**
-* Clear the transposition table
-*/
-void clearTT() {
-    tt->clearHashTable();
-}
-
-
-
-/**
-* Set the rfp value
-*
-* @param[in] value The value you want to set to.
-*/
-void setRFPsearch(const int value) {
+void Search::setRFPsearch(const int value) {
     rfpVal = value;
 }
 
 
 
-/**
-* Set the razoring value
-*
-* @param[in] value The value you want to set to.
-*/
-void setRazorsearch(const int value) {
+void Search::setRazorsearch(const int value) {
     razorVal = value;
 }
 
 
 
-/**
-* Set the probcut value
-*
-* @param[in] value The value you want to set to.
-*/
-void setProbcutsearch(const int value) {
+void Search::setProbcutsearch(const int value) {
     probcutVal = value;
 }
 
 
 
-/**
-* Set the futility value
-*
-* @param[in] value The value you want to set to.
-*/
-void setFutilitysearch(const int value) {
+void Search::setFutilitysearch(const int value) {
     futilityVal = value;
 }
 
 
 
-/**
-* Set the history value
-*
-* @param[in] value The value you want to set to.
-*/
-void setHistoryLMRsearch(const int value) {
+void Search::setHistoryLMRsearch(const int value) {
     historyLmrVal = value;
 }
 
 
 
-/**
-* Set the history capture value
-*
-* @param[in] value The value you want to set to.
-*/
-void setHistoryLMRNoisysearch(const int value) {
+void Search::setHistoryLMRNoisysearch(const int value) {
     historyLmrNoisyVal = value;
 }
 
@@ -198,7 +160,7 @@ void setHistoryLMRNoisysearch(const int value) {
 * @param[in]      ply  The current ply/height that the search is at.
 * @param[in]      move The move to be inserted into killers array.
 */
-void insertKiller(ThreadSearch *th, int ply, MOVE move) {
+void Search::insertKiller(ThreadSearch *th, int ply, MOVE move) {
     if (th->killers[ply][0] == move) {
         return;
     }
@@ -214,7 +176,7 @@ void insertKiller(ThreadSearch *th, int ply, MOVE move) {
 * @param[in, out] th  A pointer to the thread data that called the function.
 * @param[in]      ply The current ply/height that the search is at.
 */
-void removeKiller(ThreadSearch *th, int ply) {
+void Search::removeKiller(ThreadSearch *th, int ply) {
     th->killers[ply][1] = NO_MOVE;
     th->killers[ply][0] = NO_MOVE;
 }
@@ -228,7 +190,7 @@ void removeKiller(ThreadSearch *th, int ply) {
 * @param[in] ply  The current ply/height that the search is at.
 * @param[in] move The move to be determined if it is a killer move.
 */
-bool isKiller(ThreadSearch *th, int ply, MOVE move) {
+bool Search::isKiller(ThreadSearch *th, int ply, MOVE move) {
     return th->killers[ply][0] == move || th->killers[ply][1] == move;
 }
 
@@ -249,7 +211,7 @@ bool isKiller(ThreadSearch *th, int ply, MOVE move) {
 * @param[in]      ply   The current ply/height that the search is at.
 * @return               The score of the best move in the position.
 */
-int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int ply) {
+int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int ply) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
@@ -282,7 +244,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
 
     bool inCheck = b.InCheck();
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
-    int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b, model);
+    int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b);
 
     if (!inCheck) {
         stand_pat = staticEval;
@@ -382,7 +344,7 @@ int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int p
 * @param[in]      ply         The current ply/height that the search is at.
 * @return                     The score of the best move in the position.
 */
-int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply) {
+int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
@@ -441,7 +403,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
     }
 
     bool isCheck = b.InCheck();
-    int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, model));
+    int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b));
     bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
     bool ttFailLow = (ttRet && hashedBoard.flag == UPPER_BOUND);
     int extLevel = th->searchStack[ply].extLevel;
@@ -784,7 +746,7 @@ int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool
 * @param[in]      id       The ID of the thread that calls it.
 * @return                  The info of the best move in the position.
 */
-BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id) {
+Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id) {
 
     th->nodes++;
     MOVE move;
@@ -807,7 +769,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
 
 
     // Initialize evaluation stack
-    int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b, model));
+    int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b));
     th->searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
     int quietsSearched = 0;
 
@@ -915,7 +877,7 @@ BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList mov
 *
 * @return Returns the seldepth.
 */
-int getSeldepth() {
+int Search::getSeldepth() {
     int ret = 0;
     for (int id = 0; id < nThreads; id++) {
         ret = std::max(ret, thread[id].seldepth);
@@ -930,7 +892,7 @@ int getSeldepth() {
 *
 * @return Returns the total nodes searched.
 */
-uint64_t getTotalNodesSearched() {
+uint64_t Search::getTotalNodesSearched() {
     uint64_t ret = 0;
     for (int id = 0; id < nThreads; id++) {
         ret += thread[id].nodes;
@@ -945,7 +907,7 @@ uint64_t getTotalNodesSearched() {
 *
 * @return Returns the hash usage in permill.
 */
-uint64_t getHashFullTotal() {
+uint64_t Search::getHashFullTotal() {
     uint64_t writes = 0;
     for (int id = 0; id < nThreads; id++) {
         writes += thread[id].ttWrites;
@@ -958,7 +920,7 @@ uint64_t getHashFullTotal() {
 /**
 * Return true if the eval is mating
 */
-bool isMateScore(int eval) {
+bool Search::isMateScore(int eval) {
     if (std::abs(eval) >= MATE_VALUE_MAX) {
         return true;
     }
@@ -970,7 +932,7 @@ bool isMateScore(int eval) {
 /**
 * The score of the search, convert to mate score if a mate is found.
 */
-int getSearchedScore(int eval) {
+int Search::getSearchedScore(int eval) {
     int score = eval;
 
     // just cause it looks prettier to me
@@ -993,7 +955,7 @@ int getSearchedScore(int eval) {
 /**
 * Set the search info
 */
-void setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int eval) {
+void Search::setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int eval) {
     printInfo.nodes = getTotalNodesSearched();
     printInfo.totalTime = tm.getTimePassed();
     printInfo.nps = (uint64_t) (printInfo.nodes * 1000) / ((double) printInfo.totalTime + 1);
@@ -1010,7 +972,7 @@ void setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int eval) {
 /**
 * Print the search info (UCI)
 */
-void printSearchInfo(PrintInfo &printInfo, std::string &pstring, MOVE move, int bound, int pv) {
+void Search::printSearchInfo(PrintInfo &printInfo, std::string &pstring, MOVE move, int bound, int pv) {
 
     if (move == NO_MOVE) {
         std::cout << pstring << std::endl;
@@ -1060,7 +1022,7 @@ void printSearchInfo(PrintInfo &printInfo, std::string &pstring, MOVE move, int 
 * @param[in] analysis True if we are in analysis mode.
 * @param[in] b        The board representation.
 */
-int search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
+int Search::search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
     MOVE tempBestMove = NO_MOVE;
     MOVE bestMove = NO_MOVE;
@@ -1205,7 +1167,7 @@ int search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 /**
 * Clears all the data for all threads
 */
-void clearThreadData() {
+void Search::clearThreadData() {
     for (int id = 0; id < nThreads; id++) {
         thread[id].nodes = 0;
         thread[id].seldepth = 0;
@@ -1227,7 +1189,7 @@ void clearThreadData() {
 * @param[in]      movesToGo Moves to go until the next time control.
 * @param[in]      analysis  True if we are in analysis mode.
 */
-int beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
+int Search::beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
     stopable = false;
     totalTime = 0;
 
@@ -1237,7 +1199,7 @@ int beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc
 
     std::deque<std::thread> threads;
     for (int id = 1; id < nThreads; id++) {
-        threads.push_back(std::thread(search, id, &thread[id], depth, analysis, b));
+        threads.push_back(std::thread(&Search::search, this, id, &thread[id], depth, analysis, b));
     }
 
     int ret = search(0, &thread[0], depth, analysis, b);

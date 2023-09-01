@@ -20,7 +20,7 @@ Zobrist *zobrist = new Zobrist();
 Magics *magics;
 
 
-void Bench(Bitboard &b) {
+void Bench(Bitboard &b, Search &s) {
     // positions from Ethereal
     static const char* Benchmarks[] = {
     #include "bench.csv"
@@ -30,18 +30,18 @@ void Bench(Bitboard &b) {
     int nn = 0;
     int time  = 0;
 
-    canPrintInfo = false;
+    s.willPrintInfo(false);
     for (int i = 0; strcmp(Benchmarks[i], ""); i++) {
-        exit_thread_flag = false;
+        s.setSearch();
         b.setPosFen(Benchmarks[i]);
-        int eva = beginSearch(b, 13, INT_MAX, INT_MAX, 0, 0, 0, true);
-        nodes = getTotalNodesSearched();
-        printf("Bench [# %2d] %12d nodes %8d nps %8d CP\n", i + 1, (int) nodes, (int) (1000.0f * nodes / (totalTime + 1)), eva);
+        int eva = s.beginSearch(b, 13, INT_MAX, INT_MAX, 0, 0, 0, true);
+        nodes = s.getTotalNodesSearched();
+        printf("Bench [# %2d] %12d nodes %8d nps %8d CP\n", i + 1, (int) nodes, (int) (1000.0f * nodes / (s.getTotalTime() + 1)), eva);
         nn += nodes;
-        time += totalTime;
+        time += s.getTotalTime();
         b.reset();
     }
-    canPrintInfo = true;
+    s.willPrintInfo(true);
 
     printf("OVERALL: %53d nodes %8d nps\n", nn, (int) (1000.0f * nn / (time + 1)));
 }
@@ -52,12 +52,17 @@ int main(int argc, char* argv[]) {
 
     InitColumnsMask();
     InitRowsMask();
-    InitLateMoveArray();
 
     magics = new Magics();
+    KPNNUE *model = new KPNNUE();
+    Eval *eval = new Eval(model);                        /**< The evaluator to score the positions*/
+    TranspositionTable *tt = new TranspositionTable();
+    ThreadSearch *thread = new ThreadSearch[1];
+
+    Search s = Search(eval, tt, thread);
 
     Bitboard pos = Bitboard();
-    UCI uci = UCI();
+    UCI uci = UCI(s, model);
     uci.newGameCommand();
 
     std::regex setNNUEFile("setoption\\sname\\snnue\\svalue\\s(.+)");
@@ -89,7 +94,7 @@ int main(int argc, char* argv[]) {
     uci.setNNUEFileDefault();
 
     if (argc > 1 && strcmp(argv[1], "bench") == 0) {
-        Bench(pos);
+        Bench(pos, s);
         return 0;
     }
 
@@ -99,7 +104,7 @@ int main(int argc, char* argv[]) {
         std::smatch m;
         std::string lowerCommand = command;
         std::transform(lowerCommand.begin(), lowerCommand.end(), lowerCommand.begin(), ::tolower);
-        exit_thread_flag = false;
+        s.setSearch();
 
 
         // Quit the program
@@ -126,85 +131,83 @@ int main(int argc, char* argv[]) {
 
         // set nnue
         if (std::regex_search(lowerCommand, m, setNNUEFile)) {
-            exit_thread_flag = true;
+            s.stopSearch();
             uci.setNNUEFile(m[1]);
             continue;
         }
 
         // set hash
         if (std::regex_search(lowerCommand, m, setHash)) {
-            exit_thread_flag = true;
+            s.stopSearch();
             uci.setHash(std::stoi(m[1]));
             continue;
         }
 
         // set threads
         if (std::regex_search(lowerCommand, m, setThreads)) {
-            exit_thread_flag = true;
-            setNumThreads(std::stoi(m[1]));
+            s.stopSearch();
+            s.setNumThreads(std::stoi(m[1]));
             continue;
         }
 
         // set MultiPvs
         if (std::regex_search(lowerCommand, m, setMultiPv)) {
-            exit_thread_flag = true;
+            s.stopSearch();
             uci.setMultiPV(std::stoi(m[1]));
             continue;
         }
 
         // set rfp
         if (std::regex_search(lowerCommand, m, setRFP)) {
-            exit_thread_flag = true;
+            s.stopSearch();
             uci.setRFP(std::stoi(m[1]));
             continue;
         }
 
         // set razor
         if (std::regex_search(lowerCommand, m, setRazor)) {
-            exit_thread_flag = true;
+            s.stopSearch();
             uci.setRazor(std::stoi(m[1]));
             continue;
         }
 
         // set probcut
         if (std::regex_search(lowerCommand, m, setProbcut)) {
-            exit_thread_flag = true;
+            s.stopSearch();
             uci.setProbcut(std::stoi(m[1]));
             continue;
         }
 
         // set futility
         if (std::regex_search(lowerCommand, m, setFutility)) {
-            exit_thread_flag = true;
+            s.stopSearch();
             uci.setFutility(std::stoi(m[1]));
             continue;
         }
 
         // set futility
         if (std::regex_search(lowerCommand, m, setHistLMR)) {
-            exit_thread_flag = true;
+            s.stopSearch();
             uci.setHistoryLMR(std::stoi(m[1]));
             continue;
         }
 
         // set futility
         if (std::regex_search(lowerCommand, m, setHistLMRNoisy)) {
-            exit_thread_flag = true;
+            s.stopSearch();
             uci.setHistoryLMRNoisy(std::stoi(m[1]));
             continue;
         }
 
         // Stop searching
         if (command == "stop") {
-            exit_thread_flag = true;
+            s.stopSearch();
             continue;
         }
 
         // Search (virtually) forever.
         if (command == "go infinite") {
-            exit_thread_flag = false;
-
-            thr = std::thread(beginSearch, std::ref(pos), 99, INT_MAX, INT_MAX, 0, 0, 0, true);
+            thr = std::thread(&Search::beginSearch, std::ref(s), std::ref(pos), 99, INT_MAX, INT_MAX, 0, 0, 0, true);
             thr.detach();
             continue;
         }
@@ -220,7 +223,6 @@ int main(int argc, char* argv[]) {
 
         // go command with time for each side
         if (command.substr(0, 3) == "go ") {
-            exit_thread_flag = false;
             int whitetime = 0;
             int blacktime = 0;
             int whiteInc = 0;
@@ -258,7 +260,7 @@ int main(int argc, char* argv[]) {
                 depth = std::stoi(m[1]);
             }
 
-            thr = std::thread(beginSearch, std::ref(pos), depth, whitetime, blacktime, whiteInc, blackInc, movestogo, false);
+            thr = std::thread(&Search::beginSearch, &s, std::ref(pos), depth, whitetime, blacktime, whiteInc, blackInc, movestogo, false);
             thr.detach();
             continue;
         }
@@ -296,7 +298,7 @@ int main(int argc, char* argv[]) {
 
     }
 
-    cleanUpSearch();
+    s.cleanUpSearch();
 
     delete magics;
     delete zobrist;

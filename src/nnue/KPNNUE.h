@@ -6,7 +6,6 @@
 #include <random>
 #include <algorithm>
 #include <immintrin.h>
-#include <omp.h>
 
 #define PAWNPHASE   0
 #define KNIGHTPHASE 1
@@ -19,9 +18,11 @@
 
 class KPNNUE {
 public:
+    KPNNUE();
     KPNNUE(std::string fileName);
     KPNNUE(int networkSize, int *sizes);
     ~KPNNUE();
+    void setNetwork(std::string fileName);
     
     void trainNetwork
     (

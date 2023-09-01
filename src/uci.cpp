@@ -1,7 +1,7 @@
 #include "uci.h"
 
 
-UCI::UCI() {}
+UCI::UCI(Search &s, KPNNUE *model) : search(s), model(model) {}
 
 // Prints the commands
 void UCI::startMessage() {
@@ -16,7 +16,7 @@ void UCI::uciCommand() {
     std::cout << std::endl;
 
     std::cout << "option name NNUE type string default " << DEFAULT_NETWORK << std::endl;
-    std::cout << "option name Hash type spin default 256 min 1 max 131072" << std::endl;
+    std::cout << "option name Hash type spin default 8 min 1 max 131072" << std::endl;
     std::cout << "option name Threads type spin default 1 min 1 max 256" << std::endl;
     std::cout << "option name MultiPV type spin default 1 min 1 max 256" << std::endl;
 
@@ -32,22 +32,23 @@ void UCI::uciCommand() {
 
 // Set nnue
 void UCI::setNNUEFileDefault() {
-    setNNUE(DEFAULT_NETWORK);
+    model->setNetwork(DEFAULT_NETWORK);
 }
 
 
 
 // Set nnue
 void UCI::setNNUEFile(std::string filename) {
-    setNNUE(filename);
+    model->setNetwork(filename);
 }
 
 
 
 // Set Hash
 void UCI::setHash(int hashSize) {
-    setTTSize(hashSize);
-    for (int id = 0; id < nThreads; id++) {
+    ThreadSearch *thread = search.getThreads();
+    search.setTTSize(hashSize);
+    for (int id = 0; id < search.getNThreads(); id++) {
         thread[id].ttWrites = 0;
     }
 }
@@ -56,42 +57,42 @@ void UCI::setHash(int hashSize) {
 
 // Set rfp
 void UCI::setRFP(int value) {
-    setRFPsearch(value);
+    search.setRFPsearch(value);
 }
 
 
 
 // Set rfp
 void UCI::setRazor(int value) {
-    setRazorsearch(value);
+    search.setRazorsearch(value);
 }
 
 
 
 // Set rfp
 void UCI::setProbcut(int value) {
-    setProbcutsearch(value);
+    search.setProbcutsearch(value);
 }
 
 
 
 // Set rfp
 void UCI::setFutility(int value) {
-    setFutilitysearch(value);
+    search.setFutilitysearch(value);
 }
 
 
 
 // Set rfp
 void UCI::setHistoryLMR(int value) {
-    setHistoryLMRsearch(value);
+    search.setHistoryLMRsearch(value);
 }
 
 
 
 // Set rfp
 void UCI::setHistoryLMRNoisy(int value) {
-    setHistoryLMRNoisysearch(value);
+    search.setHistoryLMRNoisysearch(value);
 }
 
 
@@ -105,14 +106,14 @@ void UCI::readyCommand() {
 
 // New game has started, clear hash, killers, histories, etc.
 void UCI::newGameCommand() {
-
-    for (int id = 0; id < nThreads; id++) {
+    ThreadSearch *thread = search.getThreads();
+    for (int id = 0; id < search.getNThreads(); id++) {
         InitHistory(&thread[id]);
         InitKillers(&thread[id]);
         InitCounterMoves(&thread[id]);
         thread[id].ttWrites = 0;
     }
-    clearTT();
+    search.clearTT();
 
 }
 
@@ -120,7 +121,7 @@ void UCI::newGameCommand() {
 
 // Set multipv
 void UCI::setMultiPV(int pvs) {
-    setMultiPVSearch(pvs);
+    search.setMultiPVSearch(pvs);
 }
 
 

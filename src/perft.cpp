@@ -1,7 +1,7 @@
 #include "perft.h"
 
-extern MovePick *movePick;
-extern MoveGen *moveGen;
+
+MoveGen *moveGen;
 
 // Static exchange evaluation test
 void SeeTest(Bitboard &x, std::string fen, int from, int to, int result, MOVE flags) {

@@ -23,8 +23,8 @@ class Eval {
 
 public:
 
-    Eval();
-    int evaluate(Bitboard &board, KPNNUE *model);
+    Eval(KPNNUE *model);
+    int evaluate(Bitboard &board);
     int scaleEndgame(Bitboard &board, int eval);
 
 private:
@@ -37,5 +37,6 @@ private:
     int manhattanArray[64][64];
     int chebyshevArray[64][64];
 
+    KPNNUE *model;
 
 };
