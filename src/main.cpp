@@ -3,6 +3,7 @@
 #include <regex>
 #include <thread>
 #include <climits>
+#include <cstring>
 #include "magic_bitboards.h"
 #include "eval.h"
 #include "movegen.h"
