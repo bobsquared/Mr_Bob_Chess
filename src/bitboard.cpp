@@ -1037,7 +1037,7 @@ int Bitboard::seeCapture(MOVE capture) {
     int aPiece = pieceAt[from];
     bool isWhite = toMove;
 
-    if (to >= 56 || to < 8) {
+    if ((capture & PROMOTION_FLAG) != 0) {
         return 0;
     }
 
