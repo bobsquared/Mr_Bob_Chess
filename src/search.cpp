@@ -602,9 +602,12 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             lmr -= !isQuiet && seeScore > 0;
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
-            lmr -= hashed && !isPv && hashedBoard.flag == UPPER_BOUND && hashedBoard.depth >= depth - 2; // expected fail-lows
             lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh) / historyLmrVal; // Increase/decrease depth based on histories
             lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
+
+            if (hashed && !isPv && hashedBoard.flag == UPPER_BOUND && hashedBoard.depth >= depth - 2) {
+                lmr -= improving && seeScore >= 0;
+            }
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
