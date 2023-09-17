@@ -569,9 +569,9 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         }
 
         // Singular extensions
-        if ((depth >= 8 || (extLevel <= 3 && depth >= 4)) && !extension && ttMove == move && hashedBoard.flag != UPPER_BOUND 
+        if ((depth >= 8 || (extLevel <= 2 && depth >= 6)) && !extension && ttMove == move && hashedBoard.flag != UPPER_BOUND 
             && hashedBoard.depth >= depth - 3 && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
-            int singVal = hashedBoard.score - (2 + isPv) * depth;
+            int singVal = hashedBoard.score - (1 + isPv) * depth;
 
             th->searchStack[ply].singMove = move;
             score = pvSearch(b, th, depth / 2 - 1, singVal - 1, singVal, false, ply);
@@ -582,6 +582,11 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             }
             else if (singVal >= beta) {
                 return singVal;
+            }
+            else if (depth >= 8 && hashedBoard.flag == LOWER_BOUND) {
+                if (hashedBoard.score >= beta) {
+                    extension = -1 - !isPv;
+                }
             }
         }
 
@@ -1036,6 +1041,7 @@ int Search::search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard 
     std::string cpScore;
     PrintInfo printInfo;
     std::string pstring = "";
+    activePlayer = b.toMove;
 
     MoveList moveListOriginal;
     MoveList moveList;
