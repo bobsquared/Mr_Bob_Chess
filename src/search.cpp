@@ -579,6 +579,10 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 
             if (score < singVal) {
                 extension = 1;
+
+                if (!isPv && depth <= 7 && score < singVal - 2 * depth) {
+                    depth++;
+                }
             }
             else if (singVal >= beta) {
                 return singVal;
