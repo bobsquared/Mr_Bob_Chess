@@ -489,7 +489,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
     // Decrease depth for positions not in tt
     // Ed Schröder's iid alternative
     // http://talkchess.com/forum3/viewtopic.php?f=7&t=74769&sid=85d340ce4f4af0ed413fba3188189cd1
-    if (depth >= 6 - 3 * isPv && !hashed) {
+    if (depth >= 6 - 3 * isPv - !improving && !hashed) {
         depth--;
     }
 
