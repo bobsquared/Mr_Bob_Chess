@@ -563,7 +563,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         int score;
         int extension = 0;
 
-        // Check extension, passed pawn extension and recapture extensions
+        // Check extension, passed pawn extension
         if ((isCheck && (extLevel <= 5 || !isQuiet)) || (b.getPiece(moveFrom) == 0 && b.getRankFromSideToMove(moveTo) == 6)) {
             extension = 1;
         }
@@ -1069,11 +1069,12 @@ int Search::search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard 
         }
 
         moveList = moveListOriginal;
+        int d = i;
         for (int pv = 1; pv < multiPv + 1; pv++) {
             while (true) {
-
+                d = std::min(i, std::max(d, 1));
                 th->seldepth = 1;
-                BestMoveInfo bm = pvSearchRoot(b, th, i, moveList, alpha, beta, analysis, id);
+                BestMoveInfo bm = pvSearchRoot(b, th, d, moveList, alpha, beta, analysis, id);
                 moveList.set_score_move(bm.move, 1400000 + (i * 100) + aspNum);
                 searchedEval = bm.eval;
 
@@ -1103,12 +1104,14 @@ int Search::search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard 
                 if (searchedEval >= beta) {
                     beta = searchedEval + delta;
                     bound = LOWER_BOUND;
+                    d--;
                 }
                 // Fail low
                 else if (searchedEval <= alpha) {
                     beta = (alpha + beta) / 2;
                     alpha = searchedEval - delta;
                     bound = UPPER_BOUND;
+                    d += 2;
                 }
                 // exact
                 else {
