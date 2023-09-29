@@ -497,7 +497,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 
     // Search
     int ret = -INFINITY_VAL;
-    MOVE bestMove = NO_MOVE;
+    MOVE bestMove = NULL_MOVE;
     MOVE move;
     int quietsSearched = 0;
     int noisysSearched = 0;
@@ -643,8 +643,8 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         numMoves++;
         if (score > ret) {
             ret = score;
-            bestMove = move;
             if (score > alpha) {
+                bestMove = move;
                 alpha = score;
                 if (score >= beta) {
                     break;
@@ -763,7 +763,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
 
     th->nodes++;
     MOVE move;
-    MOVE bestMove = 0;
+    MOVE bestMove = NULL_MOVE;
     int numMoves = 0;
     int ret = -INFINITY_VAL;
     int ply = 0;
@@ -848,8 +848,8 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
 
         if (tempRet > ret) {
             ret = tempRet;
-            bestMove = move;
             if (tempRet > alpha) {
+                bestMove = move;
                 alpha = tempRet;
                 if (tempRet >= beta) {
                     break;
@@ -986,7 +986,7 @@ void Search::setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int
 */
 void Search::printSearchInfo(PrintInfo &printInfo, std::string &pstring, MOVE move, int bound, int pv) {
 
-    if (move == NO_MOVE) {
+    if (move == NO_MOVE || move == NULL_MOVE) {
         std::cout << pstring << std::endl;
         pstring = "";
         return;
@@ -1082,7 +1082,7 @@ int Search::search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard 
                     break;
                 }
 
-                if (pv == 1) {
+                if (pv == 1 && bm.move != NULL_MOVE) {
                     moveListOriginal.set_score_move(bm.move, 1400000 + (i * 100) + aspNum);
                     prevBestMove = bestMove;
                     bestMove = bm.move;
