@@ -409,6 +409,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
     int extLevel = th->searchStack[ply].extLevel;
     int extLevelMax = std::min(20, extLevel);
     int hashLevel = th->searchStack[ply].hashLevel;
+    int phase =  eval->getPhase(b);
 
     removeKiller(th, ply + 1);
     th->searchStack[ply].eval = staticEval;
@@ -578,7 +579,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             th->searchStack[ply].singMove = NO_MOVE;
 
             if (score < singVal) {
-                extension = 1;
+                extension = phase >= 213 && !isPv? 2 : 1;
 
                 if (!isPv && depth <= 7 && score < singVal - 2 * depth) {
                     depth++;
@@ -794,7 +795,6 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
         int moveTo = get_move_to(move);
         int hist = isQuiet? th->history[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
         int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[moveFrom] / 2][moveTo] : 0);
-        int seeScore = 0;
 
         // Check for legality
         if (!b.isLegal(move)) {
