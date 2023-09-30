@@ -260,7 +260,7 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
     }
 
     MOVE move;
-    MOVE bestMove = NO_MOVE;
+    MOVE bestMove = NULL_MOVE;
     MoveList moveList;
     int numMoves = 0;
 
@@ -302,14 +302,10 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
         int score = -qsearch(b, th, depth - 1, -beta, -alpha, ply + 1);
         b.undo_move(move);
 
-        if (bestMove == NO_MOVE) {
-            bestMove = move;
-        }
-
         if (score > stand_pat) {
             stand_pat = score;
-            bestMove = move;
             if (score > alpha) {
+                bestMove = move;
                 alpha = score;
                 if (score >= beta) {
                     break;
@@ -320,7 +316,6 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
     }
 
     if (numMoves > 0) {
-        assert (bestMove != 0);
         int bound = prevAlpha >= stand_pat? UPPER_BOUND : (stand_pat >= beta? LOWER_BOUND : EXACT);
         tt->saveTT(th, bestMove, stand_pat, staticEval, depth, bound, posKey, ply);
     }
@@ -426,7 +421,12 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         }
 
         // Reverse futility pruning
-        int rfpMargin = rfpVal - extLevelMax + hashLevel - 12 * (hashed && hashedBoard.flag != UPPER_BOUND);
+        int rfpMargin = rfpVal 
+                        - extLevelMax 
+                        + hashLevel 
+                        + ((256 - phase) / 16)
+                        - 12 * (hashed && hashedBoard.flag != UPPER_BOUND);
+                        
         if (depth <= 7 && staticEval - rfpMargin * (depth - improving) >= beta && std::abs(staticEval) < MATE_VALUE_MAX) {
             return staticEval;
         }
