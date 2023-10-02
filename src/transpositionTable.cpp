@@ -154,6 +154,9 @@ std::string TranspositionTable::getPv(Bitboard &b) {
 
         ZobristVal hashedBoard = hashTable[posKey % numHashes];
         if (hashedBoard.posKey == posKey) {
+            if (hashedBoard.move == NULL_MOVE) {
+                break;
+            }
             movesToUndo.push(hashedBoard.move);
             pv += " " + moveToString(hashedBoard.move);
             b.make_move(hashedBoard.move);
