@@ -1,207 +1,173 @@
 #include "uci.h"
+#include <regex>
 
 
-UCI::UCI(Search &s, KPNNUE *model) : search(s), model(model) {}
 
-// Prints the commands
-void UCI::startMessage() {
-    std::cout << NAME << " " << VERSION << " UCI chess engine by " << AUTHOR << std::endl;
-}
+/*
+-----------------------UCIInterface Class-----------------------
+*/
 
 
-// Prints the commands
-void UCI::uciCommand() {
-    std::cout << "id name " << NAME << " " << VERSION << std::endl;
-    std::cout << "id author " << AUTHOR << std::endl;
-    std::cout << std::endl;
 
-    std::cout << "option name NNUE type string default " << DEFAULT_NETWORK << std::endl;
-    std::cout << "option name Hash type spin default 8 min 1 max 131072" << std::endl;
-    std::cout << "option name Threads type spin default 1 min 1 max 256" << std::endl;
-    std::cout << "option name MultiPV type spin default 1 min 1 max 256" << std::endl;
-
-    std::cout << "option name rfp type spin default 136 min 1 max 500" << std::endl;
-    std::cout << "option name razor type spin default 392 min 1 max 1000" << std::endl;
-    std::cout << "option name probcut type spin default 251 min 1 max 1000" << std::endl;
-    std::cout << "option name futility type spin default 328 min 1 max 1000" << std::endl;
-    std::cout << "option name histlmr type spin default 2084 min 1 max 10000" << std::endl;
-    std::cout << "option name histlmrnoisy type spin default 2534 min 1 max 10000" << std::endl;
-    std::cout << "uciok" << std::endl;
-}
+UCIInterface::UCIInterface(std::string name) : name(name) {}
 
 
-// Set nnue
-void UCI::setNNUEFileDefault() {
-    model->setNetwork(DEFAULT_NETWORK);
+
+std::string UCIInterface::getName() {
+    return name;
 }
 
 
 
-// Set nnue
-void UCI::setNNUEFile(std::string filename) {
-    model->setNetwork(filename);
+/*
+-----------------------SetOptionInt Class-----------------------
+*/
+
+
+
+bool OptionInt::setParameter(std::string command) {
+    std::string tempName = name;
+    std::transform(tempName.begin(), tempName.end(), tempName.begin(), ::tolower);
+    std::transform(command.begin(), command.end(), command.begin(), ::tolower);
+
+    std::regex sp ("setoption\\sname\\s" + tempName + "\\svalue\\s(\\d+)");
+    std::smatch m;
+
+    if (std::regex_search(command, m, sp)) {
+        func(std::stoi(m[1]));
+        return true;
+    }
+    else {
+        return false;
+    }
+    
 }
 
 
 
-// Set Hash
-void UCI::setHash(int hashSize) {
-    ThreadSearch *thread = search.getThreads();
-    search.setTTSize(hashSize);
-    for (int id = 0; id < search.getNThreads(); id++) {
-        thread[id].ttWrites = 0;
+void OptionInt::printOption() {
+    std::cout << "option name " << name << " type spin default " << def << " min " << min << " max " << max << std::endl;
+}
+
+
+
+/*
+-----------------------SetOptionString Class-----------------------
+*/
+
+
+
+bool OptionString::setParameter(std::string command) {
+    std::string tempName = name;
+    std::transform(tempName.begin(), tempName.end(), tempName.begin(), ::tolower);
+    std::transform(command.begin(), command.end(), command.begin(), ::tolower);
+    
+
+    std::regex sp ("setoption\\sname\\s" + tempName + "\\svalue\\s(.+)");
+    std::smatch m;
+
+    if (std::regex_search(command, m, sp)) {
+        func(m[1]);
+        return true;
+    }
+    else {
+        return false;
+    }
+    
+}
+
+
+
+void OptionString::printOption() {
+    std::cout << "option name " << name << " type string default " << def << std::endl;
+}
+
+
+
+/*
+-----------------------ParameterInt Class-----------------------
+*/
+
+
+
+std::string ParameterInt::getName() {
+    return name;
+}
+
+
+
+int ParameterInt::getParameter(std::string command) {
+    std::string tempName = name;
+    std::transform(tempName.begin(), tempName.end(), tempName.begin(), ::tolower);
+    std::transform(command.begin(), command.end(), command.begin(), ::tolower);
+    
+
+    std::regex sp (".*" + tempName + "\\s(\\d+).*");
+    std::smatch m;
+
+    if (std::regex_search(command, m, sp)) {
+        return std::stoi(m[1]);
+    }
+    else {
+        return -1;
     }
 }
 
 
 
-// Set rfp
-void UCI::setRFP(int value) {
-    search.setRFPsearch(value);
-}
+
+
+/*
+-----------------------UCIOptions Class-----------------------
+*/
 
 
 
-// Set rfp
-void UCI::setRazor(int value) {
-    search.setRazorsearch(value);
-}
-
-
-
-// Set rfp
-void UCI::setProbcut(int value) {
-    search.setProbcutsearch(value);
-}
-
-
-
-// Set rfp
-void UCI::setFutility(int value) {
-    search.setFutilitysearch(value);
-}
-
-
-
-// Set rfp
-void UCI::setHistoryLMR(int value) {
-    search.setHistoryLMRsearch(value);
-}
-
-
-
-// Set rfp
-void UCI::setHistoryLMRNoisy(int value) {
-    search.setHistoryLMRNoisysearch(value);
-}
-
-
-
-// Prints the commands
-void UCI::readyCommand() {
-    std::cout << "readyok" << std::endl;
-}
-
-
-
-// New game has started, clear hash, killers, histories, etc.
-void UCI::newGameCommand() {
-    ThreadSearch *thread = search.getThreads();
-    for (int id = 0; id < search.getNThreads(); id++) {
-        InitHistory(&thread[id]);
-        InitKillers(&thread[id]);
-        InitCounterMoves(&thread[id]);
-        thread[id].ttWrites = 0;
-    }
-    search.clearTT();
-
-}
-
-
-
-// Set multipv
-void UCI::setMultiPV(int pvs) {
-    search.setMultiPVSearch(pvs);
-}
-
-
-
-// Universal Chess Interface position startpos moves command
-// Moves the pieces on the board according to the command.
-void UCI::startPosMoves(Bitboard & b, std::string moves) {
-
-    MoveGen moveGen = MoveGen();
-
-    // Make all the moves.
-    while (moves.find(' ') != std::string::npos) {
-
-        MOVE move;
-        MoveList moveList;
-
-        moveGen.generate_all_moves(moveList, b);
-        while (moveList.get_next_move(move)) {
-            if (get_move_from(move) == TO_NUM[moves.substr(0, 2)] && get_move_to(move) == TO_NUM[moves.substr(2, 2)]) {
-                if (moves.substr(4, 1) == "q") {
-                    if ((move & MOVE_FLAGS) != QUEEN_PROMOTION_FLAG && (move & MOVE_FLAGS) != QUEEN_PROMOTION_CAPTURE_FLAG) {
-                        continue;
-                    }
-                }
-                else if (moves.substr(4, 1) == "r"){
-                    if ((move & MOVE_FLAGS) != ROOK_PROMOTION_FLAG && (move & MOVE_FLAGS) != ROOK_PROMOTION_CAPTURE_FLAG) {
-                        continue;
-                    }
-                }
-                else if (moves.substr(4, 1) == "b"){
-                    if ((move & MOVE_FLAGS) != BISHOP_PROMOTION_FLAG && (move & MOVE_FLAGS) != BISHOP_PROMOTION_CAPTURE_FLAG) {
-                        continue;
-                    }
-                }
-                else if (moves.substr(4, 1) == "n"){
-                    if ((move & MOVE_FLAGS) != KNIGHT_PROMOTION_FLAG && (move & MOVE_FLAGS) != KNIGHT_PROMOTION_CAPTURE_FLAG) {
-                        continue;
-                    }
-                }
-                b.make_move(move);
-                break;
-            }
-        }
-
-        moves = moves.erase(0, moves.find(' ') + 1);
-    }
-
-    // If only one more move in the list
-    if (moves.find(' ') == std::string::npos && (moves.size() >= 4)) {
-        MOVE move;
-        MoveList moveList;
-        moveGen.generate_all_moves(moveList, b);
-        while (moveList.get_next_move(move)) {
-            if (get_move_from(move) == TO_NUM[moves.substr(0, 2)] && get_move_to(move) == TO_NUM[moves.substr(2, 2)]) {
-                if (moves.size() >= 5) {
-                    if (moves.substr(4, 1) == "q") {
-                        if ((move & MOVE_FLAGS) != QUEEN_PROMOTION_FLAG && (move & MOVE_FLAGS) != QUEEN_PROMOTION_CAPTURE_FLAG) {
-                            continue;
-                        }
-                    }
-                    else if (moves.substr(4, 1) == "r"){
-                        if ((move & MOVE_FLAGS) != ROOK_PROMOTION_FLAG && (move & MOVE_FLAGS) != ROOK_PROMOTION_CAPTURE_FLAG) {
-                            continue;
-                        }
-                    }
-                    else if (moves.substr(4, 1) == "b"){
-                        if ((move & MOVE_FLAGS) != BISHOP_PROMOTION_FLAG && (move & MOVE_FLAGS) != BISHOP_PROMOTION_CAPTURE_FLAG) {
-                            continue;
-                        }
-                    }
-                    else if (moves.substr(4, 1) == "n"){
-                        if ((move & MOVE_FLAGS) != KNIGHT_PROMOTION_FLAG && (move & MOVE_FLAGS) != KNIGHT_PROMOTION_CAPTURE_FLAG) {
-                            continue;
-                        }
-                    }
-                }
-                b.make_move(move);
-                break;
-            }
+void UCIOptions::setOption(std::string command) {
+    for (auto option : options) {
+        if (option->setParameter(command)) {
+            return;
         }
     }
 
+    throw std::invalid_argument("Unrecognized argument name");
 }
+
+
+
+void UCIOptions::printAllOptions() {
+    for (auto option : options) {
+        option->printOption();
+    }
+}
+
+
+
+/*
+-----------------------UCIParameters Class-----------------------
+*/
+
+
+
+std::vector<UCIParameters::params> UCIParameters::getParameters(std::string command) {
+    std::vector<UCIParameters::params> ret;
+    for (auto param : parameters) {
+        int val = param->getParameter(command);
+        if (val != -1) {
+            UCIParameters::params newParam;
+            newParam.name = param->getName();
+            newParam.val = val;
+            ret.push_back(newParam);
+        }
+    }
+
+    return ret;
+}
+
+
+
+void UCIParameters::addParameter(std::string name) {
+    parameters.push_back(new ParameterInt(name));
+}
+
+

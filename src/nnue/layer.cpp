@@ -3,7 +3,7 @@
 
 
 
-Layer::Layer(std::fstream &file) {
+Layer::Layer(std::istream &file) {
     readFromBinary(file);
 }
 
@@ -479,7 +479,7 @@ void Layer::writeToBinary(std::fstream &file) {
 
 
 
-void Layer::readFromBinary(std::fstream &file) {
+void Layer::readFromBinary(std::istream &file) {
 
     // write number of inputs outputs
     file.read(reinterpret_cast<char *>(&l0), sizeof(l0));

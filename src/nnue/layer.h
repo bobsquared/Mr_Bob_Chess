@@ -9,12 +9,13 @@
 #include <random>
 #include <cassert>
 #include <immintrin.h>
+#include <sstream>
 
 
 class Layer {
 
 public:
-    Layer(std::fstream &file);
+    Layer(std::istream &file);
     Layer(int nInputs, int nOutputs, bool isL0);
     ~Layer();
 
@@ -33,7 +34,7 @@ public:
     float* getBiases();
     float MeanSquaredError(int16_t expected);
     void writeToBinary(std::fstream &file);
-    void readFromBinary(std::fstream &file);
+    void readFromBinary(std::istream &file);
     float sigmoidW(float x);
     float *Sigmoid(float *output, float *input);
     float DSigmoid();

@@ -6,6 +6,7 @@
 #include <random>
 #include <algorithm>
 #include <immintrin.h>
+#include <sstream>
 
 #define PAWNPHASE   0
 #define KNIGHTPHASE 1
@@ -19,7 +20,7 @@
 class KPNNUE {
 public:
     KPNNUE();
-    KPNNUE(std::string fileName);
+    KPNNUE(char* defaultNetwork, size_t bsize);
     KPNNUE(int networkSize, int *sizes);
     ~KPNNUE();
     void setNetwork(std::string fileName);
@@ -52,7 +53,8 @@ private:
     void updateWeights(float ***grad, float **bias, float lr, float beta1, float beta2, int batch);
     int forwardpropagate(float *input);
     void writeToBinary(std::string fileName);
-    bool readFromBinary(std::string fileName);
+    void readFromBinary(std::istream &fileName);
+    void readDefault();
 
     float*** createGradientWeights();
     float** createGradientBias();

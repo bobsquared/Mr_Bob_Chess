@@ -8,15 +8,9 @@ KPNNUE::KPNNUE() {
     layers = nullptr;
 }
 
-
-KPNNUE::KPNNUE(std::string fileName) {  
-    bool isGood = readFromBinary(fileName);
-    if (isGood) {
-        std::cout << "NNUE loaded: " << fileName << std::endl;
-    }
-    else {
-        std::cout << "Failed to load NNUE: " << fileName << std::endl;
-    }
+KPNNUE::KPNNUE(char* defaultNetwork, size_t bsize) {  
+    std::istringstream myStream(std::string(defaultNetwork, bsize), std::ios::binary);
+    readFromBinary(myStream);
 }
 
 
@@ -55,14 +49,18 @@ void KPNNUE::setNetwork(std::string fileName) {
         layers = nullptr;
     }
 
-    bool isGood = readFromBinary(fileName);
-    if (isGood) {
+    std::fstream myFile;
+    myFile.open(fileName, std::ios::in | std::ios::binary);
+    if (myFile.good()) {
+        readFromBinary(myFile);
         std::cout << "NNUE loaded: " << fileName << std::endl;
     }
     else {
         std::cout << "Failed to load NNUE: " << fileName << std::endl;
     }
 
+    myFile.close();
+    
 }
 
 
@@ -629,24 +627,15 @@ void KPNNUE::writeToBinary(std::string fileName) {
 
 
 
-bool KPNNUE::readFromBinary(std::string fileName) {
+void KPNNUE::readFromBinary(std::istream &data) {
 
-    bool isGood = false;
-    std::fstream myFile;
-    myFile.open(fileName, std::ios::in | std::ios::binary);
-    if (myFile.good()) {
-        myFile.read(reinterpret_cast<char *>(&init_epoch), sizeof(init_epoch));
-        myFile.read(reinterpret_cast<char *>(&batchSize), sizeof(batchSize));
-        myFile.read(reinterpret_cast<char *>(&size), sizeof(size));
-        
-        layers = new Layer*[size];
-        for (int i = 0; i < size; i++) {
-            layers[i] = new Layer(myFile);
-        }
-
-        isGood = true;
+    data.read(reinterpret_cast<char *>(&init_epoch), sizeof(init_epoch));
+    data.read(reinterpret_cast<char *>(&batchSize), sizeof(batchSize));
+    data.read(reinterpret_cast<char *>(&size), sizeof(size));
+    
+    layers = new Layer*[size];
+    for (int i = 0; i < size; i++) {
+        layers[i] = new Layer(data);
     }
 
-    myFile.close();
-    return isGood;
 }

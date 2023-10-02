@@ -26,12 +26,13 @@ public:
     Eval(KPNNUE *model);
     int evaluate(Bitboard &board);
     int scaleEndgame(Bitboard &board, int eval);
+    int getPhase(Bitboard &board);
 
 private:
     void InitializeEval(Bitboard &board, ThreadSearch *th);
     void InitLightSquares();
     void InitDistanceArray();
-    int getPhase(Bitboard &board);
+    
 
     uint64_t lightSquares;
     int manhattanArray[64][64];
