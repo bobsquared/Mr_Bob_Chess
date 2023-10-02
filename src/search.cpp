@@ -76,8 +76,8 @@ void Search::clearTT() {
 * Initialize the late move reduction array
 */
 void Search::InitLateMoveArray() {
-    for (int i = 0; i < 64; i++) {
-        for (int j = 0; j < 64; j++) {
+    for (int i = 1; i < 64; i++) {
+        for (int j = 1; j < 64; j++) {
             lmrReduction[i][j] = (exp(3) * log(i) * log(j) + 72) / 54;
         }
     }
@@ -426,7 +426,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
                         + hashLevel 
                         + ((256 - phase) / 16)
                         - 12 * (hashed && hashedBoard.flag != UPPER_BOUND);
-                        
+
         if (depth <= 7 && staticEval - rfpMargin * (depth - improving) >= beta && std::abs(staticEval) < MATE_VALUE_MAX) {
             return staticEval;
         }

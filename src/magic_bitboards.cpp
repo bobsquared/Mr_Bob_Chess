@@ -120,8 +120,10 @@ void Magics::InitRookMoves(uint64_t *rookMoves) {
         uint8_t col = i % 8;
 
         for (int k = 0; k < 8; k++) {
-            tempBitBoard1 |= tempBitBoard >> (8 + k * 8);
-            tempBitBoard2 |= (tempBitBoard << (8 + k * 8));
+            if (8 + k * 8 < 64) {
+                tempBitBoard1 |= tempBitBoard >> (8 + k * 8);
+                tempBitBoard2 |= (tempBitBoard << (8 + k * 8));
+            }
         }
 
         for (int k = col; k < 8; k++) {
