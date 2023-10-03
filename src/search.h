@@ -19,6 +19,22 @@
 
 class Search {
 public:
+
+    struct SearchInfo {
+        uint64_t nodes;
+        uint64_t nps;
+        int depth;
+        int seldepth;
+        int score;
+        int eval;
+        int totalTime;
+        int hashUsage;
+        std::string s1;
+        std::string s2;
+        std::string promo;
+        std::string pv;
+    };
+
     Search(Eval *eval, TranspositionTable *tt, ThreadSearch *thread);
 
     void InitLateMoveArray();
@@ -45,7 +61,7 @@ public:
     void stopSearch();
     void setSearch();
 
-    int beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
+    SearchInfo beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
 
 private:
 
@@ -68,9 +84,10 @@ private:
     };
 
     void clearThreadData();
-    void printSearchInfo(PrintInfo &printInfo, std::string &pstring, MOVE move, int bound, int pv);
+    void printSearchInfo(SearchInfo &printInfo, std::string &pstring, MOVE move, int bound, int pv);
+    void moveToStruct(SearchInfo &si, MOVE move);
 
-    void setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int eval);
+    void setSearchInfo(SearchInfo &printInfo, Bitboard &board, int depth, int eval);
     uint64_t getHashFullTotal();
     int getSeldepth();
     
@@ -81,7 +98,7 @@ private:
     static void insertKiller(ThreadSearch *th, int ply, MOVE move);
     static void removeKiller(ThreadSearch *th, int ply);
     
-    int search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b);
+    SearchInfo search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b);
     BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id);
     int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply);
     int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int ply);

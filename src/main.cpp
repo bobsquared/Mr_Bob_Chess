@@ -36,9 +36,9 @@ void Bench(Bitboard &b, Search &s) {
     for (int i = 0; strcmp(Benchmarks[i], ""); i++) {
         s.setSearch();
         b.setPosFen(Benchmarks[i]);
-        int eva = s.beginSearch(b, 13, INT_MAX, INT_MAX, 0, 0, 0, true);
+        Search::SearchInfo ret = s.beginSearch(b, 13, INT_MAX, INT_MAX, 0, 0, 0, true);
         nodes = s.getTotalNodesSearched();
-        printf("Bench [# %2d] %12d nodes %8d nps %8d CP\n", i + 1, (int) nodes, (int) (1000.0f * nodes / (s.getTotalTime() + 1)), eva);
+        printf("Bench [# %2d] %12d nodes %8d nps %8d CP\n", i + 1, (int) nodes, (int) (1000.0f * nodes / (s.getTotalTime() + 1)), ret.score);
         nn += nodes;
         time += s.getTotalTime();
         b.reset();

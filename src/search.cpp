@@ -967,7 +967,7 @@ int Search::getSearchedScore(int eval) {
 /**
 * Set the search info
 */
-void Search::setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int eval) {
+void Search::setSearchInfo(SearchInfo &printInfo, Bitboard &board, int depth, int eval) {
     printInfo.nodes = getTotalNodesSearched();
     printInfo.totalTime = tm.getTimePassed();
     printInfo.nps = (uint64_t) (printInfo.nodes * 1000) / ((double) printInfo.totalTime + 1);
@@ -984,7 +984,7 @@ void Search::setSearchInfo(PrintInfo &printInfo, Bitboard &board, int depth, int
 /**
 * Print the search info (UCI)
 */
-void Search::printSearchInfo(PrintInfo &printInfo, std::string &pstring, MOVE move, int bound, int pv) {
+void Search::printSearchInfo(SearchInfo &printInfo, std::string &pstring, MOVE move, int bound, int pv) {
 
     if (move == NO_MOVE || move == NULL_MOVE) {
         std::cout << pstring << std::endl;
@@ -1034,7 +1034,7 @@ void Search::printSearchInfo(PrintInfo &printInfo, std::string &pstring, MOVE mo
 * @param[in] analysis True if we are in analysis mode.
 * @param[in] b        The board representation.
 */
-int Search::search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
+Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
 
     MOVE tempBestMove = NO_MOVE;
     MOVE bestMove = NO_MOVE;
@@ -1043,7 +1043,7 @@ int Search::search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard 
     int alpha;
     int beta;
     std::string cpScore;
-    PrintInfo printInfo;
+    SearchInfo printInfo;
     std::string pstring = "";
 
     MoveList moveListOriginal;
@@ -1174,7 +1174,7 @@ int Search::search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard 
         exit_thread_flag = true;
     }
 
-    return searchedEval;
+    return printInfo;
 }
 
 
@@ -1192,6 +1192,44 @@ void Search::clearThreadData() {
 }
 
 
+
+void Search::moveToStruct(SearchInfo &si, MOVE move) {
+    std::string algMove = "";
+    
+    switch (move & MOVE_FLAGS) {
+        case QUEEN_PROMOTION_FLAG:
+            algMove += "q";
+            break;
+        case QUEEN_PROMOTION_CAPTURE_FLAG:
+            algMove += "q";
+            break;
+        case ROOK_PROMOTION_FLAG:
+            algMove += "r";
+            break;
+        case ROOK_PROMOTION_CAPTURE_FLAG:
+            algMove += "r";
+            break;
+        case BISHOP_PROMOTION_FLAG:
+            algMove += "b";
+            break;
+        case BISHOP_PROMOTION_CAPTURE_FLAG:
+            algMove += "b";
+            break;
+        case KNIGHT_PROMOTION_FLAG:
+            algMove += "n";
+            break;
+        case KNIGHT_PROMOTION_CAPTURE_FLAG:
+            algMove += "n";
+            break;
+    }
+
+    si.s1 = TO_ALG[get_move_from(move)];
+    si.s2 = TO_ALG[get_move_to(move)];
+    si.promo = algMove;
+
+}
+
+
 /**
 * The function that main calls to get the best move
 *
@@ -1204,7 +1242,7 @@ void Search::clearThreadData() {
 * @param[in]      movesToGo Moves to go until the next time control.
 * @param[in]      analysis  True if we are in analysis mode.
 */
-int Search::beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
+Search::SearchInfo Search::beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
     stopable = false;
     totalTime = 0;
 
@@ -1217,7 +1255,7 @@ int Search::beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, 
         threads.push_back(std::thread(&Search::search, this, id, &thread[id], depth, analysis, b));
     }
 
-    int ret = search(0, &thread[0], depth, analysis, b);
+    Search::SearchInfo ret = search(0, &thread[0], depth, analysis, b);
 
     for (int i = 1; i < nThreads; i++) {
         threads.back().join();
@@ -1230,5 +1268,7 @@ int Search::beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, 
         std::cout << "bestmove " << moveToString(bestMove) << std::endl;
     }
 
-    return b.getSideToMove()? -ret : ret;
+    moveToStruct(ret, bestMove);
+
+    return ret;
 }
