@@ -152,6 +152,7 @@ int main(int argc, char* argv[]) {
             uci.setCommand(c);
         }
 
+        // SEE testing data from https://github.com/jdart1/arasan-chess/blob/master/src/unit.cpp
         else if (command == "see") {
             const int pvals[6] = {100, 450, 450, 650, 1250, 5000};
             SeeTest(pos, "4R3/2r3p1/5bk1/1p1r3p/p2PR1P1/P1BK1P2/1P6/8 b - -", TO_NUM["h5"], TO_NUM["g4"], 0);
