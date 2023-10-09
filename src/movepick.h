@@ -9,7 +9,7 @@
 #include "defs.h"
 #include "movegen.h"
 #include "bitboard.h"
-
+#include "thread_search.h"
 
 class MovePick {
 

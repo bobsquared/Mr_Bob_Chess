@@ -209,24 +209,24 @@ struct SearchStack {
 
 
 // Info each thread has
-struct ThreadSearch {
-    uint64_t ttWrites;
-    uint64_t nodes;
+// struct ThreadSearch {
+//     uint64_t ttWrites;
+//     uint64_t nodes;
 
-    SearchStack searchStack[MAX_PLY] = {};
-    int seldepth;
+//     SearchStack searchStack[MAX_PLY] = {};
+//     int seldepth;
 
-    int history[2][64][64] = {};
-    int captureHistory[2][64][64] = {};
-    int counterHistory[2][6][64][6][64] = {};
-    MOVE killers[MAX_PLY][2] = {};
-    MOVE counterMove[2][64][64] = {};
-    MOVE bestMove;
+//     int history[2][64][64] = {};
+//     int captureHistory[2][64][64] = {};
+//     int counterHistory[2][6][64][6][64] = {};
+//     MOVE killers[MAX_PLY][2] = {};
+//     MOVE counterMove[2][64][64] = {};
+//     MOVE bestMove;
 
-    bool nullMoveTree;
+//     bool nullMoveTree;
 
-    ThreadSearch() : ttWrites(0), nodes(0), seldepth(0), bestMove(NO_MOVE), nullMoveTree(false)  {};
-};
+//     ThreadSearch() : ttWrites(0), nodes(0), seldepth(0), bestMove(NO_MOVE), nullMoveTree(false)  {};
+// };
 
 
 
@@ -265,11 +265,8 @@ extern uint64_t columnMask[64];
 extern uint64_t rowMask[64];
 
 extern int bitScan(const uint64_t bitboard);
-extern void InitHistory(ThreadSearch *th);
 extern void InitColumnsMask();
 extern void InitRowsMask();
-extern void InitKillers(ThreadSearch *th);
-extern void InitCounterMoves(ThreadSearch *th);
 extern uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag);
 extern uint64_t knightAttacks(uint64_t knights);
 extern int count_population(uint64_t bitboard);

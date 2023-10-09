@@ -100,7 +100,7 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
         }
         else {
             int cmh = isValidPrevMove * th->counterHistory[b.toMove][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo];
-            moveList.set_score_index(i, th->history[b.toMove][moveFrom][moveTo] + cmh);
+            moveList.set_score_index(i, th->quietHistory[b.toMove][moveFrom][moveTo] + cmh);
         }
     }
 

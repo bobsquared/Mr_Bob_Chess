@@ -10,6 +10,7 @@
 #include "movegen.h"
 #include "timeman.h"
 #include "transpositionTable.h"
+#include "thread_search.h"
 
 
 
@@ -94,15 +95,10 @@ private:
     static bool isMateScore(int eval);
     static int getSearchedScore(int eval);
     
-    static bool isKiller(ThreadSearch *th, int ply, MOVE move);
-    static void insertKiller(ThreadSearch *th, int ply, MOVE move);
-    static void removeKiller(ThreadSearch *th, int ply);
-    
     SearchInfo search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b);
     BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id);
     int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply);
     int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int ply);
-
 
     std::atomic<bool> exit_thread_flag;
     int totalTime;

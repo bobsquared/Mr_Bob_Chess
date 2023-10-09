@@ -152,50 +152,6 @@ void Search::setHistoryLMRNoisysearch(const int value) {
 }
 
 
-
-/**
-* Insert a move into killers array for a given ply
-*
-* @param[in, out] th   A pointer to the thread data that called the function.
-* @param[in]      ply  The current ply/height that the search is at.
-* @param[in]      move The move to be inserted into killers array.
-*/
-void Search::insertKiller(ThreadSearch *th, int ply, MOVE move) {
-    if (th->killers[ply][0] == move) {
-        return;
-    }
-    th->killers[ply][1] = th->killers[ply][0];
-    th->killers[ply][0] = move;
-}
-
-
-
-/**
-* Removes killer moves for a given ply
-*
-* @param[in, out] th  A pointer to the thread data that called the function.
-* @param[in]      ply The current ply/height that the search is at.
-*/
-void Search::removeKiller(ThreadSearch *th, int ply) {
-    th->killers[ply][1] = NO_MOVE;
-    th->killers[ply][0] = NO_MOVE;
-}
-
-
-
-/**
-* Checks to see if a move is a killer move
-*
-* @param[in] th   A pointer to the thread data that called the function.
-* @param[in] ply  The current ply/height that the search is at.
-* @param[in] move The move to be determined if it is a killer move.
-*/
-bool Search::isKiller(ThreadSearch *th, int ply, MOVE move) {
-    return th->killers[ply][0] == move || th->killers[ply][1] == move;
-}
-
-
-
 /**
 * The function that searches only noisy moves
 *
@@ -406,7 +362,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
     int hashLevel = th->searchStack[ply].hashLevel;
     int phase =  eval->getPhase(b);
 
-    removeKiller(th, ply + 1);
+    th->removeKiller(ply + 1);
     th->searchStack[ply].eval = staticEval;
     th->searchStack[ply + 1].hashLevel = hashLevel + hashed;
 
@@ -516,7 +472,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
-        int hist = isQuiet? th->history[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
+        int hist = isQuiet? th->quietHistory[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
         int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo] : 0);
         int seeScore = 0;
 
@@ -608,7 +564,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         else if (depth >= 3 && numMoves > isPv) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)] * (100 + extLevel) / 100; // Base reduction
 
-            lmr -= isKiller(th, ply, move); // Don't reduce as much for killer moves
+            lmr -= th->isKiller(ply, move); // Don't reduce as much for killer moves
             lmr -= !isQuiet && seeScore > 0;
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
@@ -675,8 +631,8 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 
     // Update Histories
     if (alpha >= beta && isQuietMove(bestMove)) {
-        insertKiller(th, ply, bestMove);
-        b.insertCounterMove(th, bestMove);
+        th->insertKiller(ply, bestMove);
+        th->insertCounterMove(b, bestMove);
         int bestMoveFrom = get_move_from(bestMove);
         int bestMoveTo = get_move_to(bestMove);
         int piece = b.pieceAt[bestMoveFrom] / 2;
@@ -686,8 +642,8 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             histScalar += 8;
         }
 
-        int hist = th->history[b.getSideToMove()][bestMoveFrom][bestMoveTo] * std::min(depth, 20) / 23;
-        th->history[b.getSideToMove()][bestMoveFrom][bestMoveTo] += histScalar * (depth * depth) - hist;
+        int hist = th->quietHistory[b.getSideToMove()][bestMoveFrom][bestMoveTo] * std::min(depth, 20) / 23;
+        th->quietHistory[b.getSideToMove()][bestMoveFrom][bestMoveTo] += histScalar * (depth * depth) - hist;
 
         if (prevMove != NULL_MOVE) {
             hist = th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][bestMoveTo] * std::min(depth, 20) / 23;
@@ -700,8 +656,8 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             int quietTo = get_move_to(quiets[i]);
             piece = b.pieceAt[quietFrom] / 2;
 
-            hist = th->history[b.getSideToMove()][quietFrom][quietTo] * std::min(depth, 20) / 23;
-            th->history[b.getSideToMove()][quietFrom][quietTo] += histScalar * (-depth * depth) - hist;
+            hist = th->quietHistory[b.getSideToMove()][quietFrom][quietTo] * std::min(depth, 20) / 23;
+            th->quietHistory[b.getSideToMove()][quietFrom][quietTo] += histScalar * (-depth * depth) - hist;
 
             if (prevMove != NULL_MOVE) {
                 hist = th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][quietTo] * std::min(depth, 20) / 23;
@@ -793,7 +749,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
-        int hist = isQuiet? th->history[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
+        int hist = isQuiet? th->quietHistory[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
         int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[moveFrom] / 2][moveTo] : 0);
 
         // Check for legality

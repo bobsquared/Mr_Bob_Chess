@@ -4,6 +4,7 @@
 #include <stack>
 #include "bitboard.h"
 #include "defs.h"
+#include "thread_search.h"
 
 
 

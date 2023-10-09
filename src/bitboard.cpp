@@ -1106,16 +1106,6 @@ bool Bitboard::getSideToMove() {
 }
 
 
-// Insert counter move into array
-void Bitboard::insertCounterMove(ThreadSearch *th, MOVE move) {
-    MOVE prevMove = moveHistory.move[moveHistory.count - 1].move;
-
-    if (prevMove != NULL_MOVE) {
-        th->counterMove[toMove][get_move_from(prevMove)][get_move_to(prevMove)] = move;
-    }
-}
-
-
 
 // Returns true if null move pruning is allowed in the position
 bool Bitboard::nullMoveable() {

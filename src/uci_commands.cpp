@@ -35,9 +35,9 @@ void ReadyCommand::execute() {
 void NewGameCommand::execute() {
     ThreadSearch *thread = s.getThreads();
     for (int id = 0; id < s.getNThreads(); id++) {
-        InitHistory(&thread[id]);
-        InitKillers(&thread[id]);
-        InitCounterMoves(&thread[id]);
+        thread[id].ResetHistories();
+        thread[id].InitKillers();
+        thread[id].InitCounterMoves();
         thread[id].ttWrites = 0;
     }
     s.clearTT();

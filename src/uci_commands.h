@@ -8,6 +8,7 @@
 #include "bitboard.h"
 #include "search.h"
 #include "uci.h"
+#include "thread_search.h"
 
 class CommandInterface {
 public:

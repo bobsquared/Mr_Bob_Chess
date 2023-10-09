@@ -29,7 +29,6 @@ public:
     int getPhase(Bitboard &board);
 
 private:
-    void InitializeEval(Bitboard &board, ThreadSearch *th);
     void InitLightSquares();
     void InitDistanceArray();
     

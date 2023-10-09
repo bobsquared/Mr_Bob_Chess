@@ -66,7 +66,6 @@ public:
 
     void reset();
     bool getSideToMove();
-    void insertCounterMove(ThreadSearch *th, MOVE move);
 
     uint64_t getPosKey() const;
     void debugZobristHash();
