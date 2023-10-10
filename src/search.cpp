@@ -152,6 +152,14 @@ void Search::setHistoryLMRNoisysearch(const int value) {
 }
 
 
+
+PrevMoveInfo GetPreviousMoveInfo(Bitboard &b) {
+    MOVE prevMove = b.moveHistory.count > 0? b.moveHistory.move[b.moveHistory.count - 1].move : NO_MOVE;
+    int prevMoveTo = get_move_to(prevMove);
+    return PrevMoveInfo(prevMove, get_move_from(prevMove), prevMoveTo, b.pieceAt[prevMoveTo] / 2);
+}
+
+
 /**
 * The function that searches only noisy moves
 *
@@ -461,19 +469,16 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
     MoveList moveList;
     MOVE quiets[MAX_NUM_MOVES];
     MOVE noisys[MAX_NUM_MOVES];
-
-    MOVE prevMove = b.moveHistory.move[b.moveHistory.count - 1].move;
-    int prevMoveTo = get_move_to(prevMove);
-    int prevPiece = b.pieceAt[prevMoveTo] / 2;
+    PrevMoveInfo prev = GetPreviousMoveInfo(b);
 
     moveGen->generate_all_moves(moveList, b); // Generate moves
-    movePick->scoreMoves(moveList, b, th, ply, ttMove);
+    movePick->scoreMoves(moveList, b, prev, th, ply, ttMove);
     while (moveList.get_next_move(move)) {
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
-        int hist = isQuiet? th->quietHistory[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
-        int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo] : 0);
+        int hist = th->getHistory(b.toMove, isQuiet, moveFrom, moveTo);
+        int cmh = isQuiet * th->getCounterHistory(b, prev, moveFrom, moveTo);
         int seeScore = 0;
 
         if (singMove == move) {
@@ -630,58 +635,11 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
     }
 
     // Update Histories
-    if (alpha >= beta && isQuietMove(bestMove)) {
-        th->insertKiller(ply, bestMove);
-        th->insertCounterMove(b, bestMove);
-        int bestMoveFrom = get_move_from(bestMove);
-        int bestMoveTo = get_move_to(bestMove);
-        int piece = b.pieceAt[bestMoveFrom] / 2;
-        int histScalar = 32;
-
-        if (bestMove == ttMove) {
-            histScalar += 8;
-        }
-
-        int hist = th->quietHistory[b.getSideToMove()][bestMoveFrom][bestMoveTo] * std::min(depth, 20) / 23;
-        th->quietHistory[b.getSideToMove()][bestMoveFrom][bestMoveTo] += histScalar * (depth * depth) - hist;
-
-        if (prevMove != NULL_MOVE) {
-            hist = th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][bestMoveTo] * std::min(depth, 20) / 23;
-            th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][bestMoveTo] += histScalar * (depth * depth) - hist;
-        }
-
-
-        for (int i = 0; i < quietsSearched; i++) {
-            int quietFrom = get_move_from(quiets[i]);
-            int quietTo = get_move_to(quiets[i]);
-            piece = b.pieceAt[quietFrom] / 2;
-
-            hist = th->quietHistory[b.getSideToMove()][quietFrom][quietTo] * std::min(depth, 20) / 23;
-            th->quietHistory[b.getSideToMove()][quietFrom][quietTo] += histScalar * (-depth * depth) - hist;
-
-            if (prevMove != NULL_MOVE) {
-                hist = th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][quietTo] * std::min(depth, 20) / 23;
-                th->counterHistory[b.getSideToMove()][prevPiece][prevMoveTo][piece][quietTo] += histScalar * (-depth * depth) - hist;
-            }
-        }
-    }
-    
     if (alpha >= beta) {
-        if (isCaptureOrPromotionMove(bestMove)) {
-            int bestMoveFrom = get_move_from(bestMove);
-            int bestMoveTo = get_move_to(bestMove);
-
-            int hist = th->captureHistory[b.getSideToMove()][bestMoveFrom][bestMoveTo] * std::min(depth, 20) / 23;
-            th->captureHistory[b.getSideToMove()][bestMoveFrom][bestMoveTo] += 32 * (depth * depth) - hist;
+        if (isQuietMove(bestMove)) {
+            th->insertKiller(ply, bestMove);
         }
-
-        for (int i = 0; i < noisysSearched; i++) {
-            int noisyFrom = get_move_from(noisys[i]);
-            int noisyTo = get_move_to(noisys[i]);
-
-            int hist = th->captureHistory[b.getSideToMove()][noisyFrom][noisyTo] * std::min(depth, 20) / 23;
-            th->captureHistory[b.getSideToMove()][noisyFrom][noisyTo] += 32 * (-depth * depth) - hist;
-        }
+        th->UpdateHistories(b, prev, quiets, noisys, quietsSearched, noisysSearched, depth, ttMove, bestMove);
     }
 
     // Update Transposition tables
@@ -732,10 +690,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
     MOVE ttMove = NO_MOVE;
     bool hashed = tt->probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
 
-
-    MOVE prevMove = b.moveHistory.count > 0? b.moveHistory.move[b.moveHistory.count - 1].move :  NO_MOVE;
-    int prevPiece = b.pieceAt[get_move_to(prevMove)] / 2;
-
+    PrevMoveInfo prev = GetPreviousMoveInfo(b);
 
     // Initialize evaluation stack
     int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b));
@@ -749,8 +704,8 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
-        int hist = isQuiet? th->quietHistory[b.getSideToMove()][moveFrom][moveTo] : th->captureHistory[b.getSideToMove()][moveFrom][moveTo];
-        int cmh = isQuiet * (prevMove != NULL_MOVE? th->counterHistory[b.getSideToMove()][prevPiece][get_move_to(prevMove)][b.pieceAt[moveFrom] / 2][moveTo] : 0);
+        int hist = th->getHistory(b.toMove, isQuiet, moveFrom, moveTo);
+        int cmh = isQuiet? th->getCounterHistory(b, prev, moveFrom, moveTo) : 0;
 
         // Check for legality
         if (!b.isLegal(move)) {
@@ -1002,10 +957,12 @@ Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool anal
     SearchInfo printInfo;
     std::string pstring = "";
 
+    PrevMoveInfo prev = GetPreviousMoveInfo(b);
+
     MoveList moveListOriginal;
     MoveList moveList;
     moveGen->generate_all_moves(moveListOriginal, b);
-    movePick->scoreMoves(moveListOriginal, b, th, 0, NO_MOVE);
+    movePick->scoreMoves(moveListOriginal, b, prev, th, 0, NO_MOVE);
 
     if (id == 0) {
         tm.setTimer(moveListOriginal.count);

@@ -208,25 +208,16 @@ struct SearchStack {
 
 
 
-// Info each thread has
-// struct ThreadSearch {
-//     uint64_t ttWrites;
-//     uint64_t nodes;
+struct PrevMoveInfo {
+    MOVE prevMove;
+    int prevMoveFrom;
+    int prevMoveTo;
+    int prevPiece;
 
-//     SearchStack searchStack[MAX_PLY] = {};
-//     int seldepth;
-
-//     int history[2][64][64] = {};
-//     int captureHistory[2][64][64] = {};
-//     int counterHistory[2][6][64][6][64] = {};
-//     MOVE killers[MAX_PLY][2] = {};
-//     MOVE counterMove[2][64][64] = {};
-//     MOVE bestMove;
-
-//     bool nullMoveTree;
-
-//     ThreadSearch() : ttWrites(0), nodes(0), seldepth(0), bestMove(NO_MOVE), nullMoveTree(false)  {};
-// };
+    PrevMoveInfo() : prevMove(NO_MOVE), prevMoveFrom(0), prevMoveTo(0), prevPiece(0) {};
+    PrevMoveInfo(MOVE prevMove, int prevMoveFrom, int prevMoveTo, int prevPiece) : 
+        prevMove(prevMove), prevMoveFrom(prevMoveFrom), prevMoveTo(prevMoveTo), prevPiece(prevPiece) {};
+};
 
 
 

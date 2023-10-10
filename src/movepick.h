@@ -31,7 +31,7 @@ public:
     * @param[in]      ply      The current ply/height that the search is at.
     * @param[in]      pvMove   The principal variation move found in the transposition table.
     */
-    void scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int ply, MOVE pvMove);
+    void scoreMoves(MoveList &moveList, Bitboard &b, PrevMoveInfo &prev, ThreadSearch *th, int ply, MOVE pvMove);
 
     /**
     * A move scorer for qsearch.
