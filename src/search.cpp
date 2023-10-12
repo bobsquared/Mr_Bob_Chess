@@ -466,6 +466,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
     int quietsSearched = 0;
     int noisysSearched = 0;
     int numMoves = 0;
+    bool isSingular = false;
     MoveList moveList;
     MOVE quiets[MAX_NUM_MOVES];
     MOVE noisys[MAX_NUM_MOVES];
@@ -540,6 +541,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             th->searchStack[ply].singMove = NO_MOVE;
 
             if (score < singVal) {
+                isSingular = true;
                 extension = phase >= 213 && !isPv? 2 : 1;
 
                 if (!isPv && depth <= 7 && score < singVal - 2 * depth) {
@@ -639,7 +641,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         if (isQuietMove(bestMove)) {
             th->insertKiller(ply, bestMove);
         }
-        th->UpdateHistories(b, prev, quiets, noisys, quietsSearched, noisysSearched, depth, ttMove, bestMove);
+        th->UpdateHistories(b, prev, quiets, noisys, quietsSearched, noisysSearched, depth + isSingular, ttMove, bestMove);
     }
 
     // Update Transposition tables
