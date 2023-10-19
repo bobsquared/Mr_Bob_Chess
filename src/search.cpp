@@ -785,7 +785,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
     }
 
     // Stop the search
-    if ((id == 0 && depth == 2 && numMoves == 1 && !analysis)) {
+    if ((id == 0 && depth == 2 && alpha < beta && numMoves == 1 && !analysis)) {
         exit_thread_flag = true;
     }
 
