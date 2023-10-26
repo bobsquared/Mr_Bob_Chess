@@ -194,6 +194,7 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
     }
 
     // Probe Transpostion Table:
+    bool isPv = alpha == beta - 1? false : true;
     ZobristVal hashedBoard;
     uint64_t posKey = b.getPosKey();
     bool ttRet = false;
@@ -202,7 +203,7 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
 
     bool hashed = tt->probeTTQsearch(posKey, hashedBoard, ttRet, ttMove, alpha, beta, ply);
 
-    if (ttRet) {
+    if (!isPv && ttRet) {
         return hashedBoard.score;
     }
 
