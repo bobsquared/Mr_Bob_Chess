@@ -397,8 +397,10 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         }
 
         // Null move pruning
-        if (canNullMove && staticEval >= beta + 25 * (phase >= 200) && depth >= 2 && th->nullMoveTree && b.nullMoveable()) {
-            int R = 3 + depth / 6 + std::min((staticEval - beta) / 300, 3);
+        if (canNullMove && staticEval >= beta + 25 * (phase >= 200) && depth >= 2 + !hashed 
+                        && th->nullMoveTree && b.nullMoveable() 
+                        && (!hashed || hashedBoard.score >= beta)) {
+            int R = 3 + depth / 5 + std::min((staticEval - beta) / 300, 4);
             th->searchStack[ply + 1].extLevel = extLevel;
 
             b.make_null_move();
@@ -407,7 +409,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 
             if (nullRet >= beta && std::abs(nullRet) < MATE_VALUE_MAX) {
 
-                if (depth >= 8) {
+                if (depth >= 8 && (!hashed || hashedBoard.flag == UPPER_BOUND)) {
                     th->nullMoveTree = false;
                     nullRet = pvSearch(b, th, depth - R - 1, beta - 1, beta, false, ply);
                     th->nullMoveTree = true;
