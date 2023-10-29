@@ -77,7 +77,7 @@ int main(int argc, char* argv[]) {
     options.addOption([&](int n){s.setNumThreads(n);}, "Threads", 1, 1, 256);
     options.addOption([&](int n){s.setMultiPVSearch(n);}, "MultiPV", 1, 1, 256);
 
-    options.addOption([&](int n){s.setRFPsearch(n);}, "rfp", 136, 1, 500);
+    options.addOption([&](int n){s.setRFPsearch(n);}, "rfp", 95, 1, 500);
     options.addOption([&](int n){s.setRazorsearch(n);}, "razor", 392, 1, 1000);
     options.addOption([&](int n){s.setProbcutsearch(n);}, "probcut", 251, 1, 1000);
     options.addOption([&](int n){s.setFutilitysearch(n);}, "futility", 328, 1, 1000);
