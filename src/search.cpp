@@ -650,7 +650,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         if (isQuietMove(bestMove)) {
             th->insertKiller(ply, bestMove);
         }
-        th->UpdateHistories(b, prev, quiets, noisys, quietsSearched, noisysSearched, depth + isSingular, ttMove, bestMove);
+        th->UpdateHistories(b, prev, quiets, noisys, quietsSearched, noisysSearched, depth + (isSingular || isPv), ttMove, bestMove);
     }
 
     // Update Transposition tables
