@@ -554,9 +554,11 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             else if (singVal >= beta) {
                 return singVal;
             }
-            else if (depth >= 8 && hashedBoard.flag == LOWER_BOUND) {
+            else if (depth >= 8) {
                 if (hashedBoard.score >= beta) {
-                    extension = -1 - !isPv;
+                    if (hashedBoard.flag == LOWER_BOUND) {
+                        extension = -1 - 2 * !isPv;
+                    }
                 }
             }
         }
