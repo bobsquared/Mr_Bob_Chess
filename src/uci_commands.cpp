@@ -47,8 +47,8 @@ void NewGameCommand::execute() {
 
 void GoCommand::execute() {
     std::thread thr;
-    int wtime = 0;
-    int btime = 0;
+    int wtime = INT_MAX;
+    int btime = INT_MAX;
     int winc = 0;
     int binc = 0;
     int movestogo = 0;
@@ -57,8 +57,6 @@ void GoCommand::execute() {
     bool analysis = false;
 
     if (command == "go infinite") {
-        wtime = INT_MAX;
-        btime = INT_MAX;
         analysis = true;
     }
     else {
@@ -79,6 +77,7 @@ void GoCommand::execute() {
                 movestogo = param.val;
             }
             else if (param.name == "depth") {
+                analysis = true;
                 depth = param.val;
             }
             else if (param.name == "perft") {

@@ -129,8 +129,6 @@ void UCIOptions::setOption(std::string command) {
             return;
         }
     }
-
-    throw std::invalid_argument("Unrecognized argument name");
 }
 
 
