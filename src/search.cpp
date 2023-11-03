@@ -573,7 +573,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
         }
         // Late move reductions
-        else if (depth >= 3 && numMoves > isPv) {
+        else if (depth >= 3 && numMoves > isPv && (!isPv || hashedBoard.flag != EXACT || isQuiet)) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)] * (100 + extLevel) / 100; // Base reduction
 
             lmr -= th->isKiller(ply, move); // Don't reduce as much for killer moves
