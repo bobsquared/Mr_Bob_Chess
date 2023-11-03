@@ -516,7 +516,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 
             // SEE pruning
             seeScore = b.seeCapture(move);
-            if (depth <= 5 && seeScore < seePruningMargin[isQuiet][depth]) {
+            if (depth <= 8 && seeScore < seePruningMargin[isQuiet][depth]) {
                 continue;
             }
         }

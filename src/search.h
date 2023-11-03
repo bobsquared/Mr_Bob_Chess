@@ -115,7 +115,8 @@ private:
     ThreadSearch *thread;
     MoveGen *moveGen;
 
-    const int seePruningMargin[2][6] = {{0, -100, -175, -275, -400, -600}, {0, -125, -200, -275, -350, -425}}; /**< Margins for SEE pruning in pvSearch*/
+    const int seePruningMargin[2][9] = {{0, -100, -175, -325, -550, -825, -1200, -1675, -2250}, 
+                                        {0, -125, -200, -275, -350, -425, -500, -575, -650}}; /**< Margins for SEE pruning in pvSearch*/
     const int lateMoveMargin[2][9] = {{0, 3, 5, 7, 10, 14, 20, 26, 32}, {0, 6, 9, 13, 19, 27, 35, 43, 50}};    /**< Margins for late move pruning in pvSearch*/
 
     int rfpVal = 95;
