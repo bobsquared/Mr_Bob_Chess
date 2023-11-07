@@ -8,8 +8,8 @@ KPNNUE::KPNNUE() {
     layers = nullptr;
 }
 
-KPNNUE::KPNNUE(char* defaultNetwork, size_t bsize) {  
-    std::istringstream myStream(std::string(defaultNetwork, bsize), std::ios::binary);
+KPNNUE::KPNNUE(const unsigned char* defaultNetwork, unsigned int bsize) {  
+    std::istringstream myStream(std::string(reinterpret_cast<const char*>(defaultNetwork), bsize), std::ios::binary);
     readFromBinary(myStream);
 }
 
@@ -628,11 +628,9 @@ void KPNNUE::writeToBinary(std::string fileName) {
 
 
 void KPNNUE::readFromBinary(std::istream &data) {
-
     data.read(reinterpret_cast<char *>(&init_epoch), sizeof(init_epoch));
     data.read(reinterpret_cast<char *>(&batchSize), sizeof(batchSize));
     data.read(reinterpret_cast<char *>(&size), sizeof(size));
-    
     layers = new Layer*[size];
     for (int i = 0; i < size; i++) {
         layers[i] = new Layer(data);

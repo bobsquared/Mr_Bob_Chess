@@ -20,7 +20,7 @@
 class KPNNUE {
 public:
     KPNNUE();
-    KPNNUE(char* defaultNetwork, size_t bsize);
+    KPNNUE(const unsigned char* defaultNetwork, unsigned int bsize);
     KPNNUE(int networkSize, int *sizes);
     ~KPNNUE();
     void setNetwork(std::string fileName);

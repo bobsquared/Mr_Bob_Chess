@@ -12,10 +12,10 @@
 #include "search.h"
 #include "uci_commands.h"
 #include "uci.h"
+#include "incbin/incbin.h"
 
 
-extern char _binary_bob_brain_041523e378_nnue_start[];
-extern char _binary_bob_brain_041523e378_nnue_size[];
+INCBIN(bobBrain, "nets/bob_brain-041523e378.nnue");
 
 
 Zobrist *zobrist = new Zobrist();
@@ -55,10 +55,8 @@ int main(int argc, char* argv[]) {
     InitColumnsMask();
     InitRowsMask();
 
-    size_t nnueBytesSize = reinterpret_cast<size_t>(&_binary_bob_brain_041523e378_nnue_size);
-
     magics = new Magics();
-    KPNNUE *model = new KPNNUE(_binary_bob_brain_041523e378_nnue_start, nnueBytesSize);
+    KPNNUE *model = new KPNNUE(gbobBrainData, gbobBrainSize);
     Eval *eval = new Eval(model);                        /**< The evaluator to score the positions*/
     TranspositionTable *tt = new TranspositionTable();
     ThreadSearch *thread = new ThreadSearch[1];
