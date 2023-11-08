@@ -378,9 +378,9 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 
     if (!isPv && !isCheck && !hasSingMove) {
         // Razoring
-        if (depth <= 3 && staticEval + razorVal * depth <= alpha) {
+        if (depth <= 5 && staticEval + razorVal * depth <= alpha) {
             int score = qsearch(b, th, -1, alpha, beta, ply);
-            if (depth == 1 || score <= alpha) {
+            if (score <= alpha) {
                 return score;
             }
         }
