@@ -58,6 +58,7 @@ private:
 
     float*** createGradientWeights();
     float** createGradientBias();
+    void resetWeightsAndBias(float*** grad, float **bias);
     void deleteGradientWeights(float*** grad);
     void deleteGradientBias(float** bias);
 

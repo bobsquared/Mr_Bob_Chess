@@ -474,6 +474,20 @@ float** KPNNUE::createGradientBias() {
 }
 
 
+void KPNNUE::resetWeightsAndBias(float ***grad, float **bias) {
+    for (int i = 0; i < size; i++) {
+        int inputs = layers[i]->getNumInputs();
+        int outputs = layers[i]->getNumOutputs();
+
+        for (int j = 0; j < inputs; j++) {
+            std::memset(grad[i][j], 0, outputs * sizeof(float));
+        }
+
+        std::memset(bias[i], 0, outputs * sizeof(float));
+    }
+}
+
+
 
 void KPNNUE::deleteGradientWeights(float*** grad) {
     for (int i = 0; i < size; i++) {
@@ -530,6 +544,9 @@ void KPNNUE::trainNetwork
     double err_train = 0.0;
     double err_validate = 0.0;
 
+    float ***grad = createGradientWeights();
+    float **bias = createGradientBias();
+
     for (int i = validateSize; i < dataSize; i++) {
         board.setPosFen(fens[i]);
         updateAccumulator(board);
@@ -548,8 +565,7 @@ void KPNNUE::trainNetwork
 
         std::cout << "Epoch: " << epoch << ", lr: " << lr << std::endl;
         for (int batch = 0; batch < (trainSize / batchSize) + 1; batch++) {
-            float ***grad = createGradientWeights();
-            float **bias = createGradientBias();
+            resetWeightsAndBias(grad, bias);
 
             if (batch % (((trainSize / batchSize) / 20) + 1) == 0) {
                 std::cout << "Batch [" << batch << " / " << (trainSize / batchSize) + 1 << "]  -  " << batch * 100 / ((trainSize / batchSize) + 1)<< "%" << std::endl;
@@ -570,8 +586,7 @@ void KPNNUE::trainNetwork
 
             updateWeights(grad, bias, lr, 0.9, 0.999, batch + epoch * batchSize);
 
-            deleteGradientWeights(grad);
-            deleteGradientBias(bias);
+            
 
         }
 
@@ -589,6 +604,9 @@ void KPNNUE::trainNetwork
         writeToBinary(fileName + "_" + std::to_string(epoch) + ".bin");
            
     }
+
+    deleteGradientWeights(grad);
+    deleteGradientBias(bias);
 
     delete [] indexarr;
     
