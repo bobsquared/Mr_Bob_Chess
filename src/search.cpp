@@ -409,7 +409,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 
             if (nullRet >= beta && std::abs(nullRet) < MATE_VALUE_MAX) {
 
-                if (depth >= 8 && (!hashed || hashedBoard.flag == UPPER_BOUND)) {
+                if (depth >= 10 && (!hashed || hashedBoard.flag == UPPER_BOUND)) {
                     th->nullMoveTree = false;
                     nullRet = pvSearch(b, th, depth - R - 1, beta - 1, beta, false, ply);
                     th->nullMoveTree = true;
