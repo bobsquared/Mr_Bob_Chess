@@ -15,7 +15,7 @@
 #include "incbin/incbin.h"
 
 
-INCBIN(bobBrain, "nets/bob_brain-041523e378.nnue");
+INCBIN(bobBrain, "nets/dog_200.bin");
 
 
 Zobrist *zobrist = new Zobrist();
@@ -78,7 +78,7 @@ int main(int argc, char* argv[]) {
     options.addOption([&](int n){s.setRFPsearch(n);}, "rfp", 95, 1, 500);
     options.addOption([&](int n){s.setRazorsearch(n);}, "razor", 392, 1, 1000);
     options.addOption([&](int n){s.setProbcutsearch(n);}, "probcut", 251, 1, 1000);
-    options.addOption([&](int n){s.setFutilitysearch(n);}, "futility", 328, 1, 1000);
+    options.addOption([&](int n){s.setFutilitysearch(n);}, "futility", 150, 1, 1000);
     options.addOption([&](int n){s.setHistoryLMRsearch(n);}, "histlmr", 2084, 1, 10000);
     options.addOption([&](int n){s.setHistoryLMRNoisysearch(n);}, "histlmrnoisy", 2534, 1, 10000);
 

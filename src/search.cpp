@@ -491,9 +491,10 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 
         if (numMoves > 0 && ret > -MATE_VALUE_MAX) {
             if (isQuiet) {
+                int fDepth = std::max(1, 1 + depth - lmrReduction[std::min(63, numMoves)][std::min(63, depth)]);
 
                 // Futility pruning
-                if (!isCheck && depth <= 10 && staticEval + (futilityVal - extLevelMax) * depth <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
+                if (!isCheck && fDepth <= 7 && staticEval + (futilityVal - extLevelMax) * fDepth + 250 <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
                     continue;
                 }
 

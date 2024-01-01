@@ -122,7 +122,7 @@ private:
     int rfpVal = 95;
     int razorVal = 392;
     int probcutVal = 251;
-    int futilityVal = 328;
+    int futilityVal = 150;
     int historyLmrVal = 2084;
     int historyLmrNoisyVal = 2534;
     
