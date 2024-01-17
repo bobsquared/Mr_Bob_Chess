@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <immintrin.h>
 #include <sstream>
+#include <cstring>
 
 #define PAWNPHASE   0
 #define KNIGHTPHASE 1

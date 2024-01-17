@@ -3,6 +3,7 @@
 #include "perft.h"
 #include <iostream>
 #include <thread>
+#include <climits>
 
 
 
