@@ -584,10 +584,10 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh) / historyLmrVal; // Increase/decrease depth based on histories
             lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
 
-            if (!isPv && !isCheck) {
+            if (!isCheck) {
                 if (hashed && hashedBoard.flag == UPPER_BOUND && hashedBoard.score >= staticEval
                     && hashedBoard.depth >= depth - 2 && std::abs(alpha) < MATE_VALUE_MAX) {
-                    lmr -= 2 + std::max(-4, std::min(0, (staticEval - alpha) / 250));
+                    lmr -= (!isPv * 2) + std::max(-4 + 2 * isPv, std::min(0, (staticEval - alpha) / 250));
                 }
             }
             
