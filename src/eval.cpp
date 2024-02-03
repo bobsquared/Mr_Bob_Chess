@@ -154,14 +154,9 @@ int Eval::evaluate(Bitboard &board) {
 
     #endif
 
-    int phase = getPhase(board);
-    int retm = model->evaluate(board) + (board.toMove? -15 : 15);
-
-    if (retm > 1500) {
-        retm = (512 + phase) * retm / 512;
-    }
+    int retm = model->evaluate(board);
     
-    return board.toMove? -retm : retm;
+    return retm;
 
 }
 

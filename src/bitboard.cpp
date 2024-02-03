@@ -65,20 +65,20 @@ Bitboard::Bitboard(const Bitboard &b) {
 
 
 
-std::vector<Accumulator::Features>* Bitboard::getAddFeatures() {
-    return acc.getAddFeatures();
+std::vector<int>* Bitboard::getAddFeatures(bool stm) {
+    return acc.getAddFeatures(stm);
 }
 
 
 
-std::vector<Accumulator::Features>* Bitboard::getRemoveFeatures() {
-    return acc.getRemoveFeatures();
+std::vector<int>* Bitboard::getRemoveFeatures(bool stm) {
+    return acc.getRemoveFeatures(stm);
 }
 
 
 
-float* Bitboard::getFeatures() {
-    return acc.getFeatures();
+float* Bitboard::getFeatures(bool stm) {
+    return acc.getFeatures(stm);
 }
 
 
@@ -88,6 +88,11 @@ bool Bitboard::getResetFlag() {
 
 void Bitboard::setResetFlag(bool f) {
     acc.resetFlag = f;
+}
+
+
+void Bitboard::resetAccFreqIndex(int i, bool isAdd) {
+    acc.reset_frequency_index(i, isAdd);
 }
 
 

@@ -23,7 +23,7 @@ public:
     int getNumOutputs();
 
     float* linear(float *output, float *input);
-    float* ClippedRelu(float *output, float *input);
+    float* relu(float *output, float *input);
     void updateWeights(float **dCdW, float *dCdB, float lr, float beta1, float beta2, int batchSize, int batch);
 
     void DRelu(float *output[]);

@@ -318,16 +318,14 @@ float* Layer::linear(float *output, float *input) {
 
 
 #ifdef __AVX2__
-float* Layer::ClippedRelu(float *output, float *input) {
+float* Layer::relu(float *output, float *input) {
     int num_chunks = numOutputs / 8 + (numOutputs % 8 != 0);
 
     __m256 regzeroes = _mm256_setzero_ps();
-    __m256 regones = _mm256_set1_ps(1);
 
     for (int i = 0; i < num_chunks; i++) {
         __m256 reg = _mm256_loadu_ps(&input[i * 8]);
         reg = _mm256_max_ps(reg, regzeroes);
-        reg = _mm256_min_ps(reg, regones);
 
         _mm256_storeu_ps(&output[i * 8], reg);
 
@@ -341,16 +339,14 @@ float* Layer::ClippedRelu(float *output, float *input) {
 
 #elif defined(__SSE2__)
 
-float* Layer::ClippedRelu(float *output, float *input) {
+float* Layer::relu(float *output, float *input) {
     int num_chunks = numOutputs / 4 + (numOutputs % 4 != 0);
 
     __m128 regzeroes = _mm_setzero_ps();
-    __m128 regones = _mm_set1_ps(1);
 
     for (int i = 0; i < num_chunks; i++) {
         __m128 reg = _mm_loadu_ps(&input[i * 4]);
         reg = _mm_max_ps(reg, regzeroes);
-        reg = _mm_min_ps(reg, regones);
 
         _mm_storeu_ps(&output[i * 4], reg);
 
@@ -364,9 +360,9 @@ float* Layer::ClippedRelu(float *output, float *input) {
 
 #else
 
-float* Layer::ClippedRelu(float *output, float *input) {
+float* Layer::relu(float *output, float *input) {
     for (int i = 0; i < numOutputs; i++) {
-        output[i] = std::min(1.0f, std::max(input[i], 0.0f));
+        output[i] = std::max(input[i], 0.0f);
         activations[i] = output[i];
     }
     return output + numOutputs;
@@ -378,13 +374,13 @@ float* Layer::ClippedRelu(float *output, float *input) {
 
 void Layer::DRelu(float *output[]) {
     for (int i = 0; i < numOutputs; i++) {
-        (*output)[i] = (forwards[i] > 0.0 && forwards[i] < 1.0);
+        (*output)[i] = forwards[i] > 0.0;
     }
 }
 
 
 float Layer::sigmoidW(float x) {
-    return 1.0 / (1.0 + exp(-x / 385));
+    return 1.0 / (1.0 + exp(-x / 225));
 }
 
 

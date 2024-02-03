@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <immintrin.h>
 #include <sstream>
-#include <cstring>
 
 #define PAWNPHASE   0
 #define KNIGHTPHASE 1
@@ -48,11 +47,12 @@ private:
     int size;
     Layer **layers;
     float *features;
+    float buffer[2048];
     
     int getPhase(Bitboard &board);
     void backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bias);
     void updateWeights(float ***grad, float **bias, float lr, float beta1, float beta2, int batch);
-    int forwardpropagate(float *input);
+    int forwardpropagate(float *whiteInput, float *blackInput, bool toMove);
     void writeToBinary(std::string fileName);
     void readFromBinary(std::istream &fileName);
     void readDefault();

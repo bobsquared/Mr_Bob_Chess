@@ -6,7 +6,7 @@
 #include <iostream>
 #include <ostream>
 #include "../bitboard.h"
-#include "../search.h"
+#include "KPNNUE.h"
 
 
 class Trainer {
@@ -28,7 +28,6 @@ public:
     };
 
     Trainer();
-    void extractFile(std::string inputFile, std::string outputFile);
     void getFile(std::string name);
     void train(KPNNUE &model, std::string fileName, int epochs, int batchSize, double lr);
     void createLossCSV(int nModels, std::string fileName);

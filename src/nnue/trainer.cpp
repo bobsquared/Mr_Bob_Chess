@@ -6,56 +6,10 @@ Magics *magics;
 Trainer::Trainer() {
     InitColumnsMask();
     InitRowsMask();
-    InitLateMoveArray();
 
     magics = new Magics();
-
-    canPrintInfo = false;
-    exit_thread_flag = false;
     dataSize = 0;
 }
-
-
-void Trainer::extractFile(std::string inputFile, std::string outputFile) {
-
-    std::string fen;
-    int count = 0;
-
-    std::ifstream Myfile(inputFile);
-    while (std::getline(Myfile, fen)) {
-        count++;
-    }
-
-    Position *positions = new Position[count];
-
-    Myfile.clear();
-    Myfile.seekg(0, std::ios::beg);
-
-    count = 0;
-    while (std::getline(Myfile, fen)) {
-        
-        if (count % 1000 == 0) {
-            std::cout <<  count << std::endl;
-        }
-
-        fen = fen.substr(0, fen.size() - 6);
-        board.setPosFen(fen);
-
-        exit_thread_flag = false;
-        int eva = beginSearch(board, 6, INT_MAX, INT_MAX, 0, 0, 0, true);
-
-        positions[count] = Position(fen, static_cast<float>(eva));
-        count++;
-    }
-
-    Myfile.close();
-    std::ofstream OutFile(outputFile);
-    for (int i = 0; i < count; i++) {
-        OutFile << positions[i] << std::endl;
-    }
-    OutFile.close();
-}
-
 
 
 void Trainer::getFile(std::string fileName) {
@@ -114,7 +68,8 @@ void Trainer::createLossCSV(int nModels, std::string directoryName) {
 
     for (int i = 1; i < nModels; i++) {
         std::cout << "Testing Model Number: " << i << std::endl;
-        KPNNUE model = KPNNUE(directoryName + std::to_string(i) +  ".bin");
+        KPNNUE model = KPNNUE();
+        model.setNetwork(directoryName + std::to_string(i) +  ".bin");
         double loss = model.bulkLoss(dataSize, board, fens, cps);
         
         myfile << i << "," << loss << "\n";
