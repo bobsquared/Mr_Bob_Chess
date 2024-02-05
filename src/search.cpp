@@ -741,6 +741,11 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
             lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh) / historyLmrVal; // Increase/decrease depth based on histories
             lmr--;
 
+            if (hashed && hashedBoard.flag == UPPER_BOUND && hashedBoard.score >= staticEval
+                && hashedBoard.depth >= depth - 2 && std::abs(alpha) < MATE_VALUE_MAX) {
+                lmr -= std::max(-2, std::min(0, (staticEval - alpha) / 250));
+            }
+
             lmr = std::min(depth - 2, std::max(lmr, 0));
             tempRet = -pvSearch(b, th, depth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
             if (tempRet > alpha) {
