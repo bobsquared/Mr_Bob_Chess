@@ -7,6 +7,7 @@
 // Initialize transposition table
 TranspositionTable::TranspositionTable() {
     numHashes = (double) HASH_SIZE / (double) sizeof(ZobristVal) * 0xFFFFF;
+    std::cout << numHashes << std::endl;
     hashTable = new ZobristVal [numHashes];
     halfMove = 1;
 
@@ -46,8 +47,8 @@ TranspositionTable::~TranspositionTable() {
 
 
 // Set TT age
-void TranspositionTable::setTTAge(int age) {
-    halfMove = age;
+void TranspositionTable::incrementTTAge() {
+    halfMove++;
 }
 
 
@@ -68,6 +69,19 @@ void TranspositionTable::saveTT(ThreadSearch *th, MOVE move, int score, int stat
     }
 
 
+}
+
+
+
+// Probe the transposition table
+MOVE TranspositionTable::probeBestMove(uint64_t key) {
+    ZobristVal hashedBoard = hashTable[key % numHashes];
+
+    if (hashTable[key % numHashes].posKey == key) {
+        return hashedBoard.move;
+    }
+
+    return NO_MOVE;
 }
 
 

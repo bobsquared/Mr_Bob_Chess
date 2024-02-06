@@ -587,7 +587,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             if (!isCheck) {
                 if (hashed && hashedBoard.flag == UPPER_BOUND && hashedBoard.score >= staticEval
                     && hashedBoard.depth >= depth - 2 && std::abs(alpha) < MATE_VALUE_MAX) {
-                    lmr -= (!isPv * 2) + std::max(-4 + 2 * isPv, std::min(0, (staticEval - alpha) / 250));
+                    lmr -= (!isPv * 2) + std::max(-4 + 2 * isPv, std::min(0, (staticEval - alpha) / (250 + 100 * isPv)));
                 }
             }
             
@@ -1177,7 +1177,7 @@ Search::SearchInfo Search::beginSearch(Bitboard &b, int depth, int wtime, int bt
     totalTime = 0;
 
     tm = TimeManager(b.getSideToMove(), wtime, btime, winc, binc, movesToGo);
-    tt->setTTAge(b.moveHistory.count);
+    tt->incrementTTAge();
     clearThreadData();
 
     std::deque<std::thread> threads;
