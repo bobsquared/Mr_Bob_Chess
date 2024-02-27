@@ -119,10 +119,10 @@ private:
                                         {0, -125, -200, -275, -350, -425, -500, -575, -650}}; /**< Margins for SEE pruning in pvSearch*/
     const int lateMoveMargin[2][9] = {{0, 3, 5, 7, 10, 14, 20, 26, 32}, {0, 6, 9, 13, 19, 27, 35, 43, 50}};    /**< Margins for late move pruning in pvSearch*/
 
-    int rfpVal = 95;
-    int razorVal = 392;
-    int probcutVal = 251;
-    int futilityVal = 150;
+    int rfpVal = 64;
+    int razorVal = 361;
+    int probcutVal = 335;
+    int futilityVal = 214;
     int historyLmrVal = 2084;
     int historyLmrNoisyVal = 2534;
     
