@@ -51,8 +51,6 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, PrevMoveInfo &prev, T
     int from;
     int to;
     MOVE prevMove = prev.prevMove;
-    int prevMoveTo = prev.prevMoveTo;
-    int prevPiece = prev.prevPiece;
     bool isValidPrevMove = (prevMove != NO_MOVE && prevMove != NULL_MOVE);
 
     for (int i = 0; i < moveList.count; i++) {
