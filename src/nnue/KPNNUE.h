@@ -47,7 +47,6 @@ private:
     int size;
     Layer **layers;
     float *features;
-    float buffer[2048];
     
     int getPhase(Bitboard &board);
     void backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bias);

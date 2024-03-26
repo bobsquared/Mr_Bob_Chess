@@ -411,6 +411,7 @@ float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
 
 
 int KPNNUE::forwardpropagate(float *whiteInput, float *blackInput, bool toMove) {
+    float buffer[1024];
     float *curr_output = buffer;
     float *curr_input;
     float *next_output;

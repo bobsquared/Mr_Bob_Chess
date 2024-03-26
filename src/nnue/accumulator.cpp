@@ -43,6 +43,10 @@ std::vector<int>* Accumulator::getRemoveFeatures(bool toMove) {
 
 void Accumulator::refresh_accumulator() {
     resetFlag = true;
+    addWhiteFeatures->clear();
+    addBlackFeatures->clear();
+    removeWhiteFeatures->clear();
+    removeBlackFeatures->clear();
     refresh_frequency_maps();
 }
 
