@@ -65,20 +65,20 @@ Bitboard::Bitboard(const Bitboard &b) {
 
 
 
-std::vector<Accumulator::Features>* Bitboard::getAddFeatures() {
-    return acc.getAddFeatures();
+std::vector<int>* Bitboard::getAddFeatures(bool stm) {
+    return acc.getAddFeatures(stm);
 }
 
 
 
-std::vector<Accumulator::Features>* Bitboard::getRemoveFeatures() {
-    return acc.getRemoveFeatures();
+std::vector<int>* Bitboard::getRemoveFeatures(bool stm) {
+    return acc.getRemoveFeatures(stm);
 }
 
 
 
-float* Bitboard::getFeatures() {
-    return acc.getFeatures();
+float* Bitboard::getFeatures(bool stm) {
+    return acc.getFeatures(stm);
 }
 
 
@@ -88,6 +88,11 @@ bool Bitboard::getResetFlag() {
 
 void Bitboard::setResetFlag(bool f) {
     acc.resetFlag = f;
+}
+
+
+void Bitboard::resetAccFreqIndex(int i, bool isAdd) {
+    acc.reset_frequency_index(i, isAdd);
 }
 
 
@@ -1037,7 +1042,7 @@ int Bitboard::seeCapture(MOVE capture) {
     int aPiece = pieceAt[from];
     bool isWhite = toMove;
 
-    if (to >= 56 || to < 8) {
+    if ((capture & PROMOTION_FLAG) != 0) {
         return 0;
     }
 
@@ -1103,16 +1108,6 @@ int Bitboard::getRankFromSideToMove(int index) {
 // Return the side to move
 bool Bitboard::getSideToMove() {
     return toMove;
-}
-
-
-// Insert counter move into array
-void Bitboard::insertCounterMove(ThreadSearch *th, MOVE move) {
-    MOVE prevMove = moveHistory.move[moveHistory.count - 1].move;
-
-    if (prevMove != NULL_MOVE) {
-        th->counterMove[toMove][get_move_from(prevMove)][get_move_to(prevMove)] = move;
-    }
 }
 
 

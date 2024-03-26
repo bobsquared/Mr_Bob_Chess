@@ -45,14 +45,12 @@ void MovePick::InitMvvLva() {
 * @param[in]      ply      The current ply/height that the search is at.
 * @param[in]      pvMove   The principal variation move found in the transposition table.
 */
-void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int ply, MOVE pvMove) {
+void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, PrevMoveInfo &prev, ThreadSearch *th, int ply, MOVE pvMove) {
 
     MOVE move;
     int from;
     int to;
-    MOVE prevMove = b.moveHistory.count > 0? b.moveHistory.move[b.moveHistory.count - 1].move : NO_MOVE;
-    int prevMoveTo = get_move_to(prevMove);
-    int prevPiece = b.pieceAt[prevMoveTo] / 2;
+    MOVE prevMove = prev.prevMove;
     bool isValidPrevMove = (prevMove != NO_MOVE && prevMove != NULL_MOVE);
 
     for (int i = 0; i < moveList.count; i++) {
@@ -73,8 +71,8 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
             }
             else {
                 int see = b.seeCapture(move);
-                int score = (see > 0? 1000000 : (see == 0? 950000 : (ply <= 6? 0 :  750000)));
-                moveList.set_score_index(i, score + mvvlva[from][to] + th->captureHistory[b.toMove][moveFrom][moveTo] / 256);
+                int score = (see > 0? 1000000 : (see == 0? 950000 : -1000000));
+                moveList.set_score_index(i, score + mvvlva[from][to] + th->getHistory(b.toMove, false, moveFrom, moveTo) / 256);
             }
 
         }
@@ -95,12 +93,12 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, ThreadSearch *th, int
         else if (th->killers[ply][1] == move) {
             moveList.set_score_index(i, 800000);
         }
-        else if (th->counterMove[b.toMove][get_move_from(prevMove)][prevMoveTo] == move) {
+        else if (th->getCounterMove(b, prev) == move) {
             moveList.set_score_index(i, 700000);
         }
         else {
-            int cmh = isValidPrevMove * th->counterHistory[b.toMove][prevPiece][prevMoveTo][b.pieceAt[moveFrom] / 2][moveTo];
-            moveList.set_score_index(i, th->history[b.toMove][moveFrom][moveTo] + cmh);
+            int cmh = isValidPrevMove * th->getCounterHistory(b, prev, moveFrom, moveTo);
+            moveList.set_score_index(i, th->getHistory(b.toMove, true, moveFrom, moveTo) + cmh);
         }
     }
 

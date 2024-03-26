@@ -1,6 +1,6 @@
 #include "eval.h"
 
-Eval::Eval() {
+Eval::Eval(KPNNUE *model) : model(model) {
     InitLightSquares();
     InitDistanceArray();
 }
@@ -122,7 +122,7 @@ int Eval::scaleEndgame(Bitboard &board, int eval) {
 
 
 // Evaluate the position
-int Eval::evaluate(Bitboard &board, KPNNUE *model) {
+int Eval::evaluate(Bitboard &board) {
 
     // Asserts for debugging mode
     #ifndef NDEBUG
@@ -154,8 +154,9 @@ int Eval::evaluate(Bitboard &board, KPNNUE *model) {
 
     #endif
 
-    int retm = model->evaluate(board) + (board.toMove? -15 : 15);
-    return board.toMove? -retm : retm;
+    int retm = model->evaluate(board);
+    
+    return retm;
 
 }
 

@@ -41,11 +41,12 @@ public:
 
     Bitboard();
     Bitboard(const Bitboard &b);
-    std::vector<Accumulator::Features>* getAddFeatures();
-    std::vector<Accumulator::Features>* getRemoveFeatures();
-    float* getFeatures();
+    std::vector<int>* getAddFeatures(bool stm);
+    std::vector<int>* getRemoveFeatures(bool stm);
+    float* getFeatures(bool stm);
     bool getResetFlag();
     void setResetFlag(bool f);
+    void resetAccFreqIndex(int i, bool isAdd);
 
     void printPretty();
     std::string getPv();
@@ -66,7 +67,6 @@ public:
 
     void reset();
     bool getSideToMove();
-    void insertCounterMove(ThreadSearch *th, MOVE move);
 
     uint64_t getPosKey() const;
     void debugZobristHash();

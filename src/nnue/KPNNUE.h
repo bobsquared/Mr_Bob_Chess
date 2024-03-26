@@ -6,7 +6,7 @@
 #include <random>
 #include <algorithm>
 #include <immintrin.h>
-#include <omp.h>
+#include <sstream>
 
 #define PAWNPHASE   0
 #define KNIGHTPHASE 1
@@ -19,9 +19,11 @@
 
 class KPNNUE {
 public:
-    KPNNUE(std::string fileName);
+    KPNNUE();
+    KPNNUE(const unsigned char* defaultNetwork, unsigned int bsize);
     KPNNUE(int networkSize, int *sizes);
     ~KPNNUE();
+    void setNetwork(std::string fileName);
     
     void trainNetwork
     (
@@ -49,12 +51,14 @@ private:
     int getPhase(Bitboard &board);
     void backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bias);
     void updateWeights(float ***grad, float **bias, float lr, float beta1, float beta2, int batch);
-    int forwardpropagate(float *input);
+    int forwardpropagate(float *whiteInput, float *blackInput, bool toMove);
     void writeToBinary(std::string fileName);
-    bool readFromBinary(std::string fileName);
+    void readFromBinary(std::istream &fileName);
+    void readDefault();
 
     float*** createGradientWeights();
     float** createGradientBias();
+    void resetWeightsAndBias(float*** grad, float **bias);
     void deleteGradientWeights(float*** grad);
     void deleteGradientBias(float** bias);
 

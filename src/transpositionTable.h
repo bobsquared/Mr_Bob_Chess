@@ -4,6 +4,7 @@
 #include <stack>
 #include "bitboard.h"
 #include "defs.h"
+#include "thread_search.h"
 
 
 
@@ -23,12 +24,13 @@ public:
     void setSize(int hashSize);
 
     void saveTT(ThreadSearch *th, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply);
+    MOVE probeBestMove(uint64_t key);
     bool probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply);
     bool probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply);
     int getHashFull(uint64_t writes);
     void clearHashTable();
     ZobristVal getHashValue(uint64_t posKey);
-    void setTTAge(int age);
+    void incrementTTAge();
     std::string getPv(Bitboard &b);
 
 
@@ -38,6 +40,6 @@ private:
     ZobristVal *hashTable;
     uint64_t numHashes;
     uint64_t ttWrites;
-    int halfMove;
+    uint8_t halfMove;
 
 };

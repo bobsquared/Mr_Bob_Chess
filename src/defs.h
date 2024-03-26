@@ -139,16 +139,16 @@ struct MoveList {
 struct ZobristVal {
     uint64_t posKey;
     MOVE move;
-    uint16_t halfMove;
     int16_t score;
     int16_t staticScore;
+    uint8_t halfMove;
     int8_t depth;
     uint8_t flag;
 
-    ZobristVal() : posKey(0), move(NO_MOVE), halfMove(0), score(0), staticScore(0), depth(0), flag(0) {}
+    ZobristVal() : posKey(0), move(NO_MOVE), score(0), staticScore(0), halfMove(0), depth(0), flag(0) {}
 
-    ZobristVal(MOVE move, int16_t score, int16_t staticScore, int8_t depth, uint8_t flag, uint64_t posKey, uint16_t halfMove) :
-        posKey(posKey), move(move), halfMove(halfMove), score(score), staticScore(staticScore), depth(depth), flag(flag) {}
+    ZobristVal(MOVE move, int16_t score, int16_t staticScore, int8_t depth, uint8_t flag, uint64_t posKey, uint8_t halfMove) :
+        posKey(posKey), move(move), score(score), staticScore(staticScore), halfMove(halfMove), depth(depth), flag(flag) {}
 };
 
 
@@ -208,24 +208,15 @@ struct SearchStack {
 
 
 
-// Info each thread has
-struct ThreadSearch {
-    uint64_t ttWrites;
-    uint64_t nodes;
+struct PrevMoveInfo {
+    MOVE prevMove;
+    int prevMoveFrom;
+    int prevMoveTo;
+    int prevPiece;
 
-    SearchStack searchStack[MAX_PLY] = {};
-    int seldepth;
-
-    int history[2][64][64] = {};
-    int captureHistory[2][64][64] = {};
-    int counterHistory[2][6][64][6][64] = {};
-    MOVE killers[MAX_PLY][2] = {};
-    MOVE counterMove[2][64][64] = {};
-    MOVE bestMove;
-
-    bool nullMoveTree;
-
-    ThreadSearch() : ttWrites(0), nodes(0), seldepth(0), bestMove(NO_MOVE), nullMoveTree(false)  {};
+    PrevMoveInfo() : prevMove(NO_MOVE), prevMoveFrom(0), prevMoveTo(0), prevPiece(0) {};
+    PrevMoveInfo(MOVE prevMove, int prevMoveFrom, int prevMoveTo, int prevPiece) : 
+        prevMove(prevMove), prevMoveFrom(prevMoveFrom), prevMoveTo(prevMoveTo), prevPiece(prevPiece) {};
 };
 
 
@@ -265,11 +256,8 @@ extern uint64_t columnMask[64];
 extern uint64_t rowMask[64];
 
 extern int bitScan(const uint64_t bitboard);
-extern void InitHistory(ThreadSearch *th);
 extern void InitColumnsMask();
 extern void InitRowsMask();
-extern void InitKillers(ThreadSearch *th);
-extern void InitCounterMoves(ThreadSearch *th);
 extern uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag);
 extern uint64_t knightAttacks(uint64_t knights);
 extern int count_population(uint64_t bitboard);

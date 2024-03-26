@@ -85,62 +85,6 @@ void InitRowsMask() {
 
 
 
-// Initialize the history
-void InitHistory(ThreadSearch *th) {
-
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 64; j++) {
-            for (int k = 0; k < 64; k++) {
-                th->history[i][j][k] = 0;
-                th->captureHistory[i][j][k] = 0;
-            }
-        }
-    }
-
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 6; j++) {
-            for (int k = 0; k < 64; k++) {
-                for (int l = 0; l < 6; l++) {
-                    for (int m = 0; m < 64; m++) {
-                        th->counterHistory[i][j][k][l][m] = 0;
-                    }
-                }
-            }
-        }
-    }
-
-}
-
-
-
-// Initialize the history
-void InitKillers(ThreadSearch *th) {
-
-    for (int i = 0; i < 128; i++) {
-        for (int j = 0; j < 2; j++) {
-            th->killers[i][j] = 0;
-        }
-    }
-
-}
-
-
-
-// Initialize the counter moves
-void InitCounterMoves(ThreadSearch *th) {
-
-    for (int i = 0; i < 2; i++) {
-        for (int j = 0; j < 64; j++) {
-            for (int k = 0; k < 64; k++) {
-                th->counterMove[i][j][k] = 0;
-            }
-        }
-    }
-
-}
-
-
-
 std::string moveToString(MOVE move) {
     std::string algMove = TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)];
 
