@@ -7,7 +7,6 @@
 // Initialize transposition table
 TranspositionTable::TranspositionTable() {
     numHashes = (double) HASH_SIZE / (double) sizeof(ZobristVal) * 0xFFFFF;
-    std::cout << numHashes << std::endl;
     hashTable = new ZobristVal [numHashes];
     halfMove = 1;
 
