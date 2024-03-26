@@ -15,7 +15,7 @@
 #include "incbin/incbin.h"
 
 
-INCBIN(bobBrain, "../nets/bob_brain-020224e84.nnue");
+INCBIN(bobBrain, "../nets/bob_brain-020724e150.nnue");
 
 
 Zobrist *zobrist = new Zobrist();
