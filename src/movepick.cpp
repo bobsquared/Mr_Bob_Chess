@@ -71,7 +71,7 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, PrevMoveInfo &prev, T
             }
             else {
                 int see = b.seeCapture(move);
-                int score = (see > 0? 1000000 : (see == 0? 950000 : -1000000));
+                int score = (see > 0? 1000000 : (see == 0? 950000 : -1500));
                 moveList.set_score_index(i, score + mvvlva[from][to] + th->getHistory(b.toMove, false, moveFrom, moveTo) / 256);
             }
 
