@@ -546,20 +546,25 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 
             if (score < singVal) {
                 isSingular = true;
-                extension = phase >= 213 && !isPv? 2 : 1;
+                extension = 1;
 
-                if (!isPv && depth <= 7 && score < singVal - 2 * depth) {
-                    depth++;
+                if (phase >= 213 && !isPv) {
+                    extension = 2;
+                }
+
+                if (!isPv && score < singVal - 2 * depth && extLevel <= 8) {
+                    extension++;
                 }
             }
             else if (singVal >= beta) {
                 return singVal;
             }
-            else if (depth >= 8) {
+            else if (depth >= 8 && hashedBoard.flag == LOWER_BOUND) {
                 if (hashedBoard.score >= beta) {
-                    if (hashedBoard.flag == LOWER_BOUND) {
-                        extension = -1 - 2 * !isPv;
-                    }
+                    extension = -1 - 2 * !isPv;
+                }
+                else if (hashedBoard.score <= alpha) {
+                    extension = -1;
                 }
             }
         }
