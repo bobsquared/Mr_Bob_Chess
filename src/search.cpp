@@ -246,7 +246,7 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
 
             if (prevMoveTo != get_move_to(move)) {
                 int seeEval = see + staticEval;
-                if (seeEval >= beta + 200 + std::max(-150, (10 * depth))) {
+                if (seeEval >= beta + 200 + std::max(-150, (-depth * depth))) {
                     return seeEval;
                 }
 
