@@ -419,7 +419,7 @@ bool Magics::InitBlocksRook(uint64_t bitboard, uint64_t index, uint64_t magic) {
     for (uint64_t i = 0; i < 1ULL << countMasked; i++) {
         uint64_t r = bitCombinations(i, bitboardMasked);
 
-        uint64_t res = (dumb7FloodingN(indexP, r) | dumb7FloodingE(indexP, r) | dumb7FloodingS(indexP, r) | dumb7FloodingW(indexP, r)) & (indexP ^ 18446744073709551615U);
+        uint64_t res = (dumb7FloodingN(indexP, r) | dumb7FloodingE(indexP, r) | dumb7FloodingS(indexP, r) | dumb7FloodingW(indexP, r)) & ~indexP;
         uint64_t magicI = ((r * magic) >> attacksR[index].shift);
 
         if (rookComb[index * 4096 + magicI] != 0) {
@@ -449,7 +449,7 @@ bool Magics::InitBlocksBishop(uint64_t bitboard, uint8_t index, uint64_t magic) 
     for (uint64_t i = 0; i < 1ULL << countMasked; i++) {
         uint64_t r = bitCombinations(i, bitboardMasked);
 
-        uint64_t res = (dumb7FloodingNE(indexP, r) | dumb7FloodingSE(indexP, r) | dumb7FloodingSW(indexP, r) | dumb7FloodingNW(indexP, r)) & (indexP ^ 18446744073709551615U);
+        uint64_t res = (dumb7FloodingNE(indexP, r) | dumb7FloodingSE(indexP, r) | dumb7FloodingSW(indexP, r) | dumb7FloodingNW(indexP, r)) & ~indexP;
         uint64_t magicI = ((r * magic) >> attacksB[index].shift);
 
         if (bishopComb[index * 512 + magicI]  != 0) {
