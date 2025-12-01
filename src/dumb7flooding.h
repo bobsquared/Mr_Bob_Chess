@@ -37,7 +37,7 @@ static inline constexpr uint64_t dumb7FloodingS(uint64_t index, uint64_t empty) 
 
 
 static inline constexpr uint64_t dumb7FloodingE(uint64_t index, uint64_t empty) {
-    empty &= ~empty & 0xfefefefefefefefe;
+    empty = ~empty & 0xfefefefefefefefe;
     uint64_t flood = index;
     index = (index << 1) & empty; flood |= index;
     index = (index << 1) & empty; flood |= index;
