@@ -3,6 +3,7 @@
 #include <regex>
 #include <thread>
 #include <climits>
+#include <cstring>
 #include "magic_bitboards.h"
 #include "eval.h"
 #include "movegen.h"
@@ -17,8 +18,6 @@
 
 INCBIN(bobBrain, "../nets/bob_brain-020724e150.nnue");
 
-
-Zobrist *zobrist = new Zobrist();
 Magics *magics;
 
 
@@ -190,7 +189,6 @@ int main(int argc, char* argv[]) {
     s.cleanUpSearch();
 
     delete magics;
-    delete zobrist;
 
     return 0;
 }

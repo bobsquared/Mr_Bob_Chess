@@ -3,9 +3,6 @@
 std::regex fenNumbers(".*\\s+(\\d+)\\s+(\\d+)");
 extern Magics *magics;
 extern int pieceValues[6];
-extern Zobrist *zobrist;
-
-
 
 
 Bitboard::Bitboard() {
@@ -132,7 +129,7 @@ void Bitboard::reset() {
     InitPieceAt();
     InitPieceCount();
     moveHistory.clear();
-    posKey = zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove);
+    posKey = ZOBRIST::hashBoard(pieces, castleRights, enpassantSq, toMove);
     kingLoc[0] = bitScan(pieces[10]);
     kingLoc[1] = bitScan(pieces[11]);
 
@@ -341,11 +338,11 @@ void Bitboard::make_null_move() {
     moveHistory.insert(MoveInfo(0, enpassantSq, halfMoves, castleRights, posKey, NULL_MOVE));
 
     if (enpassantSq) {
-        zobrist->hashBoard_enpassant(posKey, enpassantSq);
+        ZOBRIST::hashBoard_enpassant(posKey, enpassantSq);
         enpassantSq = 0;
     }
 
-    zobrist->hashBoard_turn(posKey);
+    ZOBRIST::hashBoard_turn(posKey);
     return;
 }
 
@@ -388,7 +385,7 @@ void Bitboard::make_move(MOVE move) {
     fullMoves += toMove;
 
     if (enpassantSq) {
-        zobrist->hashBoard_enpassant(posKey, enpassantSq);
+        ZOBRIST::hashBoard_enpassant(posKey, enpassantSq);
         enpassantSq = 0;
     }
 
@@ -399,12 +396,12 @@ void Bitboard::make_move(MOVE move) {
 
     // Update castling rights
     if (fromPiece == 6 + toMove) {
-        zobrist->hashBoard_castle(posKey, castleRights & ~rookCastleFlagMask[from]);
+        ZOBRIST::hashBoard_castle(posKey, castleRights & ~rookCastleFlagMask[from]);
         castleRights &= rookCastleFlagMask[from];
     }
     else if (fromPiece == 10 + toMove) {
         if (cflag) {
-            zobrist->hashBoard_castle(posKey, castleRights & cflag);
+            ZOBRIST::hashBoard_castle(posKey, castleRights & cflag);
             castleRights &= ~cflag;
         }
         kingLoc[toMove] = to;
@@ -416,7 +413,7 @@ void Bitboard::make_move(MOVE move) {
     if (moveFlags == QUIET_MOVES_FLAG) {
         assert(toPiece == -1);
         move_quiet(from, to, fromPiece, i1i2);
-        zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
+        ZOBRIST::hashBoard_quiet(posKey, from, to, fromPiece);
     }
     else if (moveFlags == ENPASSANT_FLAG) {
         assert(toPiece == -1);
@@ -424,8 +421,8 @@ void Bitboard::make_move(MOVE move) {
         move_quiet(from, to, fromPiece, i1i2);
 
         uint64_t toCap = to + (toMove * 2 - 1) * 8;
-        zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
-        zobrist->hashBoard_square(posKey, toCap, !toMove);
+        ZOBRIST::hashBoard_quiet(posKey, from, to, fromPiece);
+        ZOBRIST::hashBoard_square(posKey, toCap, !toMove);
         color[!toMove] ^= 1ULL << toCap;
         pieces[!toMove] ^= 1ULL << toCap;
         occupied ^= 1ULL << toCap;
@@ -437,7 +434,7 @@ void Bitboard::make_move(MOVE move) {
         assert(toPiece != -1);
 
         if (toPiece == 6 + !toMove) {
-            zobrist->hashBoard_castle(posKey, castleRights & ~rookCastleFlagMask[to]);
+            ZOBRIST::hashBoard_castle(posKey, castleRights & ~rookCastleFlagMask[to]);
             castleRights &= rookCastleFlagMask[to];
         }
 
@@ -459,13 +456,13 @@ void Bitboard::make_move(MOVE move) {
             pieceAt[to] = promotePiece;
             pieceCount[toMove]--;
             pieceCount[promotePiece]++;
-            zobrist->hashBoard_capture_promotion(posKey, from, to, fromPiece, toPiece, promotePiece);
+            ZOBRIST::hashBoard_capture_promotion(posKey, from, to, fromPiece, toPiece, promotePiece);
             acc.accumulate_add(promotePiece, to);
         }
         else {
             pieceAt[to] = fromPiece;
             pieces[fromPiece] ^= i1i2;
-            zobrist->hashBoard_capture(posKey, from, to, fromPiece, toPiece);
+            ZOBRIST::hashBoard_capture(posKey, from, to, fromPiece, toPiece);
             acc.accumulate_add(fromPiece, to);
         }
 
@@ -475,8 +472,8 @@ void Bitboard::make_move(MOVE move) {
         assert(toPiece == -1);
         move_quiet(from, to, fromPiece, i1i2);
         enpassantSq = to + (toMove * 2 - 1) * 8;
-        zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
-        zobrist->hashBoard_enpassant(posKey, enpassantSq);
+        ZOBRIST::hashBoard_quiet(posKey, from, to, fromPiece);
+        ZOBRIST::hashBoard_enpassant(posKey, enpassantSq);
     }
     else if (move & PROMOTION_FLAG) {
         assert(toPiece == -1);
@@ -492,7 +489,7 @@ void Bitboard::make_move(MOVE move) {
         pieceAt[to] = promotePiece;
         pieceCount[toMove]--;
         pieceCount[promotePiece]++;
-        zobrist->hashBoard_promotion(posKey, from, to, fromPiece, promotePiece);
+        ZOBRIST::hashBoard_promotion(posKey, from, to, fromPiece, promotePiece);
         acc.accumulate_add(promotePiece, to);
         acc.accumulate_remove(fromPiece, from);
     }
@@ -501,20 +498,20 @@ void Bitboard::make_move(MOVE move) {
         assert(fromPiece == 10 + toMove);
         move_quiet(from, to, fromPiece, i1i2);
         move_quiet(to + 1, to - 1, 6 + toMove, 1ULL << (to - 1) | 1ULL << (to + 1));
-        zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
-        zobrist->hashBoard_quiet(posKey, to + 1, to - 1, 6 + toMove);
+        ZOBRIST::hashBoard_quiet(posKey, from, to, fromPiece);
+        ZOBRIST::hashBoard_quiet(posKey, to + 1, to - 1, 6 + toMove);
     }
     else if (moveFlags == QUEEN_CASTLE_FLAG) {
         assert(toPiece == -1);
         assert(fromPiece == 10 + toMove);
         move_quiet(from, to, fromPiece, i1i2);
         move_quiet(to - 2, to + 1, 6 + toMove, 1ULL << (to - 2) | 1ULL << (to + 1));
-        zobrist->hashBoard_quiet(posKey, from, to, fromPiece);
-        zobrist->hashBoard_quiet(posKey, to - 2, to + 1, 6 + toMove);
+        ZOBRIST::hashBoard_quiet(posKey, from, to, fromPiece);
+        ZOBRIST::hashBoard_quiet(posKey, to - 2, to + 1, 6 + toMove);
     }
 
     toMove = !toMove;
-    zobrist->hashBoard_turn(posKey);
+    ZOBRIST::hashBoard_turn(posKey);
     moveHistory.insert(MoveInfo(toPiece, enSq, hmoves, crights, prevPosKey, move));
 }
 
@@ -524,7 +521,7 @@ void Bitboard::make_move(MOVE move) {
 void Bitboard::undo_move(MOVE move) {
 
     toMove = !toMove;
-    zobrist->hashBoard_turn(posKey);
+    ZOBRIST::hashBoard_turn(posKey);
     int from = get_move_from(move);
     int to = get_move_to(move);
     int toPiece = pieceAt[to];
@@ -976,10 +973,10 @@ uint64_t Bitboard::getPosKey() const {
 // A debugging function for zobrist hashing.
 // A position key is created from scratch, and is compared to the iterative position key for confirmation.
 void Bitboard::debugZobristHash() {
-    if (posKey != zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove)) {
-        std::cout << posKey << " " << zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove) << std::endl;
+    if (posKey != ZOBRIST::hashBoard(pieces, castleRights, enpassantSq, toMove)) {
+        std::cout << posKey << " " << ZOBRIST::hashBoard(pieces, castleRights, enpassantSq, toMove) << std::endl;
     }
-    assert (posKey == zobrist->hashBoard(pieces, castleRights, enpassantSq, toMove));
+    assert (posKey == ZOBRIST::hashBoard(pieces, castleRights, enpassantSq, toMove));
 }
 
 
@@ -1317,7 +1314,7 @@ void Bitboard::setPosFen(std::string fen) {
             pieces[piece] |= 1ULL << lineOffset;
             pieceCount[piece]++;
             pieceAt[lineOffset] = piece;
-            zobrist->hashBoard_square(posKey, lineOffset, piece);
+            ZOBRIST::hashBoard_square(posKey, lineOffset, piece);
             acc.accumulate_add(piece, lineOffset);
 
             if (piece / 2 == 5) {
@@ -1337,7 +1334,7 @@ void Bitboard::setPosFen(std::string fen) {
     posIndex++;
     if (fen[posIndex] == 'b') {
         toMove = true;
-        zobrist->hashBoard_turn(posKey);
+        ZOBRIST::hashBoard_turn(posKey);
     }
     posIndex++;
 
@@ -1370,14 +1367,14 @@ void Bitboard::setPosFen(std::string fen) {
 
     }
 
-    zobrist->hashBoard_castle(posKey, castleRights ^ 15);
+    ZOBRIST::hashBoard_castle(posKey, castleRights ^ 15);
 
     posIndex += 2;
     if (fen[posIndex] != '-') {
         enpassantSq = TO_NUM[fen.substr(posIndex, 2)];
         posIndex++;
         if (enpassantSq) {
-            zobrist->hashBoard_enpassant(posKey, enpassantSq);
+            ZOBRIST::hashBoard_enpassant(posKey, enpassantSq);
         }
     }
     posIndex += 2;

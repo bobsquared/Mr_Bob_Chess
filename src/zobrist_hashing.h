@@ -3,36 +3,200 @@
 #include <random>
 #include "defs.h"
 
+namespace ZOBRIST {
 
-// Zobrist hashing
-class Zobrist {
+    // Zobrist hashing
+    static inline constexpr uint64_t table[64*12] = {
+        0xfceee8b9f98bdc3eULL,0x46e8e12fe9ee25acULL,0xf6f835134a194366ULL,0x32416438f306868eULL,0x5e9cc875f74988f3ULL,0xdcaa162a8f18f0fULL,0xb62a161ab52f082cULL,0x8c971bb8156977dfULL,0x4fc407a3b3cf8bULL,0x3ef0512191a211bfULL,0x641922d06809c39fULL,0xe25146032ca9167eULL,
+        0x76399ad070b3eb1cULL,0x2e5b97519baca011ULL,0x40f6f847c20c702ULL,0xdf08a8dca5efb9ULL,0x776403d9850f459aULL,0x215ce7edabd82840ULL,0x4eb33aa72472f5e6ULL,0x104dd8db53a858a5ULL,0x508adc42d840302bULL,0x13bf3d341982f4e9ULL,0xee694f63f9a6a7f1ULL,0x23494d1c7b26bd95ULL,
+        0x250b6edf53fc7e39ULL,0x488cb3878897ff2dULL,0xe19c1044276377bdULL,0x8194a98af28bdc4ULL,0x464b1fdd2c4aca52ULL,0x65db06d8dc6839a8ULL,0x374dc3ff19b33e1aULL,0x54a23b1389ccacc2ULL,0x17a8b5037996efe0ULL,0x6e9ad02673497305ULL,0xd30a262bce5eec0eULL,0x6540099ef454068aULL,
+        0xbcfd91e0b790e898ULL,0xaf2668ff4ae54842ULL,0x317efb9054f4d488ULL,0xf8f927b9c4860c11ULL,0xf84a376c47f89abfULL,0xb171bdc5fd4351e3ULL,0x79a0dd0c30232b04ULL,0xc86ea6f0c8f15d44ULL,0x53b9ec6a641d0a73ULL,0xfcf195e916e7722fULL,0xc653298c8a1b0908ULL,0xaf93dcbafb31c6c9ULL,
+        0x3904ad2eae427a20ULL,0xf11a808876c63b35ULL,0xa9f3312a9c1aa4f0ULL,0xf31bb55abafbb7dbULL,0x12dc2c78c7034a77ULL,0xa777a00f76d555a1ULL,0x3b0d2e16a3a0d4a1ULL,0x59d680cab98cf5c3ULL,0xc20391b5548e4275ULL,0x9a98ebd4e25a5b3dULL,0xb318e3e38281f813ULL,0x2ee05615f65dd7fbULL,
+        0x23aa76893a7b1302ULL,0x5d27b50d1fcee0b7ULL,0x5f7863d37a20ac91ULL,0x9eb88263024d913dULL,0x88f4d2bf0282a4a1ULL,0xf8ba11b4f87d05e9ULL,0xd89eace470af6c00ULL,0x78a20c4f6dc0580aULL,0x84f2ffc8d0a26c8dULL,0x39e1488b1cb7ecf6ULL,0x7a221cbe988d6bb2ULL,0x6ab098c6edae071ULL,
+        0x42154596e26f8589ULL,0x7f63af8675c9051ULL,0xed1106dac89821e1ULL,0x4d93fb227f5931c3ULL,0x9c8e0780f093507bULL,0x7557dbcca2899c9dULL,0x9abb96fc0a4d243aULL,0x59895ebcd1cb6ee7ULL,0xa01304d77b290010ULL,0x76f4d62b9046d7c6ULL,0xf3109411629756d5ULL,0xb95d9899506e2e94ULL,
+        0x1f8e5e715aed4662ULL,0xe8958d84b464540bULL,0x16947d173d066738ULL,0xb77fbb74c29defa5ULL,0x450028d075944c3ULL,0xd2c29181fdd8d1ebULL,0xf66dc3790a27fe20ULL,0xe4dac57c90c45db8ULL,0x796e9020ea02bebdULL,0xdbbfbd93beeda5a4ULL,0xb9237eefb1576290ULL,0xe5a30460976f90ULL,
+        0xd634b644ee57ba0bULL,0xe663a20de56438bdULL,0x76f8363a70fcba06ULL,0x668f0674b910f772ULL,0x91869a00b785e29eULL,0x3cf564bcce5910a5ULL,0xb4521467bdd1daa1ULL,0xa80ff24ad0e97b30ULL,0x42ab3e0fc51ede5eULL,0xd1f2dbbf91ae6767ULL,0x8449e5a232a4cd6cULL,0xf761d134b736b33aULL,
+        0xc3483464e97f9078ULL,0x4fa9bdce7848f6dcULL,0x12247094ff8af9d1ULL,0x712aa932d21de140ULL,0x1b2b48b69e3b8828ULL,0xa5945bba33b55b67ULL,0xc9f1dfe419feeb52ULL,0xa5174d712bb7ff04ULL,0xdd94063af3fe3f06ULL,0xd03a7a8afe8cbd6dULL,0x86735a616c3394f6ULL,0xfee9a7c118dec7f7ULL,
+        0x2130b6c8edf351e7ULL,0xd71e9b6e70565376ULL,0xb9f412faae27c75fULL,0x246c46d1ee51b262ULL,0x7d2c7606d008731bULL,0xd7692033f9f695a3ULL,0x4c66aea7a9d64b10ULL,0xeb192360d751aa0bULL,0xae16e92c0f6f2a7bULL,0x7bfb3ead6d16f3e1ULL,0xb890eff5af98ee79ULL,0xfded69df80e54a1dULL,
+        0x804a11855457f9bfULL,0x2291fe5a72fbc5d3ULL,0x9edfbfab7e3b0299ULL,0x9e97afaaf20971fULL,0x591dfccc7d5cf98bULL,0xf97e213f2d0903c2ULL,0x38ed5cf00dfac9edULL,0x17ee5da9e350796cULL,0x59992457cc9afb03ULL,0x5771ede63f913380ULL,0xf71d85f9fc795325ULL,0xb249f08af0a3e50ULL,
+        0x5ddb538694bfa694ULL,0x8fc122d326187e37ULL,0xabc4d30527ab55feULL,0xc918397bb4e13d7bULL,0x903b0f6909063c56ULL,0x32f2d907397bc0eULL,0x173fa270de6562ecULL,0x9e428311f13708c6ULL,0x73b6102137d611dfULL,0xab010536ae1a6526ULL,0x9788936262ee3864ULL,0xbdb326e825105e08ULL,
+        0x86c75cb9897cf953ULL,0x9c4d3bfb64058feeULL,0xe44b97777ae68139ULL,0x5ebcccc1452d8b0bULL,0xd1e93af220ab03aaULL,0x58a00fa572b49033ULL,0x132e830e6383cc5eULL,0x343088c1e172f0d5ULL,0x2310771b3da21156ULL,0x9e47aa807385aa24ULL,0x643a5dc173f4fc9cULL,0xd602d628fe7120baULL,
+        0xf3d8a634f0d24ff2ULL,0xd3a703310a77652bULL,0x4d09faf0a84da722ULL,0xc3975e843a07e15cULL,0x28027201daea3741ULL,0x4b912f6fcc2f9b65ULL,0x5ea48c41b1c3b70ULL,0x35115eafbf44cab0ULL,0x3ccc51e896051603ULL,0x8943ef25c95c96aULL,0x798727c6bc191d19ULL,0x12ad981775c3c0ffULL,
+        0xcae8b76d357ee0acULL,0xd0180537b64d6890ULL,0x9cf0315cd4952809ULL,0xfb869cb2031efe83ULL,0xefc0844d3c54d7fcULL,0xb715328cd259965aULL,0xc385a1cd380b8333ULL,0x60eb223aa6db7d6ULL,0xce5bf5307dbd80c2ULL,0x8d5a4ba5d335300aULL,0x1e7c7e490d10e46bULL,0xe4bbbe659d177177ULL,
+        0xc2c0b58a282ac4e5ULL,0x6db15699536b927fULL,0xc5444d4eb55e2a91ULL,0x6347295b1e01d259ULL,0x289e956ddb6e33e1ULL,0x5f313fbd25cfd9b8ULL,0xe5a194d659e52bbaULL,0xd09c2c74a8cc6ff1ULL,0x44a0ef38b5144fe8ULL,0x636b81b8e629ccbfULL,0x34a0c658f1de8d8cULL,0xb96ecb793de15a10ULL,
+        0x8395f76b082e90aaULL,0x748ea15c0a6b9f4eULL,0xe5fbc3ef1262c368ULL,0xad3e639e79ea9519ULL,0xb1358063457962adULL,0xd7cd2f2f7c031a57ULL,0xfc72211ecec6ca91ULL,0x199d059ef38e72fdULL,0x50d693fce021a1c8ULL,0x508f8de8e22e8052ULL,0x48b71915a0f8b4feULL,0x13363be24722fe6fULL,
+        0x27338b45f73bd677ULL,0xca07243da778484cULL,0x9166eac7bdccf82aULL,0x3be49b38abc6a74ULL,0xfb450259a1c52ab5ULL,0xac9e05d97d0f147ULL,0x8841fa3d67af0fb2ULL,0x2357d476e7f40b7eULL,0x582fdf67d5546eb4ULL,0xc4743946679f319ULL,0x7494bb43abcad792ULL,0x80ccac428f81c5c6ULL,
+        0x9756bd47c0bc4869ULL,0x78761e5c8758f727ULL,0x561b05ddd38da5abULL,0x2c2648dd771668a7ULL,0xe6d80ba6efc95728ULL,0xf80d1c9d9f6135caULL,0xd4cdd9574838bb20ULL,0x8a05cd0d4f1c8e42ULL,0xe2e22148eed2e48aULL,0x4b8fd48b961d817fULL,0xbbe87b80a039f1a2ULL,0x38f9b91ae78d97b0ULL,
+        0x8730077a33080b8aULL,0x7b557b39b51a59faULL,0xef62f7cc26abeb51ULL,0xfc932d219e5e2224ULL,0xbc6f0eebeca09b4bULL,0xc107f5cf500297ffULL,0xf4a0ba9289a38f39ULL,0xdea85940053d27c5ULL,0x86e5d8cba53eb8fcULL,0xad3b3b7852af145ULL,0x560ac4d254a4d432ULL,0x2237f1d04bf673f7ULL,
+        0x9069bf40e2be389bULL,0x4a181a94b1e04636ULL,0x62b09f6c9888560bULL,0x94d613796cfc48aaULL,0x98ec325f26a77ad8ULL,0x1c5a81a8f845bcULL,0x7e235fc1766bacfeULL,0x788e7e5f33522402ULL,0x116039753b7c8010ULL,0xc2ab782e29a14738ULL,0xf2bd978f17120d4fULL,0x1d9f8dbda8e8af22ULL,
+        0x3c97d1e75e0734e0ULL,0xb3cbca5bd939732dULL,0xde89837eb9db3bf1ULL,0x526fd1b0f223be07ULL,0x4a00ce10ffc579fcULL,0x5781a5ba684c7191ULL,0xc1383daee6e11959ULL,0x706931b64bbeabf6ULL,0x393bc9b7226df1b2ULL,0x4be1451e83bae847ULL,0x30a5dc331d751b94ULL,0xacfe493bd672e130ULL,
+        0xd822f263bcdb5669ULL,0x35a79a0106536661ULL,0xb17d4ef672ee187ULL,0x61379b057db977b6ULL,0xc727d23b72a9b94ULL,0xfbb96b2f3d1bcafaULL,0xf4a9f8b5c6dbfea0ULL,0x22bbf50132b68b1bULL,0x19899f97ac5939b3ULL,0x29acb2ad1816d406ULL,0x20b159d290fedc7bULL,0x5b45a75229cf69fdULL,
+        0x27555026e9cada50ULL,0x551173515409702aULL,0x566bf9546b3d5998ULL,0xea2134bcb9432d19ULL,0x88503dc6f6b2cc06ULL,0x9c07d0a44c26b017ULL,0x5f0e5c1aafc1dfadULL,0x263e05cc6305df1eULL,0x78808ab4c57e3240ULL,0xe30d29eb48509df0ULL,0xa4cb0e7d26a83da4ULL,0x1a75ea1f7c19e61ULL,
+        0xd0145a42d8db4f3ULL,0x7e60091fb4a88ddeULL,0x74ca03a72fa8629dULL,0x982d2cf1ab1c7a53ULL,0xd3ee2a04c85f68c6ULL,0x2660f16c8c1e1613ULL,0xa51c38bf24114271ULL,0xf8936606dffa85f2ULL,0x4869ab48554724c6ULL,0x67fb96b74c4666cdULL,0xae972f70e27647e6ULL,0xcca83187a05f0543ULL,
+        0x90c52b3be9b347deULL,0xfc137999fa48e1e0ULL,0xe04c855b0e622e1cULL,0xb4574f2fae2724dULL,0x2f2ec6fdd6e04dceULL,0xec1ef4521a225ef0ULL,0x17985f2356f151ULL,0x464c35c99f1730bdULL,0xcf85317850d44a83ULL,0xe7eb772613310d4dULL,0x458ccff30e9dad7dULL,0x1421d03ea3bf5941ULL,
+        0x4f8a98dbff01c100ULL,0x887ff55a0d830a6ULL,0x59bc7b491d5504d9ULL,0x3dd42b0e6a38c9c5ULL,0x329b163a6b080cfcULL,0x1b0f1894cad84388ULL,0x6abe02c0c344da12ULL,0x2d1e8f31a0ef34e9ULL,0x1c615b85e85a5b5eULL,0xee266761bfcf950cULL,0x8845fba1872e9c22ULL,0xf0e4dc30bde603cdULL,
+        0x955cee46643b3014ULL,0xdf8e7a7a6511f7f7ULL,0x2caa0e1e37a7aeafULL,0x746c0a7508f5d64eULL,0xde3a1ba5c9467835ULL,0xba3360b3b1e63b1dULL,0x499fc96f2fc46381ULL,0xb766e5897ebd0f42ULL,0xfffa026677947be8ULL,0x2737748ef5077371ULL,0x3dd19db68139c48eULL,0xf08374f8e3ed9637ULL,
+        0x4c9c543909d5ffaeULL,0x9505c7ee6adc4ee1ULL,0xdb5ecf610c5dd02bULL,0xa07ed894094756afULL,0xd2b4e1d1cf78e08eULL,0x81e93a5940cbab06ULL,0xd0347462d4131db8ULL,0x39b73a1056bdc61aULL,0x55f42793d0b22dacULL,0x4591c3cd96dca0c6ULL,0x3f9e2262dcb909faULL,0x540742eb8b3e5af0ULL,
+        0x74b0a7a62b0efe00ULL,0x18dba9a6c8b4dc6dULL,0xff86da6dcc5e49e5ULL,0x7d08f0f35f8504dULL,0x93eb2336d87d867fULL,0xb657ed49b7d8fc73ULL,0x6e665f9757ded5b9ULL,0xd077308c962ff568ULL,0x8e2e91ae603095c1ULL,0x44f6ed0a885e55fULL,0xde4088d2b2f8d433ULL,0x660a6c497ac88d72ULL,
+        0xa4c31ed9c3ea95dfULL,0x270bd1c38fd0c5b9ULL,0xedf5e52dcbfa42d8ULL,0x93dbe88562d0ba74ULL,0x908f785edc9d791eULL,0x12ff8a2e030a79a1ULL,0x89c8a83e5ce4834cULL,0x8ff5aab218a8e143ULL,0x9c47777adca9461eULL,0x1dbe4561374753d0ULL,0x74337c1c88981cefULL,0x7dfb5f83ed9aca67ULL,
+        0xc143cdf4eccb5414ULL,0xdb20b5d1ca221914ULL,0xeb214ecd330c3a50ULL,0x8ae4224db9c70b21ULL,0x14e10670dc5f2800ULL,0x6c5365d42adea076ULL,0xa76ceab2695dd8fbULL,0x6434cc0f07f26129ULL,0x3a6fbb94d266b4c3ULL,0x82f71754a69cc8b5ULL,0x62daa71de48939d5ULL,0xad7e7519d8e26e2bULL,
+        0xddb92cf7c40044b6ULL,0x6621430c14553743ULL,0xf0cca111d3665b75ULL,0xb0c8f2a1edcc41cdULL,0xcba372282629719bULL,0x5040ef7aed2eb100ULL,0xb8bef69af915347ULL,0xd5c63b97be29f2f1ULL,0x543aab67bee417fULL,0xf01fcb21fcd9209eULL,0x25c7b22bd405cec9ULL,0x688dcccbffeac819ULL,
+        0xe98ab982d780fefULL,0x7ba3c5382b4287d0ULL,0xf90a41de140e1aceULL,0x606c0c84d1486b07ULL,0x5782283adca3d17fULL,0x7ac38838da8a12ULL,0xdec1928d0f001b51ULL,0x46c5e4d934063d29ULL,0x13c47ef158d20cd3ULL,0x86d36dcda746911cULL,0x5f8f7ae13becdfa0ULL,0xb62e7ab0b4ab1291ULL,
+        0x8c925f7690e174fbULL,0x928549e2c74db0b4ULL,0xb0cce6fe616c0aafULL,0xb7d5aa8b4ffc1ea3ULL,0x78986225925b8b8ULL,0x3fa085a512c1c246ULL,0x1d12a401f954348eULL,0x5343e2da0409a653ULL,0xe8c96e1654b59961ULL,0xfb71286dba54f1aeULL,0xffa2c2e6961eabcdULL,0xa4588ac5d20b4318ULL,
+        0xf7e51448195e95fbULL,0xfa88bbed008a05c2ULL,0xcdf1eeb54a52f6dbULL,0x14ac223d5fbed276ULL,0x3fda57bd89604ea9ULL,0xe94102a19982f6c9ULL,0x8ecbc0e64a1d0df0ULL,0xd3d0b989a41d18bdULL,0xd7a2005b8772677bULL,0x327abd395b752821ULL,0x5f7b1a8f9a830b9cULL,0xb3dda40ec34bb729ULL,
+        0x4a048b3583de3b73ULL,0xa4bc3db593f1f6d8ULL,0x7fb137cb66158a63ULL,0x570d694daf25c28aULL,0xd47e97f9a8ba1d36ULL,0xf4e72a4029a2498aULL,0xd967505d6e54f92cULL,0x2d2d4eb6ccdebd99ULL,0x500ac65f53322ec4ULL,0x37dd03e3cdf1b5daULL,0x36b45315ba4ca4daULL,0x87202a4fe757921ULL,
+        0x7da539708b9adec3ULL,0x5eb41763ad291371ULL,0xb9f2126810e1d69cULL,0x184f28c0d4006b18ULL,0x6081a5ca50e3d10dULL,0xaf74150e9bda4630ULL,0x4dec18c23eed6095ULL,0xe991f98711077d62ULL,0xd442fd46dd311a8eULL,0xd1933d539c682ad6ULL,0x9249fe622f145ae5ULL,0x8ce08718908ef857ULL,
+        0x1925686e4746378fULL,0xfa20cbfdae92fd09ULL,0x5f407e270b5d1f30ULL,0x88975bcd9567161bULL,0x6084090bf69ad676ULL,0x68c123a82dad78a0ULL,0x2d2aa926430e239ULL,0x33404774468b5637ULL,0x39bad1880d0da22dULL,0xe5252533c4210725ULL,0x987f80767c580bf6ULL,0x67045627d299b1bcULL,
+        0x5951c3b8d126a816ULL,0x40252c8f97c2f22bULL,0x85dd65b12318cef7ULL,0xb7d8c8be744a9c08ULL,0x7cc9621d8fe661eeULL,0x67aff57148d6bc8cULL,0xb89dfcc4b3c2e5f3ULL,0xe4e3884b7d818e02ULL,0x49001a9887ec65a5ULL,0xd82c2016576f8d3bULL,0xd5141aad28cd28fULL,0x5207ed4ca9001b60ULL,
+        0xa32ae7837bd9535fULL,0x61d26f9804aa72ccULL,0xb05f41d8c4230ff1ULL,0xce7cc9d925185296ULL,0x1819c843883477d9ULL,0x6c755f4d9e7e9c6eULL,0x874870763349e58cULL,0x3bccf9d0970cb962ULL,0x448e76852f449533ULL,0xe00abd19b7f974baULL,0x3b96aa8411d80b58ULL,0x1c2d91eb8468e834ULL,
+        0xd3aca681bdcc8077ULL,0xf1b919251c74cb37ULL,0x6675e542e9657269ULL,0xc8e7281435ede221ULL,0xda0a575c1fdd6014ULL,0x48b854ec0cb076f4ULL,0x9d2a1ddceee83583ULL,0x82e5937d55f0c598ULL,0xcb294f66fdc0494bULL,0x9d4f3fb37b655b49ULL,0x3573a8509156ee6fULL,0xd70ca606e696b60fULL,
+        0xe0f07addc4937bf8ULL,0x722629b15a86f966ULL,0xd6c535737c552ba5ULL,0x77c067eed669ec3eULL,0x2d8ee72dee0c5088ULL,0xd89177ec7171499cULL,0xfff8810946af3760ULL,0xa0e4045f0f25c09bULL,0xb5814d7807c4e21cULL,0x85106650b7e70402ULL,0x2cc010b568ffb753ULL,0xace5824c13dc4befULL,
+        0xf1a4be0ae321f7e8ULL,0x32be8006272aecb4ULL,0x9ffc9120ba5df89aULL,0x5917fd4977962938ULL,0x91921d4a75abc7deULL,0xa3b5c4da5a25d61bULL,0x25d4d9b3a3fbec68ULL,0x80c4c7f75920da97ULL,0x6b47595a783aee88ULL,0xd2e1e21e1f41cf1bULL,0xf24ab7d18a05a9c8ULL,0x3f7d9e712a7549ebULL,
+        0xfe6b9167930d4090ULL,0xc8b4680345d72fa8ULL,0x91e3df490f09ac6dULL,0xae3249e6ed20c138ULL,0xf966781468da088bULL,0xbfc65290051b26c8ULL,0x86f8df22db945bd5ULL,0x7d11e59e7371d61fULL,0xee06db39ac59e2aaULL,0x7f5b8d80c83ba113ULL,0x38a22dffd386919fULL,0x41dd796b15256365ULL,
+        0x616bbc1ed396681fULL,0x1b0d3ea0e273c67cULL,0xa8c85a115f527b5ULL,0x1ed4794b47aee83cULL,0x13b62dc7e44e99c5ULL,0xc998a998820a6d36ULL,0x7d76abf419f3cfedULL,0x9b94441b1fac3931ULL,0x52938961c1e7f23fULL,0x454e87b393ec9cb4ULL,0x23efd3d50cb7984aULL,0xde8a63fbe3289919ULL,
+        0x29b00aac7da1b32cULL,0x6485618dbe892c82ULL,0xad79f67ef79066aaULL,0x4d81915b249b141eULL,0xc94fe96ea309514fULL,0x28e933a9f007be3ULL,0xdfe41647bf6461c8ULL,0x3c289825e343f88ULL,0xd650586e3959ffdULL,0x4585969e7a05a913ULL,0xc01c6c3380b126edULL,0xce9e5d904604c556ULL,
+        0x71929e978c7df7b5ULL,0xf948d9ad755407faULL,0xa10236ef8337058bULL,0x97e6d18f4e63b616ULL,0xbabbeb6f7e07e44bULL,0xf64afc844057879eULL,0x5cb3c9b5ec3b168fULL,0xb443a8f851f37caULL,0x3ff578ee406c0121ULL,0x24b1e4e02403913cULL,0x899c08056c543c57ULL,0x70eb017c97362194ULL,
+        0x95b0e0cd5ade5e07ULL,0x61005aa22e763f6ULL,0xe3e110c9cd372dabULL,0x792a3b263ec87cdbULL,0x1d290cf1de6db9e9ULL,0x640a20007a64cd4aULL,0x22874701734eb64dULL,0x5b7608a4474a4dabULL,0x17a56b090c2199daULL,0x42d6a6ad150441f2ULL,0xfaae6d6b6398d668ULL,0x8ac5ddc1f44f386ULL,
+        0xce875ca766dd6ea1ULL,0x769d31aab403308aULL,0x647aab8b12d875ceULL,0xbd4290d691ebc847ULL,0x2b6f3dae44eb08c3ULL,0xdfdde2746dcc8c0dULL,0x2beee1d10dbd44ebULL,0x93d7add1ce549128ULL,0xd18f079b53c9cd82ULL,0xea467da81eb5391cULL,0x45d2e364b8893b7dULL,0x3aaf1666f1744fb1ULL,
+        0x152c586cb0b41eb9ULL,0x470dad2855cfdb20ULL,0x3cb1a2843b1099bbULL,0xd26aff050ef10a05ULL,0x939fe38b961e6a6eULL,0xaa5d3f1976e538adULL,0x591636d8ab7a066bULL,0x2a3eb3c0cc45bc9dULL,0x304f619d8a76cbc8ULL,0xab7ec339a32b8919ULL,0xa9a0baa12b4e0a3fULL,0xd965daa463bc6af7ULL,
+        0xd5f4eba362b46e11ULL,0x97ab48d71b994c76ULL,0xe4d3146fea3881daULL,0x90f84fcdb04418edULL,0x1ebaeb7b68e57364ULL,0xdb35b4a16d9dbb16ULL,0x4f6f268db71ecf8eULL,0x4429d3a5e1a0a723ULL,0x82dc445e41ef9fcdULL,0xcc75411094aa142bULL,0xa0d2c92cc82b39ULL,0xab0b50cc599c1d10ULL,
+        0x662b738c3c388608ULL,0x206753724986dbd1ULL,0x79fe6e00b0aacbfULL,0xdee4f0e9352561adULL,0x855ddcfd879de9abULL,0xd24a44240184c248ULL,0x9b15b8fcff86ce64ULL,0xb18b9a6d2a125c91ULL,0xf92d5d35cf39eefcULL,0xfc04a474e5dccb43ULL,0x657ba7415a66f951ULL,0x1a8846afcd8195cULL,
+        0x5ab2b4f43ce234ceULL,0x67890f787c804ebaULL,0x32e0ef2939bd47beULL,0xde5772544112e572ULL,0x36c2985dedf8c64ULL,0x73c07e7b59affb56ULL,0x1d086415eb314efdULL,0x2d5a358c1232cf7ULL,0x67ecf1ee4ffbc4b3ULL,0x5d559dff731b9774ULL,0xec3d0fc5671061a8ULL,0x6b04fbc8de5d9038ULL,
+        0x9ee874083e77005aULL,0x8f03765e5147b1e1ULL,0x8b7a667fe4890f47ULL,0x4fe9a2541392237aULL,0xf3fc02808613e3f3ULL,0xa7714ab7aa284b2fULL,0xb8e57d7480261fe5ULL,0xd1982362a3f49a95ULL,0xc69bbb8a4e889d37ULL,0xd5a461e09fd22eaaULL,0x2a2253f4fddf25ebULL,0xb6c4f39e99a137ULL,
+        0xdefd9f55e5b2fcdfULL,0xccd6e894b4d8414dULL,0x7630d96c5d7a832ULL,0xb66723387e19922bULL,0x23ac69303193cb73ULL,0x8d3d076ab4d318d9ULL,0x68ab3e1877b48cb7ULL,0xc0da29df85fc5ca9ULL,0x22a4d3e2566efb75ULL,0xd69d102f0614c424ULL,0x3f76528827e88c45ULL,0x3291905d6ab11d06ULL,
+        0x4bd433bca3921123ULL,0xf87cce0adfa41dc5ULL,0x981bc242835459c5ULL,0x28389602b05478bfULL,0x761b91b0e12f6bbULL,0xdba74ddc791b30b3ULL,0xaca30a32e5e34e1bULL,0xf24a40ab69cf9eafULL,0xe56e5025fa20009bULL,0xdeb777f9ba3cfac3ULL,0xe83bf2a4a1979558ULL,0x29613cf586b7bf35ULL,
+        0x4b6f03e06a7bc8c7ULL,0x88c45aef88cb660fULL,0xdc3f1e192cd61130ULL,0xa18d3e688ef7cc58ULL,0x109e10cd9065c616ULL,0x55db7a2b119a6e8ULL,0x4a40068cf4bc0504ULL,0xd64ef72ac59d84cbULL,0xf9290d8def4923e4ULL,0x6ef294a87184143aULL,0xf7c4c9258f708cdfULL,0xd0245a238865b736ULL,
+        0x13b202acd618e4fcULL,0xc1dbcaace0d7a1fdULL,0x5acd623e5d806979ULL,0x7b7190b50d16f488ULL,0x7078703ec4bc9ab7ULL,0x16fefb5254044469ULL,0xfb4d09189d4be453ULL,0xa2cef02e96e829f4ULL,0xc9acc7cda4ee0f41ULL,0xa7b2c98bea96286cULL,0xb24795f40db6f802ULL,0xbe88e09dbb8938e7ULL,
+        0x80e1ff7904d7ba86ULL,0x6ea6cbd7332beebULL,0x1a691ce9f7e07b3fULL,0xdf60f09007eba6cdULL,0x468a47e56a59266ULL,0x191fc22e953ac981ULL,0x83856f7e1f160f14ULL,0xef0fde8425f394deULL,0x51887bec9c333032ULL,0x746844c8eb8147c6ULL,0x2f24881fc6b3cdd6ULL,0x4274db6334144f09ULL,
+        0xf89141ec92755774ULL,0x4a788b3d9e0d4e91ULL,0xaf12a04317eb835bULL,0xfb53bac28e372caeULL,0x525c791f88d4e90fULL,0x39f64456b906a4c9ULL,0x764548a7d2278f3ULL,0xfd8a2be10193570fULL,0x6074a3d15211aa68ULL,0x9ed071e8ed26de86ULL,0x31e40bdd8164fe88ULL,0x5ee713a26ed03afeULL,
+        0x7421dc0995b15c82ULL,0x5bfa5ce0d0ae9ce3ULL,0x954b3367746d9322ULL,0x1f670d486f2ecb1eULL,0x45a5e8b814cb8dULL,0x474b73fa79121ac8ULL,0xda29928e0e5c08b8ULL,0x33c373c5fad0f48eULL,0x5218c4bce0afe00cULL,0x420dce2b616f7fc9ULL,0xd41b612b92ff5866ULL,0x917b32db62b9fe97ULL,
+        0xab396abbf2daa235ULL,0xea5e7b818e59d217ULL,0xe2fad005523a239fULL,0x7075dc5dd0924e4cULL,0x6debc60b9776b9dcULL,0xd4fc2042166a86b6ULL,0xca84b1e6d9a80624ULL,0x494c853e46f899ccULL,0x61449ad91b083618ULL,0xf27eb487ff7da87eULL,0x94130fbd9d46223cULL,0x47fb35a8ad2bcbffULL
+    };
 
-public:
-
-    Zobrist();
-
-    // Determine hashing key
-    uint64_t hashBoard(uint64_t *pieces, uint8_t castleFlag, int enpassantSq, bool col);
-    uint64_t hashBoardPawns(uint64_t *pieces);
-    uint64_t hashBoardM(uint64_t board, int pieceFrom, int pieceTo, int moveType, int captureType, bool turn, bool isEnpassant, bool whiteCastleK, bool whiteCastleQ, bool blackCastleK, bool blackCastleQ);
-
-    void hashBoard_quiet(uint64_t &board, int from, int to, int pieceFrom);
-    void hashBoard_capture(uint64_t &board, int from, int to, int pieceFrom, int pieceTo);
-    void hashBoard_square(uint64_t &board, int square, int piece);
-    void hashBoard_turn(uint64_t &board);
-    void hashBoard_capture_promotion(uint64_t &board, int from, int to, int pieceFrom, int pieceTo, int promotionPiece);
-    void hashBoard_promotion(uint64_t &board, int from, int to, int pieceFrom, int promotionPiece);
-    void hashBoard_castle(uint64_t &board, uint8_t castleFlag);
-    void hashBoard_enpassant(uint64_t &board, int square);
+    static inline constexpr uint64_t enpassant[8] = {0x15595f867e2ce550ULL, 0x2a7448311bc15c58ULL, 0xcc5ca7e57ae5bd9fULL, 0xa061aa8bee284b86ULL, 0xa9e48e7c3e1bca12ULL, 0xce3721f1d9a9cedbULL, 0xe1866cc690d14459ULL, 0x877454d1a41fe585ULL};
+    static inline constexpr uint64_t castle[4] = {0x74abd31b97047fbULL, 0x37808729f10bf039ULL, 0x7911edcb6958e9bbULL, 0x7ffd9ba84a2e548eULL};
+    static inline constexpr uint64_t blackTurn = 0xacc7d64e798f6a48ULL;
 
 
-private:
+    // Iterative way to determine hash key:
+    // Used in making moves to keep track of the key much faster
+    static inline constexpr void hashBoard_quiet(uint64_t &__restrict board, int from, int to, int pieceFrom) {
+        board ^= table[from * 12 + pieceFrom];
+        board ^= table[to * 12 + pieceFrom];
+    }
 
-    // table and flags
 
-    uint64_t table[64][12];
-    uint64_t enpassant[8];
-    uint64_t castle[4];
-    uint64_t blackTurn;
+    // Iterative way to determine hash key:
+    // Update captures
+    static inline constexpr void hashBoard_capture(uint64_t &__restrict board, int from, int to, int pieceFrom, int pieceTo) {
+        board ^= table[from * 12 + pieceFrom];
+        board ^= table[to * 12 + pieceFrom];
+        board ^= table[to * 12 + pieceTo];
+    }
 
-};
+
+
+    // Iterative way to determine hash key:
+    // Update specific square
+    static inline constexpr void hashBoard_square(uint64_t &__restrict board, int square, int piece) {
+        board ^= table[square * 12 + piece];
+    }
+
+
+
+    // Iterative way to determine hash key:
+    // Update capture promotions
+    static inline constexpr void hashBoard_capture_promotion(uint64_t &__restrict board, int from, int to, int pieceFrom, int pieceTo, int promotionPiece) {
+        board ^= table[from * 12 + pieceFrom];
+        board ^= table[to * 12 + pieceTo];
+        board ^= table[to * 12 + promotionPiece];
+    }
+
+
+
+    // Iterative way to determine hash key:
+    // Update promotions
+    static inline constexpr void hashBoard_promotion(uint64_t &__restrict board, int from, int to, int pieceFrom, int promotionPiece) {
+        board ^= table[from * 12 + pieceFrom];
+        board ^= table[to * 12 + promotionPiece];
+    }
+
+
+
+    // Iterative way to determine hash key:
+    // Update enpassant square
+    static inline constexpr void hashBoard_enpassant(uint64_t &__restrict board, int square) {
+        board ^= enpassant[square % 8];
+    }
+
+
+
+    // Iterative way to determine hash key:
+    // Update castling rights
+    static inline constexpr void hashBoard_castle(uint64_t &__restrict board, uint8_t castleFlag) {
+        while (castleFlag) {
+            board ^= castle[bitScan(castleFlag)];
+            castleFlag &= castleFlag - 1;
+        }
+    }
+
+
+
+    // Iterative way to determine hash key:
+    // Update turn to move
+    static inline constexpr void hashBoard_turn(uint64_t &__restrict board) {
+        board ^= blackTurn;
+    }
+
+    // Non iterative way to determine the hash key: loop through the board
+    // Used to initialize the board's starting position
+    static inline constexpr uint64_t hashBoard(uint64_t *__restrict pieces, uint8_t castleFlag, int enpassantSq, bool col) {
+
+        uint64_t ret = blackTurn * (uint64_t)(col);
+
+        hashBoard_castle(ret, 15);
+        hashBoard_castle(ret, castleFlag);
+        if (enpassantSq) {
+            hashBoard_enpassant(ret, enpassantSq % 8);
+        }
+
+        for (int i = 0; i < 64; ++i) {
+            uint64_t shiftI = 1ULL << i;
+            for (int j = 0; j < 12; j++) {
+                if (pieces[j] & shiftI) {
+                    ret ^= table[i * 12 + j];
+                    break;
+                }
+            }
+        }
+
+        return ret;
+    }
+
+
+
+    // Non iterative way to determine the hash key: loop through the board
+    // Used to initialize the board's starting position
+    static inline constexpr uint64_t hashBoardPawns(uint64_t *__restrict pieces) {
+
+        uint64_t ret = 0;
+
+        for (int i = 0; i < 64; ++i) {
+            uint64_t shiftI = 1ULL << i;
+            for (int j = 0; j < 2; j++) {
+                if (pieces[j] & shiftI) {
+                    ret ^= table[i * 12 + j];
+                    break;
+                }
+
+                if (pieces[10 + j] & shiftI) {
+                    ret ^= table[i * 12 + j + 10];
+                    break;
+                }
+            }
+        }
+
+        return ret;
+    }
+
+}
