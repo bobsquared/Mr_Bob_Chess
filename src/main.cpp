@@ -18,8 +18,6 @@
 
 INCBIN(bobBrain, "../nets/bob_brain-020724e150.nnue");
 
-Magics *magics;
-
 
 void Bench(Bitboard &b, Search &s) {
     // positions from Ethereal
@@ -53,8 +51,8 @@ int main(int argc, char* argv[]) {
 
     InitColumnsMask();
     InitRowsMask();
+    MAGIC_BITBOARDS::InitMagicBitboards();
 
-    magics = new Magics();
     KPNNUE *model = new KPNNUE(gbobBrainData, gbobBrainSize);
     Eval *eval = new Eval(model);                        /**< The evaluator to score the positions*/
     TranspositionTable *tt = new TranspositionTable();
@@ -187,8 +185,6 @@ int main(int argc, char* argv[]) {
     }
 
     s.cleanUpSearch();
-
-    delete magics;
 
     return 0;
 }

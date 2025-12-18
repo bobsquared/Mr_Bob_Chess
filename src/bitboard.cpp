@@ -1,7 +1,6 @@
 #include "bitboard.h"
 
 std::regex fenNumbers(".*\\s+(\\d+)\\s+(\\d+)");
-extern Magics *magics;
 extern int pieceValues[6];
 
 
@@ -636,8 +635,8 @@ bool Bitboard::InCheckOther() {
     ret = pieces[toMove] & pawnAttacks[index][!toMove];
     ret |= pieces[2 + toMove] & knightMoves[index];
     ret |= pieces[10 + toMove] & kingMoves[index];
-    ret |= (pieces[4 + toMove] | pieces[8 + toMove]) & magics->bishopAttacksMask(occupied, index);
-    ret |= (pieces[6 + toMove] | pieces[8 + toMove]) & magics->rookAttacksMask(occupied, index);
+    ret |= (pieces[4 + toMove] | pieces[8 + toMove]) & MAGIC_BITBOARDS::bishopAttacksMask(occupied, index);
+    ret |= (pieces[6 + toMove] | pieces[8 + toMove]) & MAGIC_BITBOARDS::rookAttacksMask(occupied, index);
 
     return ret != 0;
 
@@ -655,8 +654,8 @@ bool Bitboard::InCheck() {
     ret = pieces[!toMove] & pawnAttacks[index][toMove];
     ret |= pieces[2 + !toMove] & knightMoves[index];
     ret |= pieces[10 + !toMove] & kingMoves[index];
-    ret |= (pieces[4 + !toMove] | pieces[8 + !toMove]) & magics->bishopAttacksMask(occupied, index);
-    ret |= (pieces[6 + !toMove] | pieces[8 + !toMove]) & magics->rookAttacksMask(occupied, index);
+    ret |= (pieces[4 + !toMove] | pieces[8 + !toMove]) & MAGIC_BITBOARDS::bishopAttacksMask(occupied, index);
+    ret |= (pieces[6 + !toMove] | pieces[8 + !toMove]) & MAGIC_BITBOARDS::rookAttacksMask(occupied, index);
 
     return ret != 0;
 
@@ -747,11 +746,11 @@ bool Bitboard::isPseudoLegal(MOVE move) {
             case 1:
                 return (knightMoves[from] & (1ULL << to)) != 0;
             case 2:
-                return (magics->bishopAttacksMask(occupied, from) & (1ULL << to)) != 0;
+                return (MAGIC_BITBOARDS::bishopAttacksMask(occupied, from) & (1ULL << to)) != 0;
             case 3:
-                return (magics->rookAttacksMask(occupied, from) & (1ULL << to)) != 0;
+                return (MAGIC_BITBOARDS::rookAttacksMask(occupied, from) & (1ULL << to)) != 0;
             case 4:
-                return (magics->queenAttacksMask(occupied, from) & (1ULL << to)) != 0;
+                return (MAGIC_BITBOARDS::queenAttacksMask(occupied, from) & (1ULL << to)) != 0;
             case 5:
                 return (kingMoves[from] & (1ULL << to)) != 0;
         }
@@ -801,11 +800,11 @@ bool Bitboard::isPseudoLegal(MOVE move) {
             case 1:
                 return (knightMoves[from] & (1ULL << to)) != 0;
             case 2:
-                return (magics->bishopAttacksMask(occupied, from) & (1ULL << to)) != 0;
+                return (MAGIC_BITBOARDS::bishopAttacksMask(occupied, from) & (1ULL << to)) != 0;
             case 3:
-                return (magics->rookAttacksMask(occupied, from) & (1ULL << to)) != 0;
+                return (MAGIC_BITBOARDS::rookAttacksMask(occupied, from) & (1ULL << to)) != 0;
             case 4:
-                return (magics->queenAttacksMask(occupied, from) & (1ULL << to)) != 0;
+                return (MAGIC_BITBOARDS::queenAttacksMask(occupied, from) & (1ULL << to)) != 0;
             case 5:
                 return (kingMoves[from] & (1ULL << to)) != 0;
         }
@@ -872,7 +871,7 @@ bool Bitboard::isAttackedCastleMask(uint64_t bitboard) {
 
     uint64_t piece = pieces[4 + !toMove];
     while (piece) {
-        if (magics->bishopAttacksMask(occupied, bitScan(piece)) & bitboard) {
+        if (MAGIC_BITBOARDS::bishopAttacksMask(occupied, bitScan(piece)) & bitboard) {
             return true;
         }
         piece &= piece - 1;
@@ -880,7 +879,7 @@ bool Bitboard::isAttackedCastleMask(uint64_t bitboard) {
 
     piece = pieces[6 + !toMove];
     while (piece) {
-        if (magics->rookAttacksMask(occupied, bitScan(piece)) & bitboard) {
+        if (MAGIC_BITBOARDS::rookAttacksMask(occupied, bitScan(piece)) & bitboard) {
             return true;
         }
         piece &= piece - 1;
@@ -888,7 +887,7 @@ bool Bitboard::isAttackedCastleMask(uint64_t bitboard) {
 
     piece = pieces[8 + !toMove];
     while (piece) {
-        if (magics->queenAttacksMask(occupied, bitScan(piece)) & bitboard) {
+        if (MAGIC_BITBOARDS::queenAttacksMask(occupied, bitScan(piece)) & bitboard) {
             return true;
         }
         piece &= piece - 1;
@@ -995,8 +994,8 @@ uint64_t Bitboard::isAttackedSee(int index) {
     ret |= pieces[0] & pawnAttacks[index][1];
     ret |= pieces[1] & pawnAttacks[index][0];
     ret |= (pieces[2] | pieces[3]) & knightMoves[index];
-    ret |= (pieces[4] | pieces[5] | pieces[8] | pieces[9]) & magics->bishopAttacksMask(occupied, index);
-    ret |= (pieces[6] | pieces[7] | pieces[8] | pieces[9]) & magics->rookAttacksMask(occupied, index);
+    ret |= (pieces[4] | pieces[5] | pieces[8] | pieces[9]) & MAGIC_BITBOARDS::bishopAttacksMask(occupied, index);
+    ret |= (pieces[6] | pieces[7] | pieces[8] | pieces[9]) & MAGIC_BITBOARDS::rookAttacksMask(occupied, index);
     ret |= (pieces[10] | pieces[11]) & kingMoves[index];
 
     return ret;
@@ -1063,8 +1062,8 @@ int Bitboard::seeCapture(MOVE capture) {
         occ ^= fromSet;
 
         if (fromSet & mayXray) {
-            attadef |= magics->xrayAttackBishop(occ, fromSet, to) & (pieces[4] | pieces[5] | pieces[8] | pieces[9]);
-            attadef |= magics->xrayAttackRook(occ, fromSet, to) & (pieces[6] | pieces[7] | pieces[8] | pieces[9]);
+            attadef |= MAGIC_BITBOARDS::xrayAttackBishop(occ, fromSet, to) & (pieces[4] | pieces[5] | pieces[8] | pieces[9]);
+            attadef |= MAGIC_BITBOARDS::xrayAttackRook(occ, fromSet, to) & (pieces[6] | pieces[7] | pieces[8] | pieces[9]);
         }
 
         fromSet = getLeastValuablePiece(attadef, isWhite, aPiece);

@@ -4,54 +4,42 @@
 
 
 
-class Magics{
-
-public:
-
-    ~Magics();
-    Magics();
-    void Generate_Magic_Rooks();
-    void Generate_Magic_Bishops();
-    uint64_t rookAttacksMask(uint64_t occupations, int index);
-    uint64_t bishopAttacksMask(uint64_t occupations, int index);
-    uint64_t queenAttacksMask(uint64_t occupations, int index);
-
-    uint64_t xrayAttackRook(uint64_t occ, uint64_t blockers, int index);
-    uint64_t xrayAttackBishop(uint64_t occ, uint64_t blockers, int index);
-
-private:
-
-    struct MagicPro {
-        uint64_t bitboard;
-        uint8_t shift;
+namespace MAGIC_BITBOARDS{
+    struct alignas(64) MagicPro {
         uint64_t magic;
         uint64_t mask;
-
-        MagicPro() :
-            bitboard(0), shift(0), magic(0), mask(0) {}
-
-        MagicPro(uint64_t bitboard, uint8_t shift, uint64_t magic, uint64_t mask) :
-            bitboard(bitboard), shift(shift), magic(magic), mask(mask) {}
+        uint8_t shift;
+        uint8_t padding[64 - 8 - 8 - 1];
     };
 
-    uint64_t bitCombinations(uint64_t index, uint64_t bitboard);
-    bool InitBlocksRook(uint64_t bitboard, uint64_t index, uint64_t magic);
-    bool InitBlocksBishop(uint64_t bitboard, uint8_t index, uint64_t magic);
+    extern MagicPro attacksR[64];
+    extern MagicPro attacksB[64];
 
-    void optimalMagicRook(uint64_t *magicR);
-    void optimalMagicBishop(uint64_t *magicB);
+    extern uint64_t rookComb[64 * 4096];
+    extern uint64_t bishopComb[64 * 512];
 
-    void InitBishopMoves(uint64_t *bishopMoves);
-    void InitRookMoves(uint64_t *rookMoves);
+    extern void Generate_Magic_Rooks();
+    extern void Generate_Magic_Bishops();
+    extern void InitMagicBitboards();
+    extern uint64_t xrayAttackRook(uint64_t occ, uint64_t blockers, int index);
+    extern uint64_t xrayAttackBishop(uint64_t occ, uint64_t blockers, int index);
 
-    void InitializeRookMagicsInfo(uint64_t *magicR, uint64_t *rookMoves);
-    void InitializeBishopMagicsInfo(uint64_t *magicB, uint64_t *bishopMoves);
+    static inline uint64_t bishopAttacksMask(uint64_t occupations, int index){
+        occupations &= attacksB[index].mask;
+        occupations = ((attacksB[index].magic * occupations) >> attacksB[index].shift);
+        return bishopComb[((uint64_t)index << 9) + occupations];
+    }
 
-    MagicPro attacksR[64];
-    MagicPro attacksB[64];
+    static inline uint64_t rookAttacksMask(uint64_t occupations, int index) {
+        occupations &= attacksR[index].mask;
+        occupations = ((attacksR[index].magic * occupations) >> attacksR[index].shift);
+        return rookComb[((uint64_t)index << 12) + occupations];
+    }
 
-    uint64_t *rookComb;
-    uint64_t *bishopComb;
+    static inline uint64_t queenAttacksMask(uint64_t occupations, int index) {
+        return bishopAttacksMask(occupations, index) | rookAttacksMask(occupations, index);
+    }
 
+    
 
 };

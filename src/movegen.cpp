@@ -1,8 +1,5 @@
 #include "movegen.h"
 
-extern Magics *magics;
-
-
 
 // Move is 16 bit:
 // from location: 16 - 11 MSB
@@ -167,7 +164,7 @@ void MoveGen::generate_bishop_moves_quiet(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t bishopAtt = magics->bishopAttacksMask(b.occupied, locIndex);
+        uint64_t bishopAtt = MAGIC_BITBOARDS::bishopAttacksMask(b.occupied, locIndex);
 
         uint64_t nonCaptures = (~b.occupied) & bishopAtt;
         while (nonCaptures) {
@@ -188,7 +185,7 @@ void MoveGen::generate_bishop_moves_noisy(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t bishopAtt = magics->bishopAttacksMask(b.occupied, locIndex);
+        uint64_t bishopAtt = MAGIC_BITBOARDS::bishopAttacksMask(b.occupied, locIndex);
 
         uint64_t captures = b.color[!b.toMove] & bishopAtt;
         while (captures) {
@@ -209,7 +206,7 @@ void MoveGen::generate_rook_moves_quiet(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t rookAtt = magics->rookAttacksMask(b.occupied, locIndex);
+        uint64_t rookAtt = MAGIC_BITBOARDS::rookAttacksMask(b.occupied, locIndex);
 
         uint64_t nonCaptures = (~b.occupied) & rookAtt;
         while (nonCaptures) {
@@ -230,7 +227,7 @@ void MoveGen::generate_rook_moves_noisy(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t rookAtt = magics->rookAttacksMask(b.occupied, locIndex);
+        uint64_t rookAtt = MAGIC_BITBOARDS::rookAttacksMask(b.occupied, locIndex);
 
         uint64_t captures = b.color[!b.toMove] & rookAtt;
         while (captures) {
@@ -251,7 +248,7 @@ void MoveGen::generate_queen_moves_quiet(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t queenAtt = magics->queenAttacksMask(b.occupied, locIndex);
+        uint64_t queenAtt = MAGIC_BITBOARDS::queenAttacksMask(b.occupied, locIndex);
 
         uint64_t nonCaptures = (~b.occupied) & queenAtt;
         while (nonCaptures) {
@@ -272,7 +269,7 @@ void MoveGen::generate_queen_moves_noisy(MoveList &moveList, Bitboard &b) {
     while (bb) {
 
         int locIndex = bitScan(bb);
-        uint64_t queenAtt = magics->queenAttacksMask(b.occupied, locIndex);
+        uint64_t queenAtt = MAGIC_BITBOARDS::queenAttacksMask(b.occupied, locIndex);
 
         uint64_t captures = b.color[!b.toMove] & queenAtt;
         while (captures) {
