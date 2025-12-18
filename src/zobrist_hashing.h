@@ -6,7 +6,7 @@
 namespace ZOBRIST {
 
     // Zobrist hashing
-    static inline constexpr uint64_t table[64*12] = {
+    alignas(64) static constexpr uint64_t table[64*12] = {
         0xfceee8b9f98bdc3eULL,0x46e8e12fe9ee25acULL,0xf6f835134a194366ULL,0x32416438f306868eULL,0x5e9cc875f74988f3ULL,0xdcaa162a8f18f0fULL,0xb62a161ab52f082cULL,0x8c971bb8156977dfULL,0x4fc407a3b3cf8bULL,0x3ef0512191a211bfULL,0x641922d06809c39fULL,0xe25146032ca9167eULL,
         0x76399ad070b3eb1cULL,0x2e5b97519baca011ULL,0x40f6f847c20c702ULL,0xdf08a8dca5efb9ULL,0x776403d9850f459aULL,0x215ce7edabd82840ULL,0x4eb33aa72472f5e6ULL,0x104dd8db53a858a5ULL,0x508adc42d840302bULL,0x13bf3d341982f4e9ULL,0xee694f63f9a6a7f1ULL,0x23494d1c7b26bd95ULL,
         0x250b6edf53fc7e39ULL,0x488cb3878897ff2dULL,0xe19c1044276377bdULL,0x8194a98af28bdc4ULL,0x464b1fdd2c4aca52ULL,0x65db06d8dc6839a8ULL,0x374dc3ff19b33e1aULL,0x54a23b1389ccacc2ULL,0x17a8b5037996efe0ULL,0x6e9ad02673497305ULL,0xd30a262bce5eec0eULL,0x6540099ef454068aULL,
@@ -73,9 +73,9 @@ namespace ZOBRIST {
         0xab396abbf2daa235ULL,0xea5e7b818e59d217ULL,0xe2fad005523a239fULL,0x7075dc5dd0924e4cULL,0x6debc60b9776b9dcULL,0xd4fc2042166a86b6ULL,0xca84b1e6d9a80624ULL,0x494c853e46f899ccULL,0x61449ad91b083618ULL,0xf27eb487ff7da87eULL,0x94130fbd9d46223cULL,0x47fb35a8ad2bcbffULL
     };
 
-    static inline constexpr uint64_t enpassant[8] = {0x15595f867e2ce550ULL, 0x2a7448311bc15c58ULL, 0xcc5ca7e57ae5bd9fULL, 0xa061aa8bee284b86ULL, 0xa9e48e7c3e1bca12ULL, 0xce3721f1d9a9cedbULL, 0xe1866cc690d14459ULL, 0x877454d1a41fe585ULL};
-    static inline constexpr uint64_t castle[4] = {0x74abd31b97047fbULL, 0x37808729f10bf039ULL, 0x7911edcb6958e9bbULL, 0x7ffd9ba84a2e548eULL};
-    static inline constexpr uint64_t blackTurn = 0xacc7d64e798f6a48ULL;
+    static constexpr uint64_t enpassant[8] = {0x15595f867e2ce550ULL, 0x2a7448311bc15c58ULL, 0xcc5ca7e57ae5bd9fULL, 0xa061aa8bee284b86ULL, 0xa9e48e7c3e1bca12ULL, 0xce3721f1d9a9cedbULL, 0xe1866cc690d14459ULL, 0x877454d1a41fe585ULL};
+    static constexpr uint64_t castle[4] = {0x74abd31b97047fbULL, 0x37808729f10bf039ULL, 0x7911edcb6958e9bbULL, 0x7ffd9ba84a2e548eULL};
+    static constexpr uint64_t blackTurn = 0xacc7d64e798f6a48ULL;
 
 
     // Iterative way to determine hash key:
