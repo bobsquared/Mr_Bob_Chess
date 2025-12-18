@@ -1,8 +1,5 @@
 #include "defs.h"
 
-#ifdef _WIN32
-#include <intrin.h>
-#endif
 
 uint64_t columnMask[64];
 uint64_t rowMask[64];
@@ -19,37 +16,6 @@ std::unordered_map<std::string, uint8_t> TO_NUM = {
     {"a7", 48},{"b7", 49},{"c7", 50},{"d7", 51},{"e7", 52},{"f7", 53},{"g7", 54},{"h7", 55},
     {"a8", 56},{"b8", 57},{"c8", 58},{"d8", 59},{"e8", 60},{"f8", 61},{"g8", 62},{"h8", 63}
 };
-
-
-
-// Get the move from location
-int get_move_from(uint16_t move) {
-    return (move & FROM_LOC_MOVE) >> 10;
-}
-
-
-
-// Get the move to location
-int get_move_to(uint16_t move) {
-    return (move & TO_LOC_MOVE) >> 4;
-}
-
-
-
-// Scan the least significant bit
-int bitScan(const uint64_t bitboard) {
-
-    #if defined(_MSC_VER) || defined(__MINGW32__)
-    unsigned long ret;
-    _BitScanForward64(&ret, bitboard);
-    return (int) ret;
-
-    #elif defined(__GNUC__)
-    return __builtin_ctzll(bitboard);
-    #endif
-
-    return MSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89) >> 58];
-}
 
 
 

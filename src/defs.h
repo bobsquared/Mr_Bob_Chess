@@ -7,6 +7,10 @@
 #include <unordered_map>
 #include <cassert>
 
+#ifdef _WIN32
+#include <intrin.h>
+#endif
+
 #define HASH_SIZE 256
 #define MAX_NUM_MOVES 256
 
@@ -222,7 +226,7 @@ struct PrevMoveInfo {
 
 
 // For Bitscanning
-const int MSB_TABLE[64] = {
+static constexpr inline uint8_t MSB_TABLE[64] = {
     0, 47,  1, 56, 48, 27,  2, 60,
     57, 49, 41, 37, 28, 16,  3, 61,
     54, 58, 35, 52, 50, 42, 21, 44,
@@ -247,6 +251,35 @@ const std::string TO_ALG[64] = {
     "a8","b8","c8","d8","e8","f8","g8","h8"
 };
 
+// Get the move from location
+inline int get_move_from(uint16_t move) {
+    return (move & FROM_LOC_MOVE) >> 10;
+}
+
+
+
+// Get the move to location
+inline int get_move_to(uint16_t move) {
+    return (move & TO_LOC_MOVE) >> 4;
+}
+
+
+
+// Scan the least significant bit
+inline int bitScan(uint64_t bitboard) {
+
+    #if defined(_MSC_VER) || defined(__MINGW32__)
+    unsigned long ret;
+    _BitScanForward64(&ret, bitboard);
+    return (int) ret;
+
+    #elif defined(__GNUC__)
+    return __builtin_ctzll(bitboard);
+    #endif
+
+    return MSB_TABLE[((bitboard ^ (bitboard - 1)) * 0x03f79d71b4cb0a89) >> 58];
+}
+
 
 
 // Algebra to number
@@ -255,7 +288,6 @@ extern std::unordered_map<std::string, uint8_t> TO_NUM;
 extern uint64_t columnMask[64];
 extern uint64_t rowMask[64];
 
-extern int bitScan(const uint64_t bitboard);
 extern void InitColumnsMask();
 extern void InitRowsMask();
 extern uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag);
@@ -267,7 +299,4 @@ extern bool isCaptureMove(const MOVE move);
 extern bool isCaptureOrPromotionMove(const MOVE move);
 extern bool isQuietMove(const MOVE move);
 
-
-extern int get_move_from(MOVE move);
-extern int get_move_to(MOVE move);
 extern std::string moveToString(MOVE move);
