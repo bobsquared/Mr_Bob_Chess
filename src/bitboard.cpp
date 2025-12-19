@@ -817,7 +817,7 @@ bool Bitboard::isPseudoLegal(MOVE move) {
 
 
 // Determine if player can castle kingside
-bool Bitboard::can_castle_king() {
+bool Bitboard::can_castle_king() const {
 
     if (!(castleRights & (toMove? KING_CASTLE_RIGHTS_BLACK : KING_CASTLE_RIGHTS_WHITE))) {
         return false;
@@ -837,7 +837,7 @@ bool Bitboard::can_castle_king() {
 
 
 // Determine if player can castle queenside
-bool Bitboard::can_castle_queen() {
+bool Bitboard::can_castle_queen() const {
 
     if (!(castleRights & (toMove? QUEEN_CASTLE_RIGHTS_BLACK : QUEEN_CASTLE_RIGHTS_WHITE))) {
         return false;
@@ -857,7 +857,7 @@ bool Bitboard::can_castle_queen() {
 
 
 // Determine if playr can castle
-bool Bitboard::isAttackedCastleMask(uint64_t bitboard) {
+bool Bitboard::isAttackedCastleMask(uint64_t bitboard) const {
 
     uint64_t ret = 0;
 

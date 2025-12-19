@@ -10,6 +10,7 @@
 #include "movegen.h"
 #include "bitboard.h"
 #include "thread_search.h"
+#include "movelist.h"
 
 class MovePick {
 

@@ -54,7 +54,7 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, PrevMoveInfo &prev, T
     bool isValidPrevMove = (prevMove != NO_MOVE && prevMove != NULL_MOVE);
 
     for (int i = 0; i < moveList.count; i++) {
-        moveList.get_index_move(i, move);
+        move = moveList.get_index_move(i);
         int moveTo = get_move_to(move);
         int moveFrom = get_move_from(move);
 
@@ -122,7 +122,7 @@ void MovePick::scoreMovesQS(MoveList &moveList, Bitboard &b, MOVE pvMove) {
     int to;
 
     for (int i = 0; i < moveList.count; i++) {
-        moveList.get_index_move(i, move);
+        move = moveList.get_index_move(i);
 
         if (move == pvMove) {
             moveList.set_score_index(i, 1500000);

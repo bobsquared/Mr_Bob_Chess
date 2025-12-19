@@ -70,75 +70,6 @@ typedef uint16_t MOVE;
 #define KNIGHT_PROMOTION_MASK 0
 
 
-
-
-// All information about a move
-struct Move {
-    int score;
-    MOVE move;
-
-    Move() : score(0), move(0) {}
-
-    Move(MOVE move, int score) :
-        score(score), move(move) {}
-
-    bool operator<(const Move& a) const { return score > a.score; }
-    bool operator>(const Move& a) const { return score < a.score; }
-};
-
-
-
-// A struct which contains a list of all moves.
-// Used in move generation
-struct MoveList {
-    Move moveList[MAX_NUM_MOVES];
-    int count;
-
-    MoveList() : count(0) {}
-
-    void append_move(Move move) {
-        moveList[count] = move;
-        count++;
-    }
-
-    bool get_next_move(MOVE &move) {
-
-        int index = 0;
-        for (int i = 0; i < count; i++) {
-            if (moveList[i].score > moveList[index].score) {
-                index = i;
-            }
-        }
-
-        move = count? moveList[index].move : NO_MOVE;
-        moveList[index] = moveList[std::max(0, count - 1)];
-        count--;
-
-        return count + 1;
-    }
-
-    void get_index_move(int index, MOVE &move) {
-        assert(index < count && index >= 0);
-        move = moveList[index].move;
-    }
-
-    void set_score_index(int index, int score) {
-        assert(index < count && index >= 0);
-        moveList[index].score = score;
-    }
-
-    void set_score_move(MOVE move, int score) {
-        for (int i = 0; i < count; i++) {
-            if (moveList[i].move == move) {
-                moveList[i].score = score;
-            }
-        }
-    }
-
-};
-
-
-
 // This is what is stored in the transposition table
 struct ZobristVal {
     uint64_t posKey;
@@ -226,7 +157,7 @@ struct PrevMoveInfo {
 
 
 // For Bitscanning
-static constexpr inline uint8_t MSB_TABLE[64] = {
+static constexpr uint8_t MSB_TABLE[64] = {
     0, 47,  1, 56, 48, 27,  2, 60,
     57, 49, 41, 37, 28, 16,  3, 61,
     54, 58, 35, 52, 50, 42, 21, 44,

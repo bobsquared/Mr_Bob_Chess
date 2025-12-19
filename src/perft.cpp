@@ -1,8 +1,6 @@
 #include "perft.h"
 
 
-MoveGen *moveGen;
-
 // Static exchange evaluation test
 void SeeTest(Bitboard &x, std::string fen, int from, int to, int result, MOVE flags) {
 
@@ -11,7 +9,7 @@ void SeeTest(Bitboard &x, std::string fen, int from, int to, int result, MOVE fl
     std::string resultPass;
 
     x.setPosFen(fen);
-    moveGen->generate_all_moves(moveList, x);
+    MOVE_GEN::generate_all_moves(moveList, x);
     while (moveList.get_next_move(move)) {
         if (get_move_from(move) == from && get_move_to(move) == to) {
             if (flags && (move & MOVE_FLAGS) != flags) {
@@ -69,12 +67,12 @@ uint64_t PerftCall(Bitboard & b, int depth) {
     MOVE move;
     MoveList moveList;
 
-    moveGen->generate_all_moves(moveList, b);
+    MOVE_GEN::generate_all_moves(moveList, b);
     if (depth == 1) {
         int count = 0;
 
         for (int i = 0; i < moveList.count; i++) {
-            move = moveList.moveList[i].move;
+            move = moveList.moves[i];
             if (b.isLegal(move)) {
                 count++;
             }
@@ -83,7 +81,7 @@ uint64_t PerftCall(Bitboard & b, int depth) {
     }
 
     for (int i = 0; i < moveList.count; i++) {
-        move = moveList.moveList[i].move;
+        move = moveList.moves[i];
         if (b.isLegal(move)) {
             b.make_move(move);
             nodes += PerftCall(b, depth - 1);

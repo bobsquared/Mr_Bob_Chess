@@ -76,8 +76,8 @@ public:
     bool isRepetition();
     bool isLegal(MOVE move);
 
-    bool can_castle_king();
-    bool can_castle_queen();
+    bool can_castle_king() const;
+    bool can_castle_queen() const;
     bool isPseudoLegal(MOVE move);
 
     int getPiece(int index);
@@ -129,6 +129,6 @@ private:
     uint64_t isAttackedSee(int index);
     uint64_t getLeastValuablePiece(uint64_t attadef, bool col, int &piece);
 
-    bool isAttackedCastleMask(uint64_t bitboard);
+    bool isAttackedCastleMask(uint64_t bitboard) const;
 
 };

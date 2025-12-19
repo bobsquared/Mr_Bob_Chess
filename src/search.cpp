@@ -21,7 +21,6 @@ Search::Search(Eval *eval, TranspositionTable *tt, ThreadSearch *thread) : eval(
     canPrintInfo = true;
 
     movePick = new MovePick;               /**< The move picker gives a score to each generated move*/
-    moveGen = new MoveGen;                  /**< The move generator generates all pseudo legal moves in a given position*/
     InitLateMoveArray();
 }
 
@@ -91,7 +90,6 @@ void Search::InitLateMoveArray() {
 void Search::cleanUpSearch() {
     delete tt;
     delete movePick;
-    delete moveGen;
     delete eval;
     delete [] thread;
 }
@@ -232,7 +230,7 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
     MOVE prevMove = b.moveHistory.move[b.moveHistory.count - 1].move;
     int prevMoveTo = get_move_to(prevMove);
 
-    inCheck? moveGen->generate_all_moves(moveList, b) : moveGen->generate_captures_promotions(moveList, b);
+    inCheck? MOVE_GEN::generate_all_moves(moveList, b) : MOVE_GEN::generate_captures_promotions(moveList, b);
     movePick->scoreMovesQS(moveList, b, ttMove);
     while (moveList.get_next_move(move)) {
 
@@ -428,7 +426,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             MoveList moveList;
             MOVE move;
 
-            moveGen->generate_captures_promotions(moveList, b);
+            MOVE_GEN::generate_captures_promotions(moveList, b);
             movePick->scoreMovesQS(moveList, b, ttMove);
             while (moveList.get_next_move(move)) {
 
@@ -475,7 +473,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
     MOVE noisys[MAX_NUM_MOVES];
     PrevMoveInfo prev = GetPreviousMoveInfo(b);
 
-    moveGen->generate_all_moves(moveList, b); // Generate moves
+    MOVE_GEN::generate_all_moves(moveList, b); // Generate moves
     movePick->scoreMoves(moveList, b, prev, th, ply, ttMove);
     while (moveList.get_next_move(move)) {
         bool isQuiet = isQuietMove(move);
@@ -983,7 +981,7 @@ Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool anal
 
     MoveList moveListOriginal;
     MoveList moveList;
-    moveGen->generate_all_moves(moveListOriginal, b);
+    MOVE_GEN::generate_all_moves(moveListOriginal, b);
     movePick->scoreMoves(moveListOriginal, b, prev, th, 0, NO_MOVE);
 
     if (id == 0) {
