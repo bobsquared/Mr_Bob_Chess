@@ -45,7 +45,7 @@ void MovePick::InitMvvLva() {
 * @param[in]      ply      The current ply/height that the search is at.
 * @param[in]      pvMove   The principal variation move found in the transposition table.
 */
-void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, PrevMoveInfo &prev, ThreadSearch *th, int ply, MOVE pvMove) {
+void MovePick::scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, ThreadSearch *th, int ply, MOVE pvMove) {
 
     MOVE move;
     int from;
@@ -63,16 +63,16 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, PrevMoveInfo &prev, T
         }
         else if (move & CAPTURE_FLAG) {
 
-            from = b.pieceAt[moveFrom] / 2;
-            to = b.pieceAt[moveTo] / 2;
+            from = b.state.pieceAt[moveFrom] / 2;
+            to = b.state.pieceAt[moveTo] / 2;
 
             if ((move & MOVE_FLAGS) == ENPASSANT_FLAG) {
                 moveList.set_score_index(i, 1000000 + mvvlva[from][0]);
             }
             else {
-                int see = b.seeCapture(move);
+                int see = BITBOARD::seeCapture(b.state, move);
                 int score = (see > 0? 1000000 : (see == 0? 950000 : -1500));
-                moveList.set_score_index(i, score + mvvlva[from][to] + th->getHistory(b.toMove, false, moveFrom, moveTo) / 256);
+                moveList.set_score_index(i, score + mvvlva[from][to] + th->getHistory(b.state.toMove, false, moveFrom, moveTo) / 256);
             }
 
         }
@@ -98,7 +98,7 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, PrevMoveInfo &prev, T
         }
         else {
             int cmh = isValidPrevMove * th->getCounterHistory(b, prev, moveFrom, moveTo);
-            moveList.set_score_index(i, th->getHistory(b.toMove, true, moveFrom, moveTo) + cmh);
+            moveList.set_score_index(i, th->getHistory(b.state.toMove, true, moveFrom, moveTo) + cmh);
         }
     }
 
@@ -115,7 +115,7 @@ void MovePick::scoreMoves(MoveList &moveList, Bitboard &b, PrevMoveInfo &prev, T
 * @param[in]      b        The board representation.
 * @param[in]      pvMove   The principal variation move found in the transposition table.
 */
-void MovePick::scoreMovesQS(MoveList &moveList, Bitboard &b, MOVE pvMove) {
+void MovePick::scoreMovesQS(MoveList &moveList, Board &b, MOVE pvMove) {
 
     MOVE move;
     int from;
@@ -129,8 +129,8 @@ void MovePick::scoreMovesQS(MoveList &moveList, Bitboard &b, MOVE pvMove) {
         }
         else if (move & CAPTURE_FLAG) {
 
-            from = b.pieceAt[get_move_from(move)] / 2;
-            to = b.pieceAt[get_move_to(move)] / 2;
+            from = b.state.pieceAt[get_move_from(move)] / 2;
+            to = b.state.pieceAt[get_move_to(move)] / 2;
 
             if ((move & MOVE_FLAGS) == ENPASSANT_FLAG) {
                 moveList.set_score_index(i, 1000000 + mvvlva[from][0]);

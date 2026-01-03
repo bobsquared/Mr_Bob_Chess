@@ -1,5 +1,5 @@
 #pragma once
-#include "defs.h"
+#include "../defs.h"
 
 // A struct which contains a list of all moves.
 struct alignas(64) MoveList {

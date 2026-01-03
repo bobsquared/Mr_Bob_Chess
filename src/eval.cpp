@@ -36,7 +36,8 @@ void Eval::InitDistanceArray() {
 
 
 // get the Phase value
-int Eval::getPhase(Bitboard &board) {
+int Eval::getPhase(Board &b) {
+    BoardState &board = b.state;
     int phase = TOTALPHASE;
     phase -= (board.pieceCount[0] + board.pieceCount[1]) * PAWNPHASE;
     phase -= (board.pieceCount[2] + board.pieceCount[3]) * KNIGHTPHASE;
@@ -49,7 +50,8 @@ int Eval::getPhase(Bitboard &board) {
 
 
 
-int Eval::scaleEndgame(Bitboard &board, int eval) {
+int Eval::scaleEndgame(Board &b, int eval) {
+    BoardState &board = b.state;
 
     uint64_t pawns = board.pieces[0] | board.pieces[1];
     uint64_t knights = board.pieces[2] | board.pieces[3];
@@ -122,10 +124,11 @@ int Eval::scaleEndgame(Bitboard &board, int eval) {
 
 
 // Evaluate the position
-int Eval::evaluate(Bitboard &board) {
-
+int Eval::evaluate(Board &b) {
+    
     // Asserts for debugging mode
     #ifndef NDEBUG
+    BoardState &board = b.state;
     int pawnCount = count_population(board.pieces[0]);
     int knightCount = count_population(board.pieces[2]);
     int bishopCount = count_population(board.pieces[4]);
@@ -154,7 +157,7 @@ int Eval::evaluate(Bitboard &board) {
 
     #endif
 
-    int retm = model->evaluate(board);
+    int retm = model->evaluate(b);
     
     return retm;
 

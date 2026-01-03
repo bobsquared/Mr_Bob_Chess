@@ -150,14 +150,14 @@ bool TranspositionTable::probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, b
 
 // Return the principal variation as a string.
 // It returns the string as a list of moves, (ex. 'e2e4 e7e5 d2d4 e5d4')
-std::string TranspositionTable::getPv(Bitboard &b) {
+std::string TranspositionTable::getPv(Board &b) {
 
     std::string pv = "";
     std::vector<uint64_t> loopChecker;
     std::stack<MOVE> movesToUndo;
 
     while (true) {
-        uint64_t posKey = b.getPosKey();
+        uint64_t posKey = b.state.posKey;
         loopChecker.push_back(posKey);
 
         if (std::count(loopChecker.begin(), loopChecker.end(), loopChecker.back()) >= 3) {
@@ -171,7 +171,7 @@ std::string TranspositionTable::getPv(Bitboard &b) {
             }
             movesToUndo.push(hashedBoard.move);
             pv += " " + moveToString(hashedBoard.move);
-            b.make_move(hashedBoard.move);
+            BITBOARD::make_move(b, hashedBoard.move);
         }
         else {
             break;
@@ -179,7 +179,7 @@ std::string TranspositionTable::getPv(Bitboard &b) {
     }
 
     while (!movesToUndo.empty()) {
-        b.undo_move(movesToUndo.top());
+        BITBOARD::undo_move(b, movesToUndo.top());
         movesToUndo.pop();
     }
 

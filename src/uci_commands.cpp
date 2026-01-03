@@ -7,7 +7,7 @@
 
 
 
-void startPosMoves(Bitboard &b, std::string moves);
+void startPosMoves(Board &b, std::string moves);
 
 
 
@@ -102,20 +102,20 @@ void GoCommand::execute() {
 void PositionCommand::execute() {
     // Reset postion to starting position
     if (command == "position startpos") {
-        b.reset();
+        BITBOARD::reset(b);
     }
 
     // Make all moves in the list
     else if (command.substr(0, 24) == "position startpos moves ") {
-        b.reset();
+        BITBOARD::reset(b);
         startPosMoves(b, command.substr(24, command.size() - 24));
     }
 
     // Set position to FEN position
     else if (command.substr(0, 13) == "position fen ") {
-        b.reset();
+        BITBOARD::reset(b);
         size_t indexMoves = command.find("moves ");
-        b.setPosFen(command.substr(13, indexMoves));
+        BITBOARD::setPosFen(b.state, b.acc, command.substr(13, indexMoves));
 
         if (indexMoves != std::string::npos) {
             startPosMoves(b, command.substr(indexMoves, command.size() - indexMoves));
@@ -125,7 +125,7 @@ void PositionCommand::execute() {
 
 
 
-void startPosMoves(Bitboard &b, std::string moves) {
+void startPosMoves(Board &b, std::string moves) {
 
     // Make all the moves.
     while (moves.find(' ') != std::string::npos) {
@@ -133,7 +133,7 @@ void startPosMoves(Bitboard &b, std::string moves) {
         MOVE move;
         MoveList moveList;
 
-        MOVE_GEN::generate_all_moves(moveList, b);
+        MOVE_GEN::generate_all_moves(moveList, b.state);
         while (moveList.get_next_move(move)) {
             if (get_move_from(move) == TO_NUM[moves.substr(0, 2)] && get_move_to(move) == TO_NUM[moves.substr(2, 2)]) {
                 if (moves.substr(4, 1) == "q") {
@@ -156,7 +156,7 @@ void startPosMoves(Bitboard &b, std::string moves) {
                         continue;
                     }
                 }
-                b.make_move(move);
+                BITBOARD::make_move(b, move);
                 break;
             }
         }
@@ -168,7 +168,7 @@ void startPosMoves(Bitboard &b, std::string moves) {
     if (moves.find(' ') == std::string::npos && (moves.size() >= 4)) {
         MOVE move;
         MoveList moveList;
-        MOVE_GEN::generate_all_moves(moveList, b);
+        MOVE_GEN::generate_all_moves(moveList, b.state);
         while (moveList.get_next_move(move)) {
             if (get_move_from(move) == TO_NUM[moves.substr(0, 2)] && get_move_to(move) == TO_NUM[moves.substr(2, 2)]) {
                 if (moves.size() >= 5) {
@@ -193,7 +193,7 @@ void startPosMoves(Bitboard &b, std::string moves) {
                         }
                     }
                 }
-                b.make_move(move);
+                BITBOARD::make_move(b, move);
                 break;
             }
         }

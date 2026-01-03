@@ -2,7 +2,8 @@
 #pragma once
 #include <vector>
 #include <stack>
-#include "bitboard.h"
+#include "board/bitboard.h"
+#include "board/move.h"
 #include "defs.h"
 #include "thread_search.h"
 
@@ -31,7 +32,7 @@ public:
     void clearHashTable();
     ZobristVal getHashValue(uint64_t posKey);
     void incrementTTAge();
-    std::string getPv(Bitboard &b);
+    std::string getPv(Board &b);
 
 
 

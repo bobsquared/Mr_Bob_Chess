@@ -1,7 +1,7 @@
 #pragma once
 #include "defs.h"
-#include "magic_bitboards.h"
-#include "bitboard.h"
+#include "board/magic_bitboards.h"
+#include "board/bitboard.h"
 #include "nnue/KPNNUE.h"
 
 
@@ -24,9 +24,9 @@ class Eval {
 public:
 
     Eval(KPNNUE *model);
-    int evaluate(Bitboard &board);
-    int scaleEndgame(Bitboard &board, int eval);
-    int getPhase(Bitboard &board);
+    int evaluate(Board &board);
+    int scaleEndgame(Board &board, int eval);
+    int getPhase(Board &board);
 
 private:
     void InitLightSquares();

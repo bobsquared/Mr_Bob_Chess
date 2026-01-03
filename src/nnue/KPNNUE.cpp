@@ -1,7 +1,7 @@
 
 
 #include "KPNNUE.h"
-
+#include <cstring>
 
 
 KPNNUE::KPNNUE() {  
@@ -70,25 +70,25 @@ void KPNNUE::setNetwork(std::string fileName) {
 
 
 #ifdef __AVX2__
-float* KPNNUE::updateAccumulator(Bitboard &b) {
+float* KPNNUE::updateAccumulator(Board &b) {
     float **whiteWeights = layers[0]->getWeights();
     float *whiteBiases = layers[0]->getBiases();
     float **blackWeights = layers[1]->getWeights();
     float *blackBiases = layers[1]->getBiases();
 
-    float *whiteFeatures = b.getFeatures(false);
-    float *blackFeatures = b.getFeatures(true);
-    std::vector<int> *addWhiteAccumulate = b.getAddFeatures(false);
-    std::vector<int> *addBlackAccumulate = b.getAddFeatures(true);
-    std::vector<int> *removeWhiteAccumulate = b.getRemoveFeatures(false);
-    std::vector<int> *removeBlackAccumulate = b.getRemoveFeatures(true);
+    float *whiteFeatures = b.acc.getFeatures(false);
+    float *blackFeatures = b.acc.getFeatures(true);
+    std::vector<int> *addWhiteAccumulate = b.acc.getAddFeatures(false);
+    std::vector<int> *addBlackAccumulate = b.acc.getAddFeatures(true);
+    std::vector<int> *removeWhiteAccumulate = b.acc.getRemoveFeatures(false);
+    std::vector<int> *removeBlackAccumulate = b.acc.getRemoveFeatures(true);
 
     int numOutputs = layers[0]->getNumOutputs();
     int num_chunks = numOutputs / 8 + (numOutputs % 8 != 0);
     __m256 r[64];
 
     // White
-    if (b.getResetFlag()) {
+    if (b.acc.resetFlag) {
         for (int j = 0; j < num_chunks; j++) {
             r[j] = _mm256_loadu_ps(&whiteBiases[j * 8]);
         }
@@ -105,7 +105,7 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
             r[j] = _mm256_add_ps(r[j], _mm256_loadu_ps(&whiteWeights[i][j * 8]));
         }
         addWhiteAccumulate->pop_back();
-        b.resetAccFreqIndex(i, true);
+        b.acc.reset_frequency_index(i, true);
     }
 
     while (!removeWhiteAccumulate->empty()) {
@@ -114,7 +114,7 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
             r[j] = _mm256_sub_ps(r[j], _mm256_loadu_ps(&whiteWeights[i][j * 8]));
         }
         removeWhiteAccumulate->pop_back();
-        b.resetAccFreqIndex(i, false);
+        b.acc.reset_frequency_index(i, false);
     }
 
     for (int j = 0; j < num_chunks; j++) {
@@ -125,11 +125,11 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
     numOutputs = layers[1]->getNumOutputs();
     num_chunks = numOutputs / 8 + (numOutputs % 8 != 0);
 
-    if (b.getResetFlag()) {
+    if (b.acc.resetFlag) {
         for (int j = 0; j < num_chunks; j++) {
             r[j] = _mm256_loadu_ps(&blackBiases[j * 8]);
         }
-        b.setResetFlag(false);
+        b.acc.resetFlag = false;
     }
     else {
         for (int j = 0; j < num_chunks; j++) {
@@ -161,25 +161,25 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
 }
 
 #elif defined(__SSE2__)
-float* KPNNUE::updateAccumulator(Bitboard &b) {
+float* KPNNUE::updateAccumulator(Board &b) {
     float **whiteWeights = layers[0]->getWeights();
     float *whiteBiases = layers[0]->getBiases();
     float **blackWeights = layers[1]->getWeights();
     float *blackBiases = layers[1]->getBiases();
 
-    float *whiteFeatures = b.getFeatures(false);
-    float *blackFeatures = b.getFeatures(true);
-    std::vector<int> *addWhiteAccumulate = b.getAddFeatures(false);
-    std::vector<int> *addBlackAccumulate = b.getAddFeatures(true);
-    std::vector<int> *removeWhiteAccumulate = b.getRemoveFeatures(false);
-    std::vector<int> *removeBlackAccumulate = b.getRemoveFeatures(true);
+    float *whiteFeatures = b.acc.getFeatures(false);
+    float *blackFeatures = b.acc.getFeatures(true);
+    std::vector<int> *addWhiteAccumulate = b.acc.getAddFeatures(false);
+    std::vector<int> *addBlackAccumulate = b.acc.getAddFeatures(true);
+    std::vector<int> *removeWhiteAccumulate = b.acc.getRemoveFeatures(false);
+    std::vector<int> *removeBlackAccumulate = b.acc.getRemoveFeatures(true);
 
     int numOutputs = layers[0]->getNumOutputs();
     int num_chunks = numOutputs / 4 + (numOutputs % 4 != 0);
     __m128 r[64];
 
     // White
-    if (b.getResetFlag()) {
+    if (b.acc.resetFlag) {
         for (int j = 0; j < num_chunks; j++) {
             r[j] = _mm_loadu_ps(&whiteBiases[j * 4]);
         }
@@ -214,7 +214,7 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
     num_chunks = numOutputs / 4 + (numOutputs % 4 != 0);
 
     // Black
-    if (b.getResetFlag()) {
+    if (b.acc.resetFlag) {
         for (int j = 0; j < num_chunks; j++) {
             r[j] = _mm_loadu_ps(&blackBiases[j * 4]);
         }
@@ -251,21 +251,21 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
 
 #else
 
-float* KPNNUE::updateAccumulator(Bitboard &b) {
+float* KPNNUE::updateAccumulator(Board &b) {
 
     float **whiteWeights = layers[0]->getWeights();
     float *whiteBiases = layers[0]->getBiases();
     float **blackWeights = layers[1]->getWeights();
     float *blackBiases = layers[1]->getBiases();
 
-    float *whiteFeatures = b.getFeatures(false);
-    float *blackFeatures = b.getFeatures(true);
-    std::vector<int> *addWhiteAccumulate = b.getAddFeatures(false);
-    std::vector<int> *addBlackAccumulate = b.getAddFeatures(true);
-    std::vector<int> *removeWhiteAccumulate = b.getRemoveFeatures(false);
-    std::vector<int> *removeBlackAccumulate = b.getRemoveFeatures(true);
+    float *whiteFeatures = b.acc.getFeatures(false);
+    float *blackFeatures = b.acc.getFeatures(true);
+    std::vector<int> *addWhiteAccumulate = b.acc.getAddFeatures(false);
+    std::vector<int> *addBlackAccumulate = b.acc.getAddFeatures(true);
+    std::vector<int> *removeWhiteAccumulate = b.acc.getRemoveFeatures(false);
+    std::vector<int> *removeBlackAccumulate = b.acc.getRemoveFeatures(true);
 
-    if (b.getResetFlag()) {
+    if (b.acc.resetFlag) {
         // Reset White
         for (int j = 0; j < layers[0]->getNumOutputs(); j++) {
             whiteFeatures[j] = whiteBiases[j];
@@ -276,7 +276,7 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
             blackFeatures[j] = blackBiases[j];
         }
 
-        b.setResetFlag(false);
+        b.acc.resetFlag = false;
     }
 
     // For White
@@ -320,16 +320,16 @@ float* KPNNUE::updateAccumulator(Bitboard &b) {
 
 #ifdef __AVX2__
 // Handle update differently if training
-float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
+float* KPNNUE::updateAccumulatorTrainer(Board &b) {
     float **whiteWeights = layers[0]->getWeights();
     float *whiteBiases = layers[0]->getBiases();
     float **blackWeights = layers[1]->getWeights();
     float *blackBiases = layers[1]->getBiases();
 
-    float *whiteFeatures = b.getFeatures(false);
-    float *blackFeatures = b.getFeatures(true);
-    std::vector<int> *addWhiteAccumulate = b.getAddFeatures(false);
-    std::vector<int> *addBlackAccumulate = b.getAddFeatures(true);
+    float *whiteFeatures = b.acc.getFeatures(false);
+    float *blackFeatures = b.acc.getFeatures(true);
+    std::vector<int> *addWhiteAccumulate = b.acc.getAddFeatures(false);
+    std::vector<int> *addBlackAccumulate = b.acc.getAddFeatures(true);
 
     // White Update
     int numOutputs = layers[0]->getNumOutputs();
@@ -370,16 +370,16 @@ float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
 #else
 
 // Handle update differently if training
-float* KPNNUE::updateAccumulatorTrainer(Bitboard &b) {
+float* KPNNUE::updateAccumulatorTrainer(Board &b) {
     float **whiteWeights = layers[0]->getWeights();
     float *whiteBiases = layers[0]->getBiases();
     float **blackWeights = layers[1]->getWeights();
     float *blackBiases = layers[1]->getBiases();
 
-    float *whiteFeatures = b.getFeatures(false);
-    float *blackFeatures = b.getFeatures(true);
-    std::vector<int> *addWhiteAccumulate = b.getAddFeatures(false);
-    std::vector<int> *addBlackAccumulate = b.getAddFeatures(true);
+    float *whiteFeatures = b.acc.getFeatures(false);
+    float *blackFeatures = b.acc.getFeatures(true);
+    std::vector<int> *addWhiteAccumulate = b.acc.getAddFeatures(false);
+    std::vector<int> *addBlackAccumulate = b.acc.getAddFeatures(true);
 
     // White features update
     for (int j = 0; j < layers[0]->getNumOutputs(); j++) {
@@ -485,7 +485,7 @@ int KPNNUE::forwardpropagate(float *whiteInput, float *blackInput, bool toMove) 
 
 
 
-void KPNNUE::backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bias) {
+void KPNNUE::backpropagate(Board &board, int16_t Y, float ***grad, float **bias) {
     
     float **y = new float*[size];
     for (int i = 0; i < size; i++) {
@@ -531,7 +531,7 @@ void KPNNUE::backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bi
 
             int nOutputsPrev = layers[i - 1]->getNumOutputs();
 
-            if (board.toMove) {
+            if (board.state.toMove) {
                 for (int j = 0; j < nOutputsPrev; j++) {
                     for (int k = 0; k < nOutputs; k++) {
                         float dAdZy = dAdZ[k] * y[i][k];
@@ -558,7 +558,7 @@ void KPNNUE::backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bi
             
         }
         else {
-            std::vector<int> *addFeatures = board.getAddFeatures(i);
+            std::vector<int> *addFeatures = board.acc.getAddFeatures(i);
             while (!addFeatures->empty()) {
                 int index = addFeatures->back();  
 
@@ -615,24 +615,24 @@ void KPNNUE::updateWeights(float ***grad, float **bias, float lr, float beta1, f
 
 
 
-int KPNNUE::getPhase(Bitboard &board) {
+int KPNNUE::getPhase(Board &board) {
     int phase = TOTALPHASE;
-    phase -= (board.pieceCount[0] + board.pieceCount[1]) * PAWNPHASE;
-    phase -= (board.pieceCount[2] + board.pieceCount[3]) * KNIGHTPHASE;
-    phase -= (board.pieceCount[4] + board.pieceCount[5]) * BISHOPPHASE;
-    phase -= (board.pieceCount[6] + board.pieceCount[7]) * ROOKPHASE;
-    phase -= (board.pieceCount[8] + board.pieceCount[9]) * QUEENPHASE;
+    phase -= (board.state.pieceCount[0] + board.state.pieceCount[1]) * PAWNPHASE;
+    phase -= (board.state.pieceCount[2] + board.state.pieceCount[3]) * KNIGHTPHASE;
+    phase -= (board.state.pieceCount[4] + board.state.pieceCount[5]) * BISHOPPHASE;
+    phase -= (board.state.pieceCount[6] + board.state.pieceCount[7]) * ROOKPHASE;
+    phase -= (board.state.pieceCount[8] + board.state.pieceCount[9]) * QUEENPHASE;
     return phase;
 }
 
 
 
 
-void KPNNUE::setupBoardFen(Bitboard &board, std::string fen, float *output) {
-    board.setPosFen(fen);
+void KPNNUE::setupBoardFen(Board &board, std::string fen, float *output) {
+    BITBOARD::setPosFen(board.state, board.acc, fen);
 
     for (int i = 0; i < 12; i++) {
-        uint64_t piece = board.pieces[i];
+        uint64_t piece = board.state.pieces[i];
         while (piece) {
             output[64 * i + bitScan(piece)] = 1.0;
             piece &= piece - 1;
@@ -643,10 +643,10 @@ void KPNNUE::setupBoardFen(Bitboard &board, std::string fen, float *output) {
 
 
 
-void KPNNUE::setupBoardFloat(Bitboard &board, float *output) {
+void KPNNUE::setupBoardFloat(Board &board, float *output) {
 
     for (int i = 0; i < 12; i++) {
-        uint64_t piece = board.pieces[i];
+        uint64_t piece = board.state.pieces[i];
         while (piece) {
             output[64 * i + bitScan(piece)] = 1.0;
             piece &= piece - 1;
@@ -656,16 +656,16 @@ void KPNNUE::setupBoardFloat(Bitboard &board, float *output) {
 }
 
 
-int KPNNUE::evaluate(std::string fen, Bitboard &board) {
-    board.setPosFen(fen);
+int KPNNUE::evaluate(std::string fen, Board &board) {
+    BITBOARD::setPosFen(board.state, board.acc, fen);
     updateAccumulator(board);
-    return forwardpropagate(board.getFeatures(false), board.getFeatures(true), board.toMove);
+    return forwardpropagate(board.acc.getFeatures(false), board.acc.getFeatures(true), board.state.toMove);
 }
 
 
-int KPNNUE::evaluate(Bitboard &board) {
+int KPNNUE::evaluate(Board &board) {
     updateAccumulator(board);
-    return forwardpropagate(board.getFeatures(false), board.getFeatures(true), board.toMove);
+    return forwardpropagate(board.acc.getFeatures(false), board.acc.getFeatures(true), board.state.toMove);
 }
 
 
@@ -750,7 +750,7 @@ int* createIndexArray(int dataSize) {
 void KPNNUE::trainNetwork
 (
     int dataSize, 
-    Bitboard &board, 
+    Board &board, 
     std::string *fens, 
     int16_t *expected, 
     std::string fileName, 
@@ -758,98 +758,98 @@ void KPNNUE::trainNetwork
     int bs, 
     double lr
 ) {
-    int validateSize = 0;
+    // int validateSize = 0;
     int rseed = 72828000;
-    int trainSize = dataSize - validateSize;
-    batchSize = bs;
+    // int trainSize = dataSize - validateSize;
+    // batchSize = bs;
 
     std::mt19937 g(rseed);
-    int *indexarr = createIndexArray(dataSize);
+    // int *indexarr = createIndexArray(dataSize);
 
-    double err_train = 0.0;
-    double err_validate = 0.0;
+    // double err_train = 0.0;
+    // double err_validate = 0.0;
 
-    float ***grad = createGradientWeights();
-    float **bias = createGradientBias();
+    // float ***grad = createGradientWeights();
+    // float **bias = createGradientBias();
 
-    for (int i = validateSize; i < dataSize; i++) {
-        board.setPosFen(fens[i]);
-        if (board.toMove) {
-            expected[i] = -expected[i];
-        }
-        updateAccumulator(board);
-        forwardpropagate(board.getFeatures(false), board.getFeatures(true), board.toMove);
-        err_train += layers[size - 1]->MeanSquaredError(expected[i]);
-    } 
+    // for (int i = validateSize; i < dataSize; i++) {
+    //     board.setPosFen(fens[i]);
+    //     if (board.toMove) {
+    //         expected[i] = -expected[i];
+    //     }
+    //     updateAccumulator(board);
+    //     forwardpropagate(board.getFeatures(false), board.getFeatures(true), board.toMove);
+    //     err_train += layers[size - 1]->MeanSquaredError(expected[i]);
+    // } 
 
-    std::cout << "Loss_train: " << err_train / trainSize << std::endl;
-    std::cout << "Loss_validate: " << err_validate / validateSize << std::endl << std::endl;
+    // std::cout << "Loss_train: " << err_train / trainSize << std::endl;
+    // std::cout << "Loss_validate: " << err_validate / validateSize << std::endl << std::endl;
 
-    for (int epoch = init_epoch + 1; epoch < epochs + 1; epoch++) {
+    // for (int epoch = init_epoch + 1; epoch < epochs + 1; epoch++) {
 
-        int et = 0;
-        std::shuffle(&indexarr[0], &indexarr[dataSize], g);
-        err_train = 0.0;
-        err_validate = 0.0;
+    //     int et = 0;
+    //     std::shuffle(&indexarr[0], &indexarr[dataSize], g);
+    //     err_train = 0.0;
+    //     err_validate = 0.0;
 
-        std::cout << "Epoch: " << epoch << ", lr: " << lr << std::endl;
-        for (int batch = 0; batch < (trainSize / batchSize) + 1; batch++) {
-            resetWeightsAndBias(grad, bias);
+    //     std::cout << "Epoch: " << epoch << ", lr: " << lr << std::endl;
+    //     for (int batch = 0; batch < (trainSize / batchSize) + 1; batch++) {
+    //         resetWeightsAndBias(grad, bias);
 
-            if (batch % (((trainSize / batchSize) / 20) + 1) == 0) {
-                std::cout << "Batch [" << batch << " / " << (trainSize / batchSize) + 1 << "]  -  " << batch * 100 / ((trainSize / batchSize) + 1) << "%" << " - loss: " << err_train / et  << std::endl;
-            }
+    //         if (batch % (((trainSize / batchSize) / 20) + 1) == 0) {
+    //             std::cout << "Batch [" << batch << " / " << (trainSize / batchSize) + 1 << "]  -  " << batch * 100 / ((trainSize / batchSize) + 1) << "%" << " - loss: " << err_train / et  << std::endl;
+    //         }
             
-            int start = validateSize + batch * batchSize;
-            int end = std::min(validateSize + (batch + 1) * batchSize, dataSize);
+    //         int start = validateSize + batch * batchSize;
+    //         int end = std::min(validateSize + (batch + 1) * batchSize, dataSize);
 
-            for (int i = start; i < end; i++) {
-                int index = indexarr[i];
-                board.setPosFen(fens[index]);
-                updateAccumulatorTrainer(board);
-                forwardpropagate(board.getFeatures(false), board.getFeatures(true), board.toMove);
-                backpropagate(board, expected[index], grad, bias);
-                err_train += layers[size - 1]->MeanSquaredError(expected[index]);
-                et++;
-            } 
+    //         for (int i = start; i < end; i++) {
+    //             int index = indexarr[i];
+    //             board.setPosFen(fens[index]);
+    //             updateAccumulatorTrainer(board);
+    //             forwardpropagate(board.getFeatures(false), board.getFeatures(true), board.toMove);
+    //             backpropagate(board, expected[index], grad, bias);
+    //             err_train += layers[size - 1]->MeanSquaredError(expected[index]);
+    //             et++;
+    //         } 
 
-            updateWeights(grad, bias, lr, 0.95, 0.999, batch + epoch * batchSize);
+    //         updateWeights(grad, bias, lr, 0.95, 0.999, batch + epoch * batchSize);
 
             
 
-        }
+    //     }
 
-        std::cout << "test: ";
-        for (int i = 0; i < 10; i++) {
-            board.setPosFen(fens[i]);
-            int tester = evaluate(board);
-            std::cout << tester << " (" << expected[i] << "), ";
-        }
-        std::cout << std::endl;
-        std::cout << "Loss_train: " << err_train / trainSize << std::endl;
-        std::cout << "Loss_validate: " << err_validate / validateSize << std::endl << std::endl;
+    //     std::cout << "test: ";
+    //     for (int i = 0; i < 10; i++) {
+    //         board.setPosFen(fens[i]);
+    //         int tester = evaluate(board);
+    //         std::cout << tester << " (" << expected[i] << "), ";
+    //     }
+    //     std::cout << std::endl;
+    //     std::cout << "Loss_train: " << err_train / trainSize << std::endl;
+    //     std::cout << "Loss_validate: " << err_validate / validateSize << std::endl << std::endl;
 
-        init_epoch = epoch;
-        writeToBinary(fileName + "_" + std::to_string(epoch) + ".bin");
+    //     init_epoch = epoch;
+    //     writeToBinary(fileName + "_" + std::to_string(epoch) + ".bin");
            
-    }
+    // }
 
-    deleteGradientWeights(grad);
-    deleteGradientBias(bias);
+    // deleteGradientWeights(grad);
+    // deleteGradientBias(bias);
 
-    delete [] indexarr;
+    // delete [] indexarr;
     
 }
 
 
 
-double KPNNUE::bulkLoss(int dataSize, Bitboard &board, std::string *fens, int16_t *expected) {
+double KPNNUE::bulkLoss(int dataSize, Board &board, std::string *fens, int16_t *expected) {
     double err = 0.0;
 
     for (int i = 0; i < dataSize; i++) {
-        board.setPosFen(fens[i]);
+        BITBOARD::setPosFen(board.state, board.acc, fens[i]);
         updateAccumulator(board);
-        forwardpropagate(board.getFeatures(false), board.getFeatures(true), board.toMove);
+        forwardpropagate(board.acc.getFeatures(false), board.acc.getFeatures(true), board.state.toMove);
         err += layers[size - 1]->MeanSquaredError(expected[i]);
     } 
 

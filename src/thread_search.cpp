@@ -94,11 +94,11 @@ void ThreadSearch::ResetHistories() {
  * @param b 
  * @param move 
  */
-void ThreadSearch::insertCounterMove(Bitboard &b, MOVE move) {
-    MOVE prevMove = b.moveHistory.move[b.moveHistory.count - 1].move;
+void ThreadSearch::insertCounterMove(Board &b, MOVE move) {
+    MOVE prevMove = b.moveHistory.moves[b.moveHistory.count - 1].move;
 
     if (prevMove != NULL_MOVE) {
-        counterMove[b.toMove][get_move_from(prevMove)][get_move_to(prevMove)] = move;
+        counterMove[b.state.toMove][get_move_from(prevMove)][get_move_to(prevMove)] = move;
     }
 }
 
@@ -165,14 +165,14 @@ int ThreadSearch::getHistory(bool toMove, bool isQuiet, int from, int to) {
  * @param move 
  * @return int 
  */
-int ThreadSearch::getCounterHistory(Bitboard &b, PrevMoveInfo &prev, int from, int to) {
+int ThreadSearch::getCounterHistory(Board &b, PrevMoveInfo &prev, int from, int to) {
     if (prev.prevMove == NULL_MOVE) {
         return 0;
     }
 
-    bool toMove = b.getSideToMove();
+    bool toMove = b.state.toMove;
 
-    return counterHistory[toMove][prev.prevPiece][prev.prevMoveTo][b.pieceAt[from] / 2][to];
+    return counterHistory[toMove][prev.prevPiece][prev.prevMoveTo][b.state.pieceAt[from] / 2][to];
 }
 
 /**
@@ -182,14 +182,14 @@ int ThreadSearch::getCounterHistory(Bitboard &b, PrevMoveInfo &prev, int from, i
  * @param move 
  * @return MOVE 
  */
-MOVE ThreadSearch::getCounterMove(Bitboard &b, PrevMoveInfo &prev) {
+MOVE ThreadSearch::getCounterMove(Board &b, PrevMoveInfo &prev) {
     MOVE prevMove = prev.prevMove;
 
     if (prevMove == NULL_MOVE || prevMove == NO_MOVE) {
         return NO_MOVE;
     }
 
-    return counterMove[b.getSideToMove()][prev.prevMoveFrom][prev.prevMoveTo];
+    return counterMove[b.state.toMove][prev.prevMoveFrom][prev.prevMoveTo];
 }
 
 
@@ -202,11 +202,11 @@ MOVE ThreadSearch::getCounterMove(Bitboard &b, PrevMoveInfo &prev) {
  * @param ttMove 
  * @param bestMove 
  */
-void ThreadSearch::UpdateHistories(Bitboard &b, PrevMoveInfo &prev, MOVE *quietMoves, MOVE *noisyMoves, int quietCount, int noisyCount, int depth, MOVE ttMove, MOVE bestMove) {
-    bool toMove = b.getSideToMove();
+void ThreadSearch::UpdateHistories(Board &b, PrevMoveInfo &prev, MOVE *quietMoves, MOVE *noisyMoves, int quietCount, int noisyCount, int depth, MOVE ttMove, MOVE bestMove) {
+    bool toMove = b.state.toMove;
     int bestMoveFrom = get_move_from(bestMove);
     int bestMoveTo = get_move_to(bestMove);
-    int piece = b.pieceAt[bestMoveFrom] / 2;
+    int piece = b.state.pieceAt[bestMoveFrom] / 2;
     int histScalar = 32;
 
     MOVE prevMove = prev.prevMove;
@@ -224,14 +224,14 @@ void ThreadSearch::UpdateHistories(Bitboard &b, PrevMoveInfo &prev, MOVE *quietM
         if (prevMove != NULL_MOVE) {
             hist = counterHistory[toMove][prevPiece][prevMoveTo][piece][bestMoveTo] * std::min(depth, 20) / 23;
             counterHistory[toMove][prevPiece][prevMoveTo][piece][bestMoveTo] += histScalar * (depth * depth) - hist;
-            counterMove[b.toMove][prev.prevMoveFrom][prevMoveTo] = bestMove;
+            counterMove[b.state.toMove][prev.prevMoveFrom][prevMoveTo] = bestMove;
         }
 
         for (int i = 0; i < quietCount; i++) {
             MOVE move = quietMoves[i];
             int from = get_move_from(move);
             int to = get_move_to(move);
-            piece = b.pieceAt[from] / 2;
+            piece = b.state.pieceAt[from] / 2;
 
             int hist = quietHistory[toMove][from][to] * std::min(depth, 20) / 23;
             quietHistory[toMove][from][to] += histScalar * (-depth * depth) - hist;
@@ -251,8 +251,8 @@ void ThreadSearch::UpdateHistories(Bitboard &b, PrevMoveInfo &prev, MOVE *quietM
         int noisyFrom = get_move_from(noisyMoves[i]);
         int noisyTo = get_move_to(noisyMoves[i]);
 
-        int hist = captureHistory[b.getSideToMove()][noisyFrom][noisyTo] * std::min(depth, 20) / 23;
-        captureHistory[b.getSideToMove()][noisyFrom][noisyTo] += 32 * (-depth * depth) - hist;
+        int hist = captureHistory[b.state.toMove][noisyFrom][noisyTo] * std::min(depth, 20) / 23;
+        captureHistory[b.state.toMove][noisyFrom][noisyTo] += 32 * (-depth * depth) - hist;
     }
 
 }

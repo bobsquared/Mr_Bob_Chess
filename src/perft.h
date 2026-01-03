@@ -3,10 +3,13 @@
 #include <iostream>
 #include <chrono>
 #include <string>
-#include "bitboard.h"
-#include "movepick.h"
+#include "board/bitboard.h"
+#include "board/movepick.h"
+#include "board/legality.h"
+#include "board/move.h"
+#include "board/fen.h"
+#include "board/see.h"
 
-
-extern void SeeTest(Bitboard &x, std::string fen, int from, int to, int result, MOVE flags=0);
-extern void Perft(Bitboard & b, int depth);
-uint64_t PerftCall(Bitboard & b, int depth);
+extern void SeeTest(Board &x, std::string fen, int from, int to, int result, MOVE flags=0);
+extern void Perft(Board & b, int depth);
+uint64_t PerftCall(Board & b, int depth);

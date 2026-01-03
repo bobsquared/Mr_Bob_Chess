@@ -2,20 +2,20 @@
 
 
 // Static exchange evaluation test
-void SeeTest(Bitboard &x, std::string fen, int from, int to, int result, MOVE flags) {
+void SeeTest(Board &x, std::string fen, int from, int to, int result, MOVE flags) {
 
     MOVE move;
     MoveList moveList;
     std::string resultPass;
 
-    x.setPosFen(fen);
-    MOVE_GEN::generate_all_moves(moveList, x);
+    BITBOARD::setPosFen(x.state, x.acc, fen);
+    MOVE_GEN::generate_all_moves(moveList, x.state);
     while (moveList.get_next_move(move)) {
         if (get_move_from(move) == from && get_move_to(move) == to) {
             if (flags && (move & MOVE_FLAGS) != flags) {
                 continue;
             }
-            int seeRes = x.seeCapture(move);
+            int seeRes = BITBOARD::seeCapture(x.state, move);
             if (seeRes == result) {
                 resultPass = "PASS";
             }
@@ -31,7 +31,7 @@ void SeeTest(Bitboard &x, std::string fen, int from, int to, int result, MOVE fl
 
 
 // Perft root call
-void Perft(Bitboard & x, int depth) {
+void Perft(Board & x, int depth) {
 
     uint64_t nodes = 0;
     for (int i = 0; i <= depth; i++) {
@@ -57,7 +57,7 @@ void Perft(Bitboard & x, int depth) {
 
 
 // Perft recursive call
-uint64_t PerftCall(Bitboard & b, int depth) {
+uint64_t PerftCall(Board & b, int depth) {
 
     if (depth == 0) {
         return 1;
@@ -67,13 +67,13 @@ uint64_t PerftCall(Bitboard & b, int depth) {
     MOVE move;
     MoveList moveList;
 
-    MOVE_GEN::generate_all_moves(moveList, b);
+    MOVE_GEN::generate_all_moves(moveList, b.state);
     if (depth == 1) {
         int count = 0;
 
         for (int i = 0; i < moveList.count; i++) {
             move = moveList.moves[i];
-            if (b.isLegal(move)) {
+            if (BITBOARD::isLegal(b, move)) {
                 count++;
             }
         }
@@ -82,10 +82,10 @@ uint64_t PerftCall(Bitboard & b, int depth) {
 
     for (int i = 0; i < moveList.count; i++) {
         move = moveList.moves[i];
-        if (b.isLegal(move)) {
-            b.make_move(move);
+        if (BITBOARD::isLegal(b, move)) {
+            BITBOARD::make_move(b, move);
             nodes += PerftCall(b, depth - 1);
-            b.undo_move(move);
+            BITBOARD::undo_move(b, move);
         }
     }
 

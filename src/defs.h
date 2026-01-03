@@ -87,50 +87,6 @@ struct ZobristVal {
 };
 
 
-
-struct MoveInfo {
-    uint64_t posKey;
-    int captureType;
-    int enpassantSq;
-    int halfMoves;
-    MOVE move;
-    uint8_t castleRights;
-
-    bool operator==(const uint64_t& rhs) {
-        return posKey == rhs;
-    }
-
-    MoveInfo() :
-        posKey(0), captureType(-1), enpassantSq(0), halfMoves(0), move(NO_MOVE), castleRights(15) {}
-
-    MoveInfo(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey, MOVE move) :
-        posKey(posKey), captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), move(move), castleRights(castleRights) {}
-
-};
-
-
-struct MoveInfoStack {
-    MoveInfo move[1024] = {};
-    int count;
-
-    MoveInfoStack() : count(0) {}
-
-    void insert(MoveInfo moveInfo) {
-        move[count] = moveInfo;
-        count++;
-    }
-
-    MoveInfo pop() {
-        count--;
-        return move[count];
-    }
-
-    void clear() {
-        count = 0;
-    }
-};
-
-
 // Information for search
 struct SearchStack {
     int eval;

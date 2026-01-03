@@ -5,9 +5,13 @@
 #include <chrono>
 #include "defs.h"
 #include "eval.h"
-#include "bitboard.h"
-#include "movepick.h"
-#include "movegen.h"
+#include "board/bitboard.h"
+#include "board/movepick.h"
+#include "board/movegen.h"
+#include "board/legality.h"
+#include "board/move.h"
+#include "board/see.h"
+#include "board/detections.h"
 #include "timeman.h"
 #include "transpositionTable.h"
 #include "thread_search.h"
@@ -62,7 +66,7 @@ public:
     void stopSearch();
     void setSearch();
 
-    SearchInfo beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
+    SearchInfo beginSearch(Board &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
 
 private:
 
@@ -88,17 +92,17 @@ private:
     void printSearchInfo(SearchInfo &printInfo, std::string &pstring, MOVE move, int bound, int pv);
     void moveToStruct(SearchInfo &si, MOVE move);
 
-    void setSearchInfo(SearchInfo &printInfo, Bitboard &board, int depth, int eval);
+    void setSearchInfo(SearchInfo &printInfo, Board &board, int depth, int eval);
     uint64_t getHashFullTotal();
     int getSeldepth();
     
     static bool isMateScore(int eval);
     static int getSearchedScore(int eval);
     
-    SearchInfo search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b);
-    BestMoveInfo pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id);
-    int pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply);
-    int qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int ply);
+    SearchInfo search(int id, ThreadSearch *th, int depth, bool analysis, Board& b);
+    BestMoveInfo pvSearchRoot(Board &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id);
+    int pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply);
+    int qsearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, int ply);
 
     std::atomic<bool> exit_thread_flag;
     int totalTime;

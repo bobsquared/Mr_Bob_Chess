@@ -1,5 +1,5 @@
 #pragma once
-#include "defs.h"
+#include "../defs.h"
 #include "dumb7flooding.h"
 
 
@@ -9,7 +9,6 @@ namespace MAGIC_BITBOARDS{
         uint64_t magic;
         uint64_t mask;
         uint8_t shift;
-        uint8_t padding[64 - 8 - 8 - 1];
     };
 
     extern MagicPro attacksR[64];

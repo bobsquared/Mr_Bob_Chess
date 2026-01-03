@@ -2,7 +2,8 @@
 #define KPNNUE_H
 
 #include "layer.h"
-#include "../bitboard.h"
+#include "../board/bitboard.h"
+#include "../board/fen.h"
 #include <random>
 #include <algorithm>
 #include <immintrin.h>
@@ -28,7 +29,7 @@ public:
     void trainNetwork
     (
         int dataSize, 
-        Bitboard &board, 
+        Board &board, 
         std::string *fens, 
         int16_t *expected, 
         std::string fileName, 
@@ -37,9 +38,9 @@ public:
         double lr
     );
 
-    double bulkLoss(int dataSize, Bitboard &board, std::string *fens, int16_t *expected);
-    int evaluate(std::string fen, Bitboard &board);
-    int evaluate(Bitboard &board);
+    double bulkLoss(int dataSize, Board &board, std::string *fens, int16_t *expected);
+    int evaluate(std::string fen, Board &board);
+    int evaluate(Board &board);
 
 private:
     int init_epoch;
@@ -48,8 +49,8 @@ private:
     Layer **layers;
     float *features;
     
-    int getPhase(Bitboard &board);
-    void backpropagate(Bitboard &board, int16_t Y, float ***grad, float **bias);
+    int getPhase(Board &board);
+    void backpropagate(Board &board, int16_t Y, float ***grad, float **bias);
     void updateWeights(float ***grad, float **bias, float lr, float beta1, float beta2, int batch);
     int forwardpropagate(float *whiteInput, float *blackInput, bool toMove);
     void writeToBinary(std::string fileName);
@@ -62,11 +63,11 @@ private:
     void deleteGradientWeights(float*** grad);
     void deleteGradientBias(float** bias);
 
-    void setupBoardFen(Bitboard &board, std::string fens, float *input);
-    void setupBoardFloat(Bitboard &board, float *output);
+    void setupBoardFen(Board &board, std::string fens, float *input);
+    void setupBoardFloat(Board &board, float *output);
 
-    float* updateAccumulatorTrainer(Bitboard &b);
-    float *updateAccumulator(Bitboard &b);
+    float* updateAccumulatorTrainer(Board &b);
+    float *updateAccumulator(Board &b);
     
 };
 

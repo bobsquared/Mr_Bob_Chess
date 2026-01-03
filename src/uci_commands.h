@@ -5,7 +5,8 @@
 #define ENGINE_NAME "Mr Bob"
 #define ENGINE_VERSION "v1.3.0"
 
-#include "bitboard.h"
+#include "board/bitboard.h"
+#include "board/move.h"
 #include "search.h"
 #include "uci.h"
 #include "thread_search.h"
@@ -59,26 +60,26 @@ private:
 
 class GoCommand : public CommandInterface {
 public:
-    GoCommand(UCIParameters* params, std::string command, Search& s, Bitboard& b) : params(params), command(command), s(s), b(b) {}
+    GoCommand(UCIParameters* params, std::string command, Search& s, Board& b) : params(params), command(command), s(s), b(b) {}
     void execute() override;
     ~GoCommand() {};
 private:
     UCIParameters* params = nullptr;
     std::string command;
     Search& s;
-    Bitboard &b;
+    Board &b;
 };
 
 
 
 class PositionCommand : public CommandInterface {
 public:
-    PositionCommand(std::string command, Bitboard& b) : command(command), b(b) {}
+    PositionCommand(std::string command, Board& b) : command(command), b(b) {}
     void execute() override;
     ~PositionCommand() {};
 private:
     std::string command;
-    Bitboard& b;
+    Board& b;
 };
 
 

@@ -42,7 +42,7 @@ namespace MOVE_GEN {
 
 
 
-    static void generate_pawn_moves_quiet(MoveList &moveList, const Bitboard &b) {
+    static void generate_pawn_moves_quiet(MoveList &moveList, const BoardState &b) {
         const int normalPush = (b.toMove << 4) - 8;
         const int doublePush = (b.toMove << 5) - 16;
         uint64_t normalPawns = (b.toMove? (~b.occupied << 8) & ~rowMask[8] : (~b.occupied >> 8) & ~rowMask[48]) & b.pieces[b.toMove];
@@ -67,10 +67,10 @@ namespace MOVE_GEN {
 
 
 
-    static void generate_pawn_moves_noisy(MoveList &moveList, const Bitboard &b) {
+    static void generate_pawn_moves_noisy(MoveList &moveList, const BoardState &b) {
         uint64_t pawnAtts = pawnAttacksAll(b.color[!b.toMove], !b.toMove);
         uint64_t promotionPawns = rowMask[48 - b.toMove * 40] & (b.toMove? (~b.occupied << 8) : (~b.occupied >> 8)) & b.pieces[b.toMove];
-        uint64_t enpassantPawns = b.enpassantSq? b.pawnAttacks[b.enpassantSq][!b.toMove] & b.pieces[b.toMove] : 0;
+        uint64_t enpassantPawns = b.enpassantSq? BITBOARD::pieceMoves.pawnAttacks[b.enpassantSq][!b.toMove] & b.pieces[b.toMove] : 0;
         uint64_t promotionCapturePawns = (rowMask[48 - b.toMove * 40] & b.pieces[b.toMove] & pawnAtts);
         uint64_t capturePawns = pawnAtts & b.pieces[b.toMove] & ~promotionCapturePawns;
 
@@ -80,7 +80,7 @@ namespace MOVE_GEN {
             int locIndex = bitScan(loc);
 
             // Captures
-            uint64_t captures = b.color[!b.toMove] & b.pawnAttacks[locIndex][b.toMove];
+            uint64_t captures = b.color[!b.toMove] & BITBOARD::pieceMoves.pawnAttacks[locIndex][b.toMove];
             while (captures) {
                 create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
                 captures &= captures - 1;
@@ -94,7 +94,7 @@ namespace MOVE_GEN {
         while (promotionCapturePawns) {
             int locIndex = bitScan(promotionCapturePawns);
 
-            uint64_t captures = b.color[!b.toMove] & b.pawnAttacks[locIndex][b.toMove];
+            uint64_t captures = b.color[!b.toMove] & BITBOARD::pieceMoves.pawnAttacks[locIndex][b.toMove];
             while (captures) {
                 create_all_promotions_captures(moveList, locIndex, bitScan(captures));
                 captures &= captures - 1;
@@ -120,12 +120,12 @@ namespace MOVE_GEN {
 
 
 
-    static void generate_knight_moves_quiet(MoveList &moveList, const Bitboard &b) {
+    static void generate_knight_moves_quiet(MoveList &moveList, const BoardState &b) {
         uint64_t bb = b.pieces[2 + b.toMove];
         while (bb) {
 
             int locIndex = bitScan(bb);
-            uint64_t nonCaptures = (~b.occupied) & b.knightMoves[locIndex];
+            uint64_t nonCaptures = (~b.occupied) & BITBOARD::pieceMoves.knightMoves[locIndex];
             while (nonCaptures) {
                 create_move(moveList, locIndex, bitScan(nonCaptures), QUIET_MOVES_FLAG);
                 nonCaptures &= nonCaptures - 1;
@@ -137,12 +137,12 @@ namespace MOVE_GEN {
 
 
 
-    static void generate_knight_moves_noisy(MoveList &moveList, const Bitboard &b) {
+    static void generate_knight_moves_noisy(MoveList &moveList, const BoardState &b) {
         uint64_t bb = b.pieces[2 + b.toMove];
         while (bb) {
             int locIndex = bitScan(bb);
 
-            uint64_t captures = b.color[!b.toMove] & b.knightMoves[locIndex];
+            uint64_t captures = b.color[!b.toMove] & BITBOARD::pieceMoves.knightMoves[locIndex];
             while (captures) {
                 create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
                 captures &= captures - 1;
@@ -154,7 +154,7 @@ namespace MOVE_GEN {
 
 
 
-    static void generate_bishop_moves_quiet(MoveList &moveList, const Bitboard &b) {
+    static void generate_bishop_moves_quiet(MoveList &moveList, const BoardState &b) {
         uint64_t bb = b.pieces[4 + b.toMove];
         while (bb) {
             int locIndex = bitScan(bb);
@@ -172,7 +172,7 @@ namespace MOVE_GEN {
 
 
 
-    static void generate_bishop_moves_noisy(MoveList &moveList, const Bitboard &b) {
+    static void generate_bishop_moves_noisy(MoveList &moveList, const BoardState &b) {
         uint64_t bb = b.pieces[4 + b.toMove];
         while (bb) {
             int locIndex = bitScan(bb);
@@ -190,7 +190,7 @@ namespace MOVE_GEN {
 
 
 
-    static void generate_rook_moves_quiet(MoveList &moveList, const Bitboard &b) {
+    static void generate_rook_moves_quiet(MoveList &moveList, const BoardState &b) {
         uint64_t bb = b.pieces[6 + b.toMove];
         while (bb) {
             int locIndex = bitScan(bb);
@@ -208,7 +208,7 @@ namespace MOVE_GEN {
 
 
 
-    static void generate_rook_moves_noisy(MoveList &moveList, const Bitboard &b) {
+    static void generate_rook_moves_noisy(MoveList &moveList, const BoardState &b) {
         uint64_t bb = b.pieces[6 + b.toMove];
         while (bb) {
 
@@ -228,7 +228,7 @@ namespace MOVE_GEN {
 
 
 
-    static void generate_queen_moves_quiet(MoveList &moveList, const Bitboard &b) {
+    static void generate_queen_moves_quiet(MoveList &moveList, const BoardState &b) {
         uint64_t bb = b.pieces[8 + b.toMove];
         while (bb) {
             int locIndex = bitScan(bb);
@@ -246,7 +246,7 @@ namespace MOVE_GEN {
 
 
 
-    static void generate_queen_moves_noisy(MoveList &moveList, const Bitboard &b) {
+    static void generate_queen_moves_noisy(MoveList &moveList, const BoardState &b) {
         uint64_t bb = b.pieces[8 + b.toMove];
         while (bb) {
             int locIndex = bitScan(bb);
@@ -264,32 +264,32 @@ namespace MOVE_GEN {
 
 
 
-    static void generate_king_moves_quiet(MoveList &moveList, const Bitboard &b) {
+    static void generate_king_moves_quiet(MoveList &moveList, BoardState &b) {
         int locIndex = bitScan(b.pieces[10 + b.toMove]);
         assert(1ULL << locIndex == b.pieces[10 + b.toMove]);
 
-        uint64_t nonCaptures = (~b.occupied) & b.kingMoves[locIndex];
+        uint64_t nonCaptures = (~b.occupied) & BITBOARD::pieceMoves.kingMoves[locIndex];
         while (nonCaptures) {
             create_move(moveList, locIndex, bitScan(nonCaptures), QUIET_MOVES_FLAG);
             nonCaptures &= nonCaptures - 1;
         }
 
-        if (b.can_castle_king()) {
+        if (BITBOARD::can_castle_king(b)) {
             create_move(moveList, locIndex, b.toMove? 62 : 6, KING_CASTLE_FLAG);
         }
 
-        if (b.can_castle_queen()) {
+        if (BITBOARD::can_castle_queen(b)) {
             create_move(moveList, locIndex, b.toMove? 58 : 2, QUEEN_CASTLE_FLAG);
         }
     }
 
 
 
-    static void generate_king_moves_noisy(MoveList &moveList, const Bitboard &b) {
+    static void generate_king_moves_noisy(MoveList &moveList, const BoardState &b) {
         int locIndex = bitScan(b.pieces[10 + b.toMove]);
         assert(1ULL << locIndex == b.pieces[10 + b.toMove]);
 
-        uint64_t captures = b.color[!b.toMove] & b.kingMoves[locIndex];
+        uint64_t captures = b.color[!b.toMove] & BITBOARD::pieceMoves.kingMoves[locIndex];
         while (captures) {
             create_move(moveList, locIndex, bitScan(captures), CAPTURES_NORMAL_FLAG);
             captures &= captures - 1;
@@ -299,7 +299,7 @@ namespace MOVE_GEN {
 
 
     // Generate all pseudo-legal moves
-    void generate_all_moves(MoveList &moveList, const Bitboard &b) {
+    void generate_all_moves(MoveList &moveList, BoardState &b) {
         generate_pawn_moves_quiet(moveList, b);
         generate_pawn_moves_noisy(moveList, b);
 
@@ -322,7 +322,7 @@ namespace MOVE_GEN {
 
 
     // Generate all pseudo-legal captures
-    void generate_captures_promotions(MoveList &moveList, const Bitboard &b) {
+    void generate_captures_promotions(MoveList &moveList, BoardState &b) {
         generate_pawn_moves_noisy(moveList, b);
         generate_knight_moves_noisy(moveList, b);
         generate_bishop_moves_noisy(moveList, b);

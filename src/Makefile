@@ -2,9 +2,9 @@
 debug = no
 debug_gdb = no
 debug_zobrist = no
-popcount = no
+popcount = yes
 avx2 = yes
-native = no
+native = yes
 EXE = ../bob
 
 
@@ -44,7 +44,7 @@ ifeq ($(debug_zobrist), yes)
 CXXFLAGS += -DDEBUGHASH
 endif
 
-CXX := bitboard.cpp magic_bitboards.cpp defs.cpp dumb7flooding.cpp movegen.cpp perft.cpp eval.cpp search.cpp uci.cpp uci_commands.cpp movepick.cpp zobrist_hashing.cpp transpositionTable.cpp timeman.cpp thread_search.cpp nnue/layer.cpp nnue/KPNNUE.cpp nnue/accumulator.cpp
+CXX := board/detections.cpp board/debug.cpp board/see.cpp board/fen.cpp board/move.cpp board/bitboard.cpp board/magic_bitboards.cpp defs.cpp board/movegen.cpp board/legality.cpp perft.cpp eval.cpp search.cpp uci.cpp uci_commands.cpp board/movepick.cpp transpositionTable.cpp timeman.cpp thread_search.cpp nnue/layer.cpp nnue/KPNNUE.cpp nnue/accumulator.cpp
 
 openbench: $(CXX)
 	g++ -O3 -o $(EXE) $(OBCXXFLAGS) main.cpp $(CXX)

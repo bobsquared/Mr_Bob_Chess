@@ -2,7 +2,7 @@
 
 
 #include "defs.h"
-#include "bitboard.h"
+#include "board/bitboard.h"
 
 
 class ThreadSearch {
@@ -16,11 +16,11 @@ public:
     void ResetHistories();
     bool isKiller(int ply, MOVE move);
     void InitCounterMoves();
-    void insertCounterMove(Bitboard &b, MOVE move);
+    void insertCounterMove(Board &b, MOVE move);
     int getHistory(bool toMove, bool isQuiet, int from, int to);
-    int getCounterHistory(Bitboard &b, PrevMoveInfo &prev, int from, int to);
-    MOVE getCounterMove(Bitboard &b, PrevMoveInfo &prev);
-    void UpdateHistories(Bitboard &b, PrevMoveInfo &prev, MOVE *quietMoves, MOVE *noisyMoves, int quietCount, int noisyCount, int depth, MOVE ttMove, MOVE bestMove);
+    int getCounterHistory(Board &b, PrevMoveInfo &prev, int from, int to);
+    MOVE getCounterMove(Board &b, PrevMoveInfo &prev);
+    void UpdateHistories(Board &b, PrevMoveInfo &prev, MOVE *quietMoves, MOVE *noisyMoves, int quietCount, int noisyCount, int depth, MOVE ttMove, MOVE bestMove);
     
     uint64_t ttWrites;
     uint64_t nodes;

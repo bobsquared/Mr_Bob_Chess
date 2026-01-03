@@ -151,10 +151,10 @@ void Search::setHistoryLMRNoisysearch(const int value) {
 
 
 
-PrevMoveInfo GetPreviousMoveInfo(Bitboard &b) {
-    MOVE prevMove = b.moveHistory.count > 0? b.moveHistory.move[b.moveHistory.count - 1].move : NO_MOVE;
+PrevMoveInfo GetPreviousMoveInfo(Board &b) {
+    MOVE prevMove = b.moveHistory.count > 0? b.moveHistory.moves[b.moveHistory.count - 1].move : NO_MOVE;
     int prevMoveTo = get_move_to(prevMove);
-    return PrevMoveInfo(prevMove, get_move_from(prevMove), prevMoveTo, b.pieceAt[prevMoveTo] / 2);
+    return PrevMoveInfo(prevMove, get_move_from(prevMove), prevMoveTo, b.state.pieceAt[prevMoveTo] / 2);
 }
 
 
@@ -173,7 +173,7 @@ PrevMoveInfo GetPreviousMoveInfo(Bitboard &b) {
 * @param[in]      ply   The current ply/height that the search is at.
 * @return               The score of the best move in the position.
 */
-int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, int ply) {
+int Search::qsearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, int ply) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
@@ -187,14 +187,14 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
     }
 
     // determine if it is a draw
-    if (b.isDraw(ply)) {
+    if (BITBOARD::isDraw(b.state, b.moveHistory, ply)) {
         return 2 * (th->nodes & 1) - 1;
     }
 
     // Probe Transpostion Table:
     bool isPv = alpha == beta - 1? false : true;
     ZobristVal hashedBoard;
-    uint64_t posKey = b.getPosKey();
+    uint64_t posKey = b.state.posKey;
     bool ttRet = false;
     MOVE ttMove = NO_MOVE;
     int prevAlpha = alpha;
@@ -205,7 +205,7 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
         return hashedBoard.score;
     }
 
-    bool inCheck = b.InCheck();
+    bool inCheck = BITBOARD::InCheck(b.state);
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
     int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b);
 
@@ -227,15 +227,15 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
     MoveList moveList;
     int numMoves = 0;
 
-    MOVE prevMove = b.moveHistory.move[b.moveHistory.count - 1].move;
+    MOVE prevMove = b.moveHistory.moves[b.moveHistory.count - 1].move;
     int prevMoveTo = get_move_to(prevMove);
 
-    inCheck? MOVE_GEN::generate_all_moves(moveList, b) : MOVE_GEN::generate_captures_promotions(moveList, b);
+    inCheck? MOVE_GEN::generate_all_moves(moveList, b.state) : MOVE_GEN::generate_captures_promotions(moveList, b.state);
     movePick->scoreMovesQS(moveList, b, ttMove);
     while (moveList.get_next_move(move)) {
 
         if (!inCheck) {
-            int see = b.seeCapture(move);
+            int see = BITBOARD::seeCapture(b.state, move);
 
             // Prune negative SEE
             if (see < 0) {
@@ -255,15 +255,15 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
         }
 
         // Check legality
-        if (!b.isLegal(move)) {
+        if (!BITBOARD::isLegal(b, move)) {
             continue;
         }
 
         // Search more captures
         numMoves++;
-        b.make_move(move);
+        BITBOARD::make_move(b, move);
         int score = -qsearch(b, th, depth - 1, -beta, -alpha, ply + 1);
-        b.undo_move(move);
+        BITBOARD::undo_move(b, move);
 
         if (score > stand_pat) {
             stand_pat = score;
@@ -302,7 +302,7 @@ int Search::qsearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int bet
 * @param[in]      ply         The current ply/height that the search is at.
 * @return                     The score of the best move in the position.
 */
-int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply) {
+int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
@@ -311,7 +311,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
     th->seldepth = std::max(ply, th->seldepth); // update seldepth
 
     // Check if there are any potential wins that don't require help mate.
-    if (beta > 0 && b.noPotentialWin()) {
+    if (beta > 0 && BITBOARD::noPotentialWin(b.state)) {
         if (alpha >= 0) {
             th->nodes++;
             return 0;
@@ -331,7 +331,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
     }
 
     // Determine if the position is a textbook draw
-    if (b.isDraw(ply)) {
+    if (BITBOARD::isDraw(b.state, b.moveHistory, ply)) {
         return 2 * (th->nodes & 1) - 1;
     }
 
@@ -351,7 +351,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 
     // Probe Transpostion Table:
     ZobristVal hashedBoard;
-    uint64_t posKey = b.getPosKey();
+    uint64_t posKey = b.state.posKey;
     bool ttRet = false;
     MOVE ttMove = NO_MOVE;
     bool hashed = hasSingMove? false : tt->probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
@@ -360,7 +360,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         return hashedBoard.score;
     }
 
-    bool isCheck = b.InCheck();
+    bool isCheck = BITBOARD::InCheck(b.state);
     int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b));
     bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
     bool ttFailLow = (ttRet && hashedBoard.flag == UPPER_BOUND);
@@ -396,14 +396,14 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 
         // Null move pruning
         if (canNullMove && staticEval >= beta + 25 * (phase >= 200) && depth >= 2 + !hashed 
-                        && th->nullMoveTree && b.nullMoveable() 
+                        && th->nullMoveTree && BITBOARD::nullMoveable(b.state) 
                         && (!hashed || hashedBoard.score >= beta)) {
             int R = 3 + depth / 5 + std::min((staticEval - beta) / 300, 4);
             th->searchStack[ply + 1].extLevel = extLevel;
 
-            b.make_null_move();
+            BITBOARD::make_null_move(b);
             int nullRet = -pvSearch(b, th, depth - R - 1, -beta, -beta + 1, false, ply + 1);
-            b.undo_null_move();
+            BITBOARD::undo_null_move(b);
 
             if (nullRet >= beta && std::abs(nullRet) < MATE_VALUE_MAX) {
 
@@ -426,22 +426,22 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             MoveList moveList;
             MOVE move;
 
-            MOVE_GEN::generate_captures_promotions(moveList, b);
+            MOVE_GEN::generate_captures_promotions(moveList, b.state);
             movePick->scoreMovesQS(moveList, b, ttMove);
             while (moveList.get_next_move(move)) {
 
                 // Skip the move it is not legal
-                if (!b.isLegal(move)) {
+                if (!BITBOARD::isLegal(b, move)) {
                     continue;
                 }
 
-                b.make_move(move);
+                BITBOARD::make_move(b, move);
                 int score = -qsearch(b, th, -1, -probBeta, -probBeta + 1, ply);
 
                 if (score >= probBeta) {
                     score = -pvSearch(b, th, depth - 4, -probBeta, -probBeta + 1, true, ply + 1);
                 }
-                b.undo_move(move); 
+                BITBOARD::undo_move(b, move);
 
                 if (score >= probBeta) {
                     tt->saveTT(th, move, score, staticEval, depth - 3, LOWER_BOUND, posKey, ply);
@@ -473,13 +473,13 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
     MOVE noisys[MAX_NUM_MOVES];
     PrevMoveInfo prev = GetPreviousMoveInfo(b);
 
-    MOVE_GEN::generate_all_moves(moveList, b); // Generate moves
+    MOVE_GEN::generate_all_moves(moveList, b.state); // Generate moves
     movePick->scoreMoves(moveList, b, prev, th, ply, ttMove);
     while (moveList.get_next_move(move)) {
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
-        int hist = th->getHistory(b.toMove, isQuiet, moveFrom, moveTo);
+        int hist = th->getHistory(b.state.toMove, isQuiet, moveFrom, moveTo);
         int cmh = isQuiet * th->getCounterHistory(b, prev, moveFrom, moveTo);
         int seeScore = 0;
 
@@ -514,14 +514,14 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             }
 
             // SEE pruning
-            seeScore = b.seeCapture(move);
+            seeScore = BITBOARD::seeCapture(b.state, move);
             if (depth <= 8 && seeScore < seePruningMargin[isQuiet][depth]) {
                 continue;
             }
         }
 
         // Skip the move it is not legal
-        if (!b.isLegal(move)) {
+        if (!BITBOARD::isLegal(b, move)) {
             continue;
         }
 
@@ -529,7 +529,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         int extension = 0;
 
         // Check extension, passed pawn extension
-        if ((isCheck && (extLevel <= 5 || !isQuiet)) || (b.getPiece(moveFrom) == 0 && b.getRankFromSideToMove(moveTo) == 6)) {
+        if ((isCheck && (extLevel <= 5 || !isQuiet)) || (BITBOARD::getPiece(b.state, moveFrom) == 0 && BITBOARD::getRankFromSideToMove(b.state, moveTo) == 6)) {
             extension = 1;
         }
 
@@ -570,7 +570,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
         int newDepth = depth + extension; // Extend
         th->searchStack[ply + 1].extLevel = extLevel + extension;
 
-        b.make_move(move); // Make move
+        BITBOARD::make_move(b, move); // Make move
 
         // First move search at full depth and full window
         if (numMoves == 0) {
@@ -614,7 +614,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
             }
         }
 
-        b.undo_move(move); // Undo move
+        BITBOARD::undo_move(b, move); // Undo move
 
         numMoves++;
         if (score > ret) {
@@ -688,7 +688,7 @@ int Search::pvSearch(Bitboard &b, ThreadSearch *th, int depth, int alpha, int be
 * @param[in]      id       The ID of the thread that calls it.
 * @return                  The info of the best move in the position.
 */
-Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id) {
+Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id) {
 
     th->nodes++;
     MOVE move;
@@ -696,11 +696,11 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
     int numMoves = 0;
     int ret = -INFINITY_VAL;
     int ply = 0;
-    bool inCheck = b.InCheck();
+    bool inCheck = BITBOARD::InCheck(b.state);
 
     // Probe transposition table:
     ZobristVal hashedBoard;
-    uint64_t posKey = b.getPosKey();
+    uint64_t posKey = b.state.posKey;
     bool ttRet = false;
     MOVE ttMove = NO_MOVE;
     bool hashed = tt->probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
@@ -719,11 +719,11 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
-        int hist = th->getHistory(b.toMove, isQuiet, moveFrom, moveTo);
+        int hist = th->getHistory(b.state.toMove, isQuiet, moveFrom, moveTo);
         int cmh = isQuiet? th->getCounterHistory(b, prev, moveFrom, moveTo) : 0;
 
         // Check for legality
-        if (!b.isLegal(move)) {
+        if (!BITBOARD::isLegal(b, move)) {
             continue;
         }
 
@@ -732,7 +732,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
-        b.make_move(move); // Make the move
+        BITBOARD::make_move(b, move); // Make the move
 
         // First move search at full depth and full window
         if (numMoves == 0) {
@@ -768,7 +768,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Bitboard &b, ThreadSearch *th, int dep
             }
         }
 
-        b.undo_move(move); // Undo move
+        BITBOARD::undo_move(b, move); // Undo move
 
         numMoves++;
 
@@ -898,7 +898,7 @@ int Search::getSearchedScore(int eval) {
 /**
 * Set the search info
 */
-void Search::setSearchInfo(SearchInfo &printInfo, Bitboard &board, int depth, int eval) {
+void Search::setSearchInfo(SearchInfo &printInfo, Board &board, int depth, int eval) {
     printInfo.nodes = getTotalNodesSearched();
     printInfo.totalTime = tm.getTimePassed();
     printInfo.nps = (uint64_t) (printInfo.nodes * 1000) / ((double) printInfo.totalTime + 1);
@@ -965,7 +965,7 @@ void Search::printSearchInfo(SearchInfo &printInfo, std::string &pstring, MOVE m
 * @param[in] analysis True if we are in analysis mode.
 * @param[in] b        The board representation.
 */
-Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool analysis, Bitboard b) {
+Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool analysis, Board& b) {
 
     MOVE tempBestMove = NO_MOVE;
     MOVE bestMove = NO_MOVE;
@@ -981,7 +981,7 @@ Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool anal
 
     MoveList moveListOriginal;
     MoveList moveList;
-    MOVE_GEN::generate_all_moves(moveListOriginal, b);
+    MOVE_GEN::generate_all_moves(moveListOriginal, b.state);
     movePick->scoreMoves(moveListOriginal, b, prev, th, 0, NO_MOVE);
 
     if (id == 0) {
@@ -1175,24 +1175,25 @@ void Search::moveToStruct(SearchInfo &si, MOVE move) {
 * @param[in]      movesToGo Moves to go until the next time control.
 * @param[in]      analysis  True if we are in analysis mode.
 */
-Search::SearchInfo Search::beginSearch(Bitboard &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
+Search::SearchInfo Search::beginSearch(Board &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
     stopable = false;
     totalTime = 0;
 
-    tm = TimeManager(b.getSideToMove(), wtime, btime, winc, binc, movesToGo);
+    tm = TimeManager(b.state.toMove, wtime, btime, winc, binc, movesToGo);
     tt->incrementTTAge();
     clearThreadData();
 
     std::deque<std::thread> threads;
+    std::vector<Board> boards(nThreads);
     for (int id = 1; id < nThreads; id++) {
-        threads.push_back(std::thread(&Search::search, this, id, &thread[id], depth, analysis, b));
+        BITBOARD::CopyAllBoard(b, boards[id]);
+        threads.emplace_back(&Search::search, this, id, &thread[id], depth, analysis, std::ref(boards[id]));
     }
 
     Search::SearchInfo ret = search(0, &thread[0], depth, analysis, b);
 
-    for (int i = 1; i < nThreads; i++) {
-        threads.back().join();
-        threads.pop_back();
+    for (auto &t : threads) {
+        t.join();
     }
 
     MOVE bestMove = thread[0].bestMove;

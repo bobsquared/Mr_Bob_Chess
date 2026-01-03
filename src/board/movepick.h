@@ -6,11 +6,12 @@
 
 
 #pragma once
-#include "defs.h"
+#include "../defs.h"
 #include "movegen.h"
 #include "bitboard.h"
-#include "thread_search.h"
+#include "../thread_search.h"
 #include "movelist.h"
+#include "see.h"
 
 class MovePick {
 
@@ -32,7 +33,7 @@ public:
     * @param[in]      ply      The current ply/height that the search is at.
     * @param[in]      pvMove   The principal variation move found in the transposition table.
     */
-    void scoreMoves(MoveList &moveList, Bitboard &b, PrevMoveInfo &prev, ThreadSearch *th, int ply, MOVE pvMove);
+    void scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, ThreadSearch *th, int ply, MOVE pvMove);
 
     /**
     * A move scorer for qsearch.
@@ -43,7 +44,7 @@ public:
     * @param[in]      b        The board representation.
     * @param[in]      pvMove   The principal variation move found in the transposition table.
     */
-    void scoreMovesQS(MoveList &moveList, Bitboard &b, MOVE pvMove);
+    void scoreMovesQS(MoveList &moveList, Board &b, MOVE pvMove);
 
 private:
 
