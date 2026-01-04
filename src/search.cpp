@@ -688,7 +688,7 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
 * @param[in]      id       The ID of the thread that calls it.
 * @return                  The info of the best move in the position.
 */
-Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id) {
+Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth, const MoveList &moveList, int alpha, int beta, bool analysis, int id) {
 
     th->nodes++;
     MOVE move;
@@ -711,8 +711,9 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth,
     int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b));
     th->searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
     int quietsSearched = 0;
+    MoveList localMoveList = moveList;
 
-    while (moveList.get_next_move(move)) {
+    while (localMoveList.get_next_move(move)) {
 
         int tempRet;
 
@@ -980,7 +981,6 @@ Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool anal
     PrevMoveInfo prev = GetPreviousMoveInfo(b);
 
     MoveList moveListOriginal;
-    MoveList moveList;
     MOVE_GEN::generate_all_moves(moveListOriginal, b.state);
     movePick->scoreMoves(moveListOriginal, b, prev, th, 0, NO_MOVE);
 
@@ -1001,7 +1001,7 @@ Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool anal
             stopable = true;
         }
 
-        moveList = moveListOriginal;
+        MoveList moveList = moveListOriginal;
         int d = i;
         for (int pv = 1; pv < multiPv + 1; pv++) {
             while (true) {
@@ -1184,10 +1184,10 @@ Search::SearchInfo Search::beginSearch(Board &b, int depth, int wtime, int btime
     clearThreadData();
 
     std::deque<std::thread> threads;
-    std::vector<Board> boards(nThreads);
+    std::vector<Board> boards(nThreads - 1);
     for (int id = 1; id < nThreads; id++) {
-        BITBOARD::CopyAllBoard(b, boards[id]);
-        threads.emplace_back(&Search::search, this, id, &thread[id], depth, analysis, std::ref(boards[id]));
+        BITBOARD::CopyAllBoard(b, boards[id - 1]);
+        threads.emplace_back(&Search::search, this, id, &thread[id], depth, analysis, std::ref(boards[id - 1]));
     }
 
     Search::SearchInfo ret = search(0, &thread[0], depth, analysis, b);

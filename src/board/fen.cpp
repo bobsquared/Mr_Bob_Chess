@@ -1,8 +1,6 @@
 #include "fen.h"
 
 namespace BITBOARD {
-    
-    std::regex fenNumbers(".*\\s+(\\d+)\\s+(\\d+)");
 
      // Converts the current position to FEN
     std::string posToFEN(BoardState& bs) {

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <regex>
 #include "bitboard.h"
 
 namespace BITBOARD {

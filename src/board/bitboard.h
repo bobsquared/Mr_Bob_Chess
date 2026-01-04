@@ -64,7 +64,7 @@ struct MoveInfoStack {
 
 
 
-struct alignas(64) BoardState {
+struct BoardState {
     uint64_t pieces[12];
     uint64_t color[2];
     uint64_t occupied;
@@ -81,7 +81,7 @@ struct alignas(64) BoardState {
 
 
 
-struct alignas(64) Board {
+struct Board {
     BoardState state;
     MoveInfoStack moveHistory;
     Accumulator acc;
@@ -91,7 +91,7 @@ struct alignas(64) Board {
 
 namespace BITBOARD {
 
-    struct alignas(64) PieceMoves {
+    struct PieceMoves {
         uint64_t kingMoves[64];
         uint64_t knightMoves[64];
         uint64_t pawnAttacks[64][2];

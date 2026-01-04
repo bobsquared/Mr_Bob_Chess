@@ -136,7 +136,9 @@ namespace BITBOARD {
 
 
     // Initialize castling flags
-    void InitRookCastleFlags(uint64_t whiteRooks, uint64_t blackRooks) {
+    void InitRookCastleFlags() {
+        uint64_t whiteRooks = 1 | (1ULL << 7);
+        uint64_t blackRooks = (1ULL << 56) | (1ULL << 63);
         for (int i = 0; i < 64; i++) {
             pieceMoves.rookCastleFlagMask[i] = 15;
         }
@@ -161,6 +163,7 @@ namespace BITBOARD {
         InitWhitePawnAttacks();
         InitKnightMoves();
         InitKingMoves();
+        InitRookCastleFlags();
     }
 
     void CopyBoard(const BoardState &bOrig, BoardState &bTarget) {
@@ -236,7 +239,6 @@ namespace BITBOARD {
         bs.kingLoc[1] = bitScan(bs.pieces[11]);
 
         InitFeatures(bs, acc);
-        InitRookCastleFlags(bs.pieces[6], bs.pieces[7]);
     }
 
 

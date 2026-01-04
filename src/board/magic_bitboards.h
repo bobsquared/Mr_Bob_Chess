@@ -5,7 +5,7 @@
 
 
 namespace MAGIC_BITBOARDS{
-    struct alignas(64) MagicPro {
+    struct MagicPro {
         uint64_t magic;
         uint64_t mask;
         uint8_t shift;

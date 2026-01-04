@@ -100,7 +100,7 @@ private:
     static int getSearchedScore(int eval);
     
     SearchInfo search(int id, ThreadSearch *th, int depth, bool analysis, Board& b);
-    BestMoveInfo pvSearchRoot(Board &b, ThreadSearch *th, int depth, MoveList moveList, int alpha, int beta, bool analysis, int id);
+    BestMoveInfo pvSearchRoot(Board &b, ThreadSearch *th, int depth, const MoveList &moveList, int alpha, int beta, bool analysis, int id);
     int pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply);
     int qsearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, int ply);
 

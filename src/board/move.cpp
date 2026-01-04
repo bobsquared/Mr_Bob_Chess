@@ -137,11 +137,11 @@ namespace BITBOARD::detail {
                 assert(fromPiece == bs.toMove);
                 int pieceVal = (moveFlags - 11);
                 int promotePiece = pieceVal * 2 + bs.toMove;
-            bs. pieces[fromPiece] ^= i1;
-            bs. pieces[promotePiece] ^= i2;
-            bs. pieceAt[to] = promotePiece;
-            bs. pieceCount[bs.toMove]--;
-            bs. pieceCount[promotePiece]++;
+                bs.pieces[fromPiece] ^= i1;
+                bs.pieces[promotePiece] ^= i2;
+                bs.pieceAt[to] = promotePiece;
+                bs.pieceCount[bs.toMove]--;
+                bs.pieceCount[promotePiece]++;
                 ZOBRIST::hashBoard_capture_promotion(bs.posKey, from, to, fromPiece, toPiece, promotePiece);
                 acc.accumulate_add(promotePiece, to);
             }

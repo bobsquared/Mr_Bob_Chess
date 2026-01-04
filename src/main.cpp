@@ -1,6 +1,5 @@
 #include <iostream>
 #include <cstdint>
-#include <regex>
 #include <thread>
 #include <climits>
 #include <cstring>
@@ -60,7 +59,7 @@ int main(int argc, char* argv[]) {
     ThreadSearch *thread = new ThreadSearch[1];
 
     Search s = Search(eval, tt, thread);
-    
+
     Board pos;
     BITBOARD::InitBoard();
     BITBOARD::reset(pos);
