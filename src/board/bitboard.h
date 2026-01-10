@@ -3,7 +3,7 @@
 
 #include "../defs.h"
 #include "../zobrist_hashing.h"
-#include "../nnue/accumulator.h"
+#include "../nnue/accumulator/accumulator.h"
 
 
 // Castling flags
@@ -38,7 +38,7 @@ struct MoveInfo {
 
 
 struct MoveInfoStack {
-    MoveInfo moves[512] = {};
+    MoveInfo moves[1024] = {};
     int count;
 
     MoveInfoStack() : count(0) {}
@@ -84,7 +84,7 @@ struct BoardState {
 struct Board {
     BoardState state;
     MoveInfoStack moveHistory;
-    Accumulator acc;
+    Accumulator<768, 768> acc;
 };
 
 

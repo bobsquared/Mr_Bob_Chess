@@ -6,8 +6,8 @@
 namespace BITBOARD {
 
     namespace detail {
-        void make_move_impl(BoardState& bs, MoveInfoStack& moveHistory, Accumulator& acc, MOVE move);
-        void undo_move_impl(BoardState& bs, MoveInfoStack& moveHistory, Accumulator& acc, MOVE move);
+        void make_move_impl(BoardState& bs, MoveInfoStack& moveHistory, Accumulator<768, 768>& acc, MOVE move);
+        void undo_move_impl(BoardState& bs, MoveInfoStack& moveHistory, Accumulator<768, 768>& acc, MOVE move);
         void make_null_move_impl(BoardState& bs, MoveInfoStack& moveHistory);
         void undo_null_move_impl(BoardState& bs, MoveInfoStack& moveHistory);
     }

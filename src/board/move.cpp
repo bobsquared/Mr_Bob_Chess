@@ -8,14 +8,14 @@ namespace BITBOARD::detail {
 
 
 
-    void move_quiet(BoardState& bs, Accumulator& acc, int from, int to, int piece, uint64_t i1i2) {
+    void move_quiet(BoardState& bs, Accumulator<768, 768>& acc, int from, int to, int piece, uint64_t i1i2) {
         bs.color[bs.toMove] ^= i1i2;
         bs.pieces[piece] ^= i1i2;
         bs.occupied      ^= i1i2;
         bs.pieceAt[to]    = piece;
         bs.pieceAt[from]  = -1;
-        acc.accumulate_add(piece, to);
-        acc.accumulate_remove(piece, from);
+        acc.Add(piece * 64 + to);
+        acc.Remove(piece * 64 + from);
     }
 
 
@@ -47,7 +47,7 @@ namespace BITBOARD::detail {
 
 
 
-    void make_move_impl(BoardState& bs, MoveInfoStack& moveHistory, Accumulator& acc, MOVE move) {
+    void make_move_impl(BoardState& bs, MoveInfoStack& moveHistory, Accumulator<768, 768>& acc, MOVE move) {
         
         PieceMoves& pm = BITBOARD::pieceMoves;
         int from = get_move_from(move);
@@ -114,7 +114,7 @@ namespace BITBOARD::detail {
             bs.occupied ^= 1ULL << toCap;
             bs.pieceAt[toCap] = -1;
             bs.pieceCount[!bs.toMove]--;
-            acc.accumulate_remove(!bs.toMove, toCap);
+            acc.Remove(!bs.toMove * 64 + toCap);
         }
         else if (move & CAPTURE_FLAG) {
             assert(toPiece != -1);
@@ -130,8 +130,8 @@ namespace BITBOARD::detail {
             bs.pieces[toPiece] ^= i2;
             bs.occupied ^= i1;
             bs.pieceCount[toPiece]--;
-            acc.accumulate_remove(fromPiece, from);
-            acc.accumulate_remove(toPiece, to);
+            acc.Remove(fromPiece * 64 + from);
+            acc.Remove(toPiece * 64 + to);
 
             if (move & PROMOTION_FLAG) {
                 assert(fromPiece == bs.toMove);
@@ -143,13 +143,13 @@ namespace BITBOARD::detail {
                 bs.pieceCount[bs.toMove]--;
                 bs.pieceCount[promotePiece]++;
                 ZOBRIST::hashBoard_capture_promotion(bs.posKey, from, to, fromPiece, toPiece, promotePiece);
-                acc.accumulate_add(promotePiece, to);
+                acc.Add(promotePiece * 64 + to);
             }
             else {
                 bs.pieceAt[to] = fromPiece;
                 bs.pieces[fromPiece] ^= i1i2;
                 ZOBRIST::hashBoard_capture(bs.posKey, from, to, fromPiece, toPiece);
-                acc.accumulate_add(fromPiece, to);
+                acc.Add(fromPiece * 64 + to);
             }
 
             bs.halfMoves = 0;
@@ -176,8 +176,8 @@ namespace BITBOARD::detail {
             bs.pieceCount[bs.toMove]--;
             bs.pieceCount[promotePiece]++;
             ZOBRIST::hashBoard_promotion(bs.posKey, from, to, fromPiece, promotePiece);
-            acc.accumulate_add(promotePiece, to);
-            acc.accumulate_remove(fromPiece, from);
+            acc.Add(promotePiece * 64 + to);
+            acc.Remove(fromPiece * 64 + from);
         }
         else if (moveFlags == KING_CASTLE_FLAG) {
             assert(toPiece == -1);
@@ -203,7 +203,7 @@ namespace BITBOARD::detail {
 
 
 
-    void undo_move_impl(BoardState& bs, MoveInfoStack& moveHistory, Accumulator& acc, MOVE move) {
+    void undo_move_impl(BoardState& bs, MoveInfoStack& moveHistory, Accumulator<768, 768>& acc, MOVE move) {
 
         bs.toMove = !bs.toMove;
         ZOBRIST::hashBoard_turn(bs.posKey);
@@ -241,7 +241,7 @@ namespace BITBOARD::detail {
             bs.occupied ^= 1ULL << toCap;
             bs.pieceAt[toCap] = !bs.toMove;
             bs.pieceCount[!bs.toMove]++;
-            acc.accumulate_add(!bs.toMove, toCap);
+            acc.Add(!bs.toMove * 64 + toCap);
         }
         else if (move & CAPTURE_FLAG) {
 
@@ -251,7 +251,7 @@ namespace BITBOARD::detail {
             bs.pieceAt[to] = moveInfo.captureType;
             bs.occupied ^= i1;
             bs.pieceCount[moveInfo.captureType]++;
-            acc.accumulate_add(moveInfo.captureType, to);
+            acc.Add(moveInfo.captureType * 64 + to);
 
             if (move & PROMOTION_FLAG) {
                 int pieceVal = (moveFlags - 11);
@@ -261,14 +261,14 @@ namespace BITBOARD::detail {
                 bs.pieces[promotePiece] ^= i2;
                 bs.pieceCount[bs.toMove]++;
                 bs.pieceCount[promotePiece]--;
-                acc.accumulate_remove(promotePiece, to);
-                acc.accumulate_add(bs.toMove, from);
+                acc.Remove(promotePiece * 64 + to);
+                acc.Add(bs.toMove * 64 + from);
             }
             else {
                 bs.pieces[toPiece] ^= i1i2;
                 bs.pieceAt[from] = toPiece;
-                acc.accumulate_remove(toPiece, to);
-                acc.accumulate_add(toPiece, from);
+                acc.Remove(toPiece * 64 + to);
+                acc.Add(toPiece * 64 + from);
             }
 
         }
@@ -288,8 +288,8 @@ namespace BITBOARD::detail {
             bs.pieces[promotePiece] ^= i2;
             bs.pieceCount[bs.toMove]++;
             bs.pieceCount[promotePiece]--;
-            acc.accumulate_remove(promotePiece, to);
-            acc.accumulate_add(bs.toMove, from);
+            acc.Remove(promotePiece * 64 + to);
+            acc.Add(bs.toMove * 64 + from);
 
         }
         else if (moveFlags == KING_CASTLE_FLAG) {

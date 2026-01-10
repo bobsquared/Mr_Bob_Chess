@@ -6,12 +6,12 @@ namespace BITBOARD {
     PieceMoves pieceMoves;
 
     // Initialize features
-    void InitFeatures(BoardState& bs, Accumulator& acc) {
-        acc.refresh_accumulator();
+    void InitFeatures(BoardState& bs, Accumulator<768, 768>& acc) {
+        acc.Refresh();
         for (int i = 0; i < 12; i++) {
             uint64_t piece = bs.pieces[i];
             while (piece) {
-                acc.accumulate_add(i, bitScan(piece));
+                acc.Add(i * 64 + bitScan(piece));
                 piece &= piece - 1;
             }
         }
@@ -191,6 +191,7 @@ namespace BITBOARD {
     }
 
     void CopyAllBoard(const Board &bOrig, Board &bTarget) {
+        bTarget.acc = Accumulator<768, 768>();
         CopyBoard(bOrig.state, bTarget.state);
         CopyBoardHistory(bOrig.moveHistory, bTarget.moveHistory);
         InitFeatures(bTarget.state, bTarget.acc);
@@ -201,7 +202,7 @@ namespace BITBOARD {
 
         BoardState& bs = b.state;
         MoveInfoStack& moveHistory = b.moveHistory;
-        Accumulator& acc = b.acc;
+        b.acc = Accumulator<768, 768>();
 
         bs.pieces[0] = (1ULL << 8) | (1ULL << 9) | (1ULL << 10) | (1ULL << 11) | (1ULL << 12) | (1ULL << 13) | (1ULL << 14) | (1ULL << 15);
         bs.pieces[1] = (1ULL << 48) | (1ULL << 49) | (1ULL << 50) | (1ULL << 51) | (1ULL << 52) | (1ULL << 53) | (1ULL << 54) | (1ULL << 55);
@@ -238,7 +239,7 @@ namespace BITBOARD {
         bs.kingLoc[0] = bitScan(bs.pieces[10]);
         bs.kingLoc[1] = bitScan(bs.pieces[11]);
 
-        InitFeatures(bs, acc);
+        InitFeatures(bs, b.acc);
     }
 
 

@@ -106,7 +106,7 @@ namespace BITBOARD {
 
 
     // Take a FEN position as a string and set the posiiton.
-    void setPosFen(BoardState& bs, Accumulator& acc, std::string fen) {
+    void setPosFen(BoardState& bs, Accumulator<768, 768>& acc, std::string fen) {
 
         // Clear all bitboards
         std::string pieceIndex = "PpNnBbRrQqKk";
@@ -120,7 +120,7 @@ namespace BITBOARD {
         bs.fullMoves = 1;
         bs.enpassantSq = 0;
         bs.toMove = false;
-        acc.refresh_accumulator();
+        acc.Refresh();
 
         for (int i = 0; i < 12; i++) {
             bs.pieces[i] = 0;
@@ -146,7 +146,7 @@ namespace BITBOARD {
                 bs.pieceCount[piece]++;
                 bs.pieceAt[lineOffset] = piece;
                 ZOBRIST::hashBoard_square(bs.posKey, lineOffset, piece);
-                acc.accumulate_add(piece, lineOffset);
+                acc.Add(piece * 64 + lineOffset);
 
                 if (piece / 2 == 5) {
                     bs.kingLoc[piece - 10] = lineOffset;

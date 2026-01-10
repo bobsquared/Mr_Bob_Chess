@@ -2,7 +2,8 @@
 #include "defs.h"
 #include "board/magic_bitboards.h"
 #include "board/bitboard.h"
-#include "nnue/KPNNUE.h"
+#include "nnue/nncpp.h"
+#include "nnue/accumulator/accumulator.h"
 
 
 
@@ -23,7 +24,7 @@ class Eval {
 
 public:
 
-    Eval(KPNNUE *model);
+    Eval(NNCPP &model);
     int evaluate(Board &board);
     int scaleEndgame(Board &board, int eval);
     int getPhase(Board &board);
@@ -37,6 +38,6 @@ private:
     int manhattanArray[64][64];
     int chebyshevArray[64][64];
 
-    KPNNUE *model;
+    NNCPP &model;
 
 };

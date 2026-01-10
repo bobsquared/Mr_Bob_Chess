@@ -1,6 +1,6 @@
 #include "eval.h"
 
-Eval::Eval(KPNNUE *model) : model(model) {
+Eval::Eval(NNCPP &model) : model(model) {
     InitLightSquares();
     InitDistanceArray();
 }
@@ -126,9 +126,10 @@ int Eval::scaleEndgame(Board &b, int eval) {
 // Evaluate the position
 int Eval::evaluate(Board &b) {
     
+    BoardState &board = b.state;
+
     // Asserts for debugging mode
     #ifndef NDEBUG
-    BoardState &board = b.state;
     int pawnCount = count_population(board.pieces[0]);
     int knightCount = count_population(board.pieces[2]);
     int bishopCount = count_population(board.pieces[4]);
@@ -154,10 +155,11 @@ int Eval::evaluate(Board &b) {
     assert(rookCount == board.pieceCount[7]);
     assert(queenCount == board.pieceCount[9]);
     assert(kingCount == board.pieceCount[11]);
-
     #endif
 
-    int retm = model->evaluate(b);
+    Accumulator<768, 768>& acc = b.acc;
+    acc.Accumulate(model.getL1White(), model.getL1Black(), false);
+    int retm = model.evaluate(acc.getOutputVectorWhite(), acc.getOutputVectorBlack(), board.toMove, board.pieceCount[0] + board.pieceCount[1]);
     
     return retm;
 

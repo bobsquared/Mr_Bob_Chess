@@ -8,8 +8,8 @@ native = yes
 EXE = ../bob
 
 
-CXXFLAGS := -Wall -Wextra -std=c++17 -static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
-OBCXXFLAGS := -Wall -Wextra -std=c++17 -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+CXXFLAGS := -Wall -Wextra -std=c++20 -static -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
+OBCXXFLAGS := -Wall -Wextra -std=c++20 -pthread -Wl,--whole-archive -lpthread -Wl,--no-whole-archive
 
 
 ifeq ($(debug), no)
@@ -28,6 +28,7 @@ OBCXXFLAGS += -msse3 -mpopcnt -DPOPCOUNT
 endif
 
 ifeq ($(avx2), yes)
+CXXFLAGS += -DUSE_AVX2
 CXXFLAGS += -mavx2
 OBCXXFLAGS += -mavx2
 else
@@ -44,7 +45,7 @@ ifeq ($(debug_zobrist), yes)
 CXXFLAGS += -DDEBUGHASH
 endif
 
-CXX := board/detections.cpp board/debug.cpp board/see.cpp board/fen.cpp board/move.cpp board/bitboard.cpp board/magic_bitboards.cpp defs.cpp board/movegen.cpp board/legality.cpp perft.cpp eval.cpp search.cpp uci.cpp uci_commands.cpp board/movepick.cpp transpositionTable.cpp timeman.cpp thread_search.cpp nnue/layer.cpp nnue/KPNNUE.cpp nnue/accumulator.cpp
+CXX := nnue/layers/concatenate.cpp board/detections.cpp board/debug.cpp board/see.cpp board/fen.cpp board/move.cpp board/bitboard.cpp board/magic_bitboards.cpp defs.cpp board/movegen.cpp board/legality.cpp perft.cpp eval.cpp search.cpp uci.cpp uci_commands.cpp board/movepick.cpp transpositionTable.cpp timeman.cpp thread_search.cpp
 
 openbench: $(CXX)
 	g++ -O3 -o $(EXE) $(OBCXXFLAGS) main.cpp $(CXX)

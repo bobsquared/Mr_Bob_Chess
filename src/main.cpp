@@ -13,10 +13,9 @@
 #include "search.h"
 #include "uci_commands.h"
 #include "uci.h"
-#include "incbin/incbin.h"
+#include "nnue/nncpp.h"
 
 
-INCBIN(bobBrain, "../nets/bob_brain-020724e150.nnue");
 
 
 void Bench(Board &b, Search &s) {
@@ -53,8 +52,11 @@ int main(int argc, char* argv[]) {
     InitRowsMask();
     MAGIC_BITBOARDS::InitMagicBitboards();
 
-    KPNNUE *model = new KPNNUE(gbobBrainData, gbobBrainSize);
-    Eval *eval = new Eval(model);                        /**< The evaluator to score the positions*/
+    NNCPP net = NNCPP();
+    net.LoadNetwork("nets/bobbrain_34_0.006588.nnue");
+    net.eval();
+
+    Eval *eval = new Eval(net);                        /**< The evaluator to score the positions*/
     TranspositionTable *tt = new TranspositionTable();
     ThreadSearch *thread = new ThreadSearch[1];
 
