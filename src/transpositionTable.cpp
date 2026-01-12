@@ -6,9 +6,9 @@
 
 // Initialize transposition table
 TranspositionTable::TranspositionTable() {
-    numHashes = (double) HASH_SIZE / (double) sizeof(ZobristVal) * 0xFFFFF;
+    numHashes = ((uint64_t) HASH_SIZE * 0xFFFFFULL) / sizeof(ZobristVal);
     hashTable = new ZobristVal [numHashes];
-    halfMove = 1;
+    age = 1;
 
     clearHashTable();
 }
@@ -17,9 +17,9 @@ TranspositionTable::TranspositionTable() {
 
 // Initialize transposition table
 TranspositionTable::TranspositionTable(int hashSize) {
-    numHashes = (double) hashSize / (double) sizeof(ZobristVal) * 0xFFFFF;
+    numHashes = ((uint64_t) HASH_SIZE * 0xFFFFFULL) / sizeof(ZobristVal);
     hashTable = new ZobristVal [numHashes];
-    halfMove = 1;
+    age = 1;
 
     clearHashTable();
 }
@@ -27,10 +27,10 @@ TranspositionTable::TranspositionTable(int hashSize) {
 
 
 // set transposition table size
-void TranspositionTable::setSize(int hashSize) {
+void TranspositionTable::setSize(uint64_t hashSize) {
     delete [] hashTable;
 
-    numHashes = (double) hashSize / (double) sizeof(ZobristVal) * 0xFFFFF;
+    numHashes = ((uint64_t) hashSize * 0xFFFFFULL) / sizeof(ZobristVal);
     hashTable = new ZobristVal [numHashes];
 
     clearHashTable();
@@ -47,7 +47,8 @@ TranspositionTable::~TranspositionTable() {
 
 // Set TT age
 void TranspositionTable::incrementTTAge() {
-    halfMove++;
+    age++;
+    age = age % 64;
 }
 
 
@@ -58,31 +59,19 @@ void TranspositionTable::saveTT(ThreadSearch *th, MOVE move, int score, int stat
 
     score += score > MATE_VALUE_MAX? ply : (score < -MATE_VALUE_MAX? -ply : 0);
     ZobristVal tt = hashTable[posKey];
+    uint8_t ttAge = getAgeFromTT(tt.flagsAndAge);
+    uint8_t ttFlag = getFlagsFromTT(tt.flagsAndAge);
 
     if (tt.posKey == 0) {
         th->ttWrites++;
-        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, flag, key, halfMove);
+        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, setFlagsAndAgeInTT(age, flag), key);
     }
-    else if (halfMove != tt.halfMove || flag == EXACT || (tt.flag == EXACT && depth >= tt.depth) || (tt.flag != EXACT && depth >= tt.depth - 3)) {
-        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, flag, key, halfMove);
+    else if (age != ttAge || flag == EXACT || (ttFlag == EXACT && depth >= tt.depth) || (ttFlag != EXACT && depth >= tt.depth - 3)) {
+        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, setFlagsAndAgeInTT(age, flag), key);
     }
 
 
 }
-
-
-
-// Probe the transposition table
-MOVE TranspositionTable::probeBestMove(uint64_t key) {
-    ZobristVal hashedBoard = hashTable[key % numHashes];
-
-    if (hashTable[key % numHashes].posKey == key) {
-        return hashedBoard.move;
-    }
-
-    return NO_MOVE;
-}
-
 
 
 // Probe the transposition table
@@ -101,11 +90,11 @@ bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int dept
 
         // Ensure hashedBoard depth >= current depth
         if (hashedBoard.depth >= depth) {
+            uint8_t ttFlag = getFlagsFromTT(hashedBoard.flagsAndAge);
+            alpha = ttFlag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
+            beta = ttFlag == UPPER_BOUND? hashedBoard.score : beta; // upper bound
 
-            alpha = hashedBoard.flag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
-            beta = hashedBoard.flag == UPPER_BOUND? hashedBoard.score : beta; // upper bound
-
-            if (hashedBoard.flag == EXACT || alpha >= beta) { // exact or alpha >= beta
+            if (ttFlag == EXACT || alpha >= beta) { // exact or alpha >= beta
                 ttRet = true;
             }
 
@@ -132,11 +121,12 @@ bool TranspositionTable::probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, b
         ret = true;
         ttMove = hashedBoard.move;
         hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
+        uint8_t ttFlag = getFlagsFromTT(hashedBoard.flagsAndAge);
 
-        alpha = hashedBoard.flag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
-        beta = hashedBoard.flag == UPPER_BOUND? hashedBoard.score : beta; // upper bound
+        alpha = ttFlag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
+        beta = ttFlag == UPPER_BOUND? hashedBoard.score : beta; // upper bound
 
-        if (hashedBoard.flag == EXACT || alpha >= beta) { // exact or alpha >= beta
+        if (ttFlag == EXACT || alpha >= beta) { // exact or alpha >= beta
             ttRet = true;
         }
 
@@ -185,14 +175,6 @@ std::string TranspositionTable::getPv(Board &b) {
 
     return pv;
 }
-
-
-
-// Return the hash value of the position key
-ZobristVal TranspositionTable::getHashValue(uint64_t posKey) {
-    return hashTable[posKey % numHashes];
-}
-
 
 
 // Print hash table statistics

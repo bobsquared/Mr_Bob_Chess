@@ -70,22 +70,6 @@ typedef uint16_t MOVE;
 #define KNIGHT_PROMOTION_MASK 0
 
 
-// This is what is stored in the transposition table
-struct ZobristVal {
-    uint64_t posKey;
-    MOVE move;
-    int16_t score;
-    int16_t staticScore;
-    uint8_t halfMove;
-    int8_t depth;
-    uint8_t flag;
-
-    ZobristVal() : posKey(0), move(NO_MOVE), score(0), staticScore(0), halfMove(0), depth(0), flag(0) {}
-
-    ZobristVal(MOVE move, int16_t score, int16_t staticScore, int8_t depth, uint8_t flag, uint64_t posKey, uint8_t halfMove) :
-        posKey(posKey), move(move), score(score), staticScore(staticScore), halfMove(halfMove), depth(depth), flag(flag) {}
-};
-
 
 // Information for search
 struct SearchStack {
