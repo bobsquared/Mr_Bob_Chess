@@ -45,7 +45,7 @@ void MovePick::InitMvvLva() {
 * @param[in]      ply      The current ply/height that the search is at.
 * @param[in]      pvMove   The principal variation move found in the transposition table.
 */
-void MovePick::scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, ThreadSearch *th, int ply, MOVE pvMove) {
+void MovePick::scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, ThreadSearch *th, int ply, MOVE pvMove, MOVE pvMove2, MOVE pvMove3) {
 
     MOVE move;
     int from;
@@ -60,6 +60,12 @@ void MovePick::scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, Thre
 
         if (move == pvMove) {
             moveList.set_score_index(i, 1500000);
+        }
+        else if (move == pvMove2) {
+            moveList.set_score_index(i, 1400000);
+        }
+        else if (move == pvMove3) {
+            moveList.set_score_index(i, 1300000);
         }
         else if (move & CAPTURE_FLAG) {
 

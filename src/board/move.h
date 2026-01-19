@@ -2,6 +2,7 @@
 
 #include "bitboard.h"
 #include "magic_bitboards.h"
+#include "../transpositionTable.h"
 
 namespace BITBOARD {
 
@@ -14,6 +15,7 @@ namespace BITBOARD {
 
     inline void make_move(Board& b, MOVE move) {
         detail::make_move_impl(b.state, b.moveHistory, b.acc, move);
+        TT::prefetchTT(b.state.posKey);
     }
 
     inline void undo_move(Board& b, MOVE move) {
@@ -22,6 +24,7 @@ namespace BITBOARD {
 
     inline void make_null_move(Board& b) {
         detail::make_null_move_impl(b.state, b.moveHistory);
+        TT::prefetchTT(b.state.posKey);
     }
 
     inline void undo_null_move(Board& b) {

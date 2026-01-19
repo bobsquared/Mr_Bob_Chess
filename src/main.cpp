@@ -57,10 +57,10 @@ int main(int argc, char* argv[]) {
     net.eval();
 
     Eval *eval = new Eval(net);                        /**< The evaluator to score the positions*/
-    TranspositionTable *tt = new TranspositionTable();
+    TT::InitTT(HASH_SIZE);                       /**< The transposition table for storing previously searched positions*/
     ThreadSearch *thread = new ThreadSearch[1];
 
-    Search s = Search(eval, tt, thread);
+    Search s = Search(eval, thread);
 
     Board pos;
     BITBOARD::InitBoard();

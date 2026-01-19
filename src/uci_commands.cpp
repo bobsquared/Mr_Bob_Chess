@@ -4,6 +4,7 @@
 #include <iostream>
 #include <thread>
 #include <climits>
+#include "transpositionTable.h"
 
 
 
@@ -41,7 +42,7 @@ void NewGameCommand::execute() {
         thread[id].InitCounterMoves();
         thread[id].ttWrites = 0;
     }
-    s.clearTT();
+    TT::clearHashTable();
 }
 
 

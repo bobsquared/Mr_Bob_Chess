@@ -14,7 +14,7 @@
 
 
 
-Search::Search(Eval *eval, TranspositionTable *tt, ThreadSearch *thread) : eval(eval), tt(tt), thread(thread) {
+Search::Search(Eval *eval, ThreadSearch *thread) : eval(eval), thread(thread) {
     nThreads = 1;                   /**< Number of threads to search, default is 1.*/
     multiPv = 1;                   /**< Number of pvs to search, default is 1.*/
     stopable = false;              /**< Used to ensure that we search atleast a depth one 1.*/
@@ -61,16 +61,6 @@ void Search::willPrintInfo(bool b) {
 }
 
 
-
-/**
-* Clear the transposition table
-*/
-void Search::clearTT() {
-    tt->clearHashTable();
-}
-
-
-
 /**
 * Initialize the late move reduction array
 */
@@ -88,7 +78,7 @@ void Search::InitLateMoveArray() {
 * Deallocate memory in the search file
 */
 void Search::cleanUpSearch() {
-    delete tt;
+    TT::DestroyTT();
     delete movePick;
     delete eval;
     delete [] thread;
@@ -110,7 +100,7 @@ void Search::setMultiPVSearch(int pvs) {
 
 
 void Search::setTTSize(int hashSize) {
-    tt->setSize(hashSize);
+    TT::setSize(hashSize);
 }
 
 
@@ -193,13 +183,13 @@ int Search::qsearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, 
 
     // Probe Transpostion Table:
     bool isPv = alpha == beta - 1? false : true;
-    ZobristVal hashedBoard;
+    TTEntry hashedBoard;
     uint64_t posKey = b.state.posKey;
     bool ttRet = false;
     MOVE ttMove = NO_MOVE;
     int prevAlpha = alpha;
 
-    bool hashed = tt->probeTTQsearch(posKey, hashedBoard, ttRet, ttMove, alpha, beta, ply);
+    bool hashed = TT::probeTTQsearch(posKey, hashedBoard, ttRet, ttMove, alpha, beta, ply);
 
     if (!isPv && ttRet) {
         return hashedBoard.score;
@@ -280,7 +270,7 @@ int Search::qsearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, 
 
     if (numMoves > 0) {
         int bound = prevAlpha >= stand_pat? UPPER_BOUND : (stand_pat >= beta? LOWER_BOUND : EXACT);
-        tt->saveTT(th, bestMove, stand_pat, staticEval, depth, bound, posKey, ply);
+        TT::saveTT(th, bestMove, stand_pat, staticEval, depth, bound, posKey, ply);
     }
 
     return stand_pat;
@@ -350,11 +340,12 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
 
 
     // Probe Transpostion Table:
-    ZobristVal hashedBoard;
+    TTEntry hashedBoard;
     uint64_t posKey = b.state.posKey;
     bool ttRet = false;
     MOVE ttMove = NO_MOVE;
-    bool hashed = hasSingMove? false : tt->probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
+    bool hashed = hasSingMove? false : TT::probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
+    uint8_t TTFlag = TT::getFlagsFromTT(hashedBoard.flagsAndAge);
 
     if (ttRet && !isPv) {
         return hashedBoard.score;
@@ -444,7 +435,7 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
                 BITBOARD::undo_move(b, move);
 
                 if (score >= probBeta) {
-                    tt->saveTT(th, move, score, staticEval, depth - 3, LOWER_BOUND, posKey, ply);
+                    TT::saveTT(th, move, score, staticEval, depth - 3, LOWER_BOUND, posKey, ply);
                     return score;
                 }
             }
@@ -474,7 +465,7 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
     PrevMoveInfo prev = GetPreviousMoveInfo(b);
 
     MOVE_GEN::generate_all_moves(moveList, b.state); // Generate moves
-    movePick->scoreMoves(moveList, b, prev, th, ply, ttMove);
+    movePick->scoreMoves(moveList, b, prev, th, ply, ttMove, hashedBoard.move2, hashedBoard.move3);
     while (moveList.get_next_move(move)) {
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
@@ -534,7 +525,7 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
         }
 
         // Singular extensions
-        if ((depth >= 8 || (extLevel <= 2 && depth >= 6)) && !extension && ttMove == move && (hashedBoard.flagsAndAge & 0b11) != UPPER_BOUND 
+        if ((depth >= 8 || (extLevel <= 2 && depth >= 6)) && !extension && hashed && ttMove == move && TTFlag != UPPER_BOUND 
             && hashedBoard.depth >= depth - 3 && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
             int singVal = hashedBoard.score - (1 + isPv) * depth;
 
@@ -557,7 +548,7 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
             else if (singVal >= beta) {
                 return singVal;
             }
-            else if (depth >= 8 && (hashedBoard.flagsAndAge & 0b11) == LOWER_BOUND) {
+            else if (depth >= 8 && TTFlag == LOWER_BOUND) {
                 if (hashedBoard.score >= beta) {
                     extension = -1 - 2 * !isPv;
                 }
@@ -577,7 +568,7 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
             score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
         }
         // Late move reductions
-        else if (depth >= 3 && numMoves > isPv && (!isPv || (hashedBoard.flagsAndAge & 0b11) != EXACT || isQuiet)) {
+        else if (depth >= 3 && numMoves > isPv && (!isPv || (hashed && TTFlag != EXACT) || isQuiet)) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)] * (100 + extLevel) / 100; // Base reduction
 
             lmr -= th->isKiller(ply, move); // Don't reduce as much for killer moves
@@ -587,8 +578,8 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
             lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh) / historyLmrVal; // Increase/decrease depth based on histories
             lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
 
-            if (!isCheck) {
-                if (hashed && (hashedBoard.flagsAndAge & 0b11) == UPPER_BOUND && hashedBoard.score >= staticEval
+            if (hashed && !isCheck) {
+                if (TTFlag == UPPER_BOUND && hashedBoard.score >= staticEval
                     && hashedBoard.depth >= depth - 2 && std::abs(alpha) < MATE_VALUE_MAX) {
                     lmr -= (!isPv * 2) + std::max(-4 + 2 * isPv, std::min(0, (staticEval - alpha) / (250 + 100 * isPv)));
                 }
@@ -662,7 +653,7 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
     assert (bestMove != 0);
     if (!hasSingMove) {
         int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
-        tt->saveTT(th, bestMove, ret, staticEval, depth, bound, posKey, ply);
+        TT::saveTT(th, bestMove, ret, staticEval, depth, bound, posKey, ply);
     }
     
 
@@ -699,11 +690,11 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth,
     bool inCheck = BITBOARD::InCheck(b.state);
 
     // Probe transposition table:
-    ZobristVal hashedBoard;
+    TTEntry hashedBoard;
     uint64_t posKey = b.state.posKey;
     bool ttRet = false;
     MOVE ttMove = NO_MOVE;
-    bool hashed = tt->probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
+    bool hashed = TT::probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
 
     PrevMoveInfo prev = GetPreviousMoveInfo(b);
 
@@ -740,7 +731,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth,
             tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
         }
         // Late move reductions
-        else if (depth >= 3 && numMoves > 1 && ((hashedBoard.flagsAndAge & 0b11) != EXACT || isQuiet)) {
+        else if (depth >= 3 && numMoves > 1 && ((hashed && (hashedBoard.flagsAndAge & 0b11) != EXACT) || isQuiet)) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
             lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh) / historyLmrVal; // Increase/decrease depth based on histories
             lmr--;
@@ -807,7 +798,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth,
     // Update transposition table
     if (!exit_thread_flag && !tm.outOfTime()) {
         assert (bestMove != 0);
-        tt->saveTT(th, bestMove, ret, staticEval, depth, EXACT, posKey, ply);
+        TT::saveTT(th, bestMove, ret, staticEval, depth, EXACT, posKey, ply);
     }
 
     return BestMoveInfo(bestMove, ret);
@@ -856,7 +847,7 @@ uint64_t Search::getHashFullTotal() {
     for (int id = 0; id < nThreads; id++) {
         writes += thread[id].ttWrites;
     }
-    return tt->getHashFull(writes);
+    return TT::getHashFull(writes);
 }
 
 
@@ -908,7 +899,7 @@ void Search::setSearchInfo(SearchInfo &printInfo, Board &board, int depth, int e
     printInfo.score = getSearchedScore(eval);
     printInfo.eval = eval;
     printInfo.hashUsage = getHashFullTotal();
-    printInfo.pv = tt->getPv(board);
+    printInfo.pv = TT::getPv(board);
 }
 
 
@@ -982,7 +973,7 @@ Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool anal
 
     MoveList moveListOriginal;
     MOVE_GEN::generate_all_moves(moveListOriginal, b.state);
-    movePick->scoreMoves(moveListOriginal, b, prev, th, 0, NO_MOVE);
+    movePick->scoreMoves(moveListOriginal, b, prev, th, 0, NO_MOVE, NO_MOVE, NO_MOVE);
 
     if (id == 0) {
         tm.setTimer(moveListOriginal.count);
@@ -1180,7 +1171,7 @@ Search::SearchInfo Search::beginSearch(Board &b, int depth, int wtime, int btime
     totalTime = 0;
 
     tm = TimeManager(b.state.toMove, wtime, btime, winc, binc, movesToGo);
-    tt->incrementTTAge();
+    TT::incrementTTAge();
     clearThreadData();
 
     std::deque<std::thread> threads;

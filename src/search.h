@@ -40,7 +40,7 @@ public:
         std::string pv;
     };
 
-    Search(Eval *eval, TranspositionTable *tt, ThreadSearch *thread);
+    Search(Eval *eval, ThreadSearch *thread);
 
     void InitLateMoveArray();
     void willPrintInfo(bool b);
@@ -61,7 +61,6 @@ public:
     int getNThreads();
     int getTotalTime();
 
-    void clearTT();
     void cleanUpSearch();
     void stopSearch();
     void setSearch();
@@ -114,7 +113,6 @@ private:
     TimeManager tm;                     /**< The time manager determines when to stop the search given time parameters.*/
 
     Eval *eval;                        /**< The evaluator to score the positions*/
-    TranspositionTable *tt;
     MovePick *movePick;
     ThreadSearch *thread;
     

@@ -1,192 +1,253 @@
 
 #include "transpositionTable.h"
+#include "board/move.h"
 
 
 
+namespace TT {
 
-// Initialize transposition table
-TranspositionTable::TranspositionTable() {
-    numHashes = ((uint64_t) HASH_SIZE * 0xFFFFFULL) / sizeof(ZobristVal);
-    hashTable = new ZobristVal [numHashes];
-    age = 1;
-
-    clearHashTable();
-}
+    TranspositionTable tt;
 
 
 
-// Initialize transposition table
-TranspositionTable::TranspositionTable(int hashSize) {
-    numHashes = ((uint64_t) HASH_SIZE * 0xFFFFFULL) / sizeof(ZobristVal);
-    hashTable = new ZobristVal [numHashes];
-    age = 1;
-
-    clearHashTable();
-}
-
-
-
-// set transposition table size
-void TranspositionTable::setSize(uint64_t hashSize) {
-    delete [] hashTable;
-
-    numHashes = ((uint64_t) hashSize * 0xFFFFFULL) / sizeof(ZobristVal);
-    hashTable = new ZobristVal [numHashes];
-
-    clearHashTable();
-}
-
-
-
-// Delete the hash table
-TranspositionTable::~TranspositionTable() {
-    delete [] hashTable;
-}
-
-
-
-// Set TT age
-void TranspositionTable::incrementTTAge() {
-    age++;
-    age = age % 64;
-}
-
-
-
-// Save the position into the transposition table
-void TranspositionTable::saveTT(ThreadSearch *th, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply) {
-    uint64_t posKey = key % numHashes;
-
-    score += score > MATE_VALUE_MAX? ply : (score < -MATE_VALUE_MAX? -ply : 0);
-    ZobristVal tt = hashTable[posKey];
-    uint8_t ttAge = getAgeFromTT(tt.flagsAndAge);
-    uint8_t ttFlag = getFlagsFromTT(tt.flagsAndAge);
-
-    if (tt.posKey == 0) {
-        th->ttWrites++;
-        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, setFlagsAndAgeInTT(age, flag), key);
-    }
-    else if (age != ttAge || flag == EXACT || (ttFlag == EXACT && depth >= tt.depth) || (ttFlag != EXACT && depth >= tt.depth - 3)) {
-        hashTable[posKey] = ZobristVal(move, (int16_t) score, (int16_t) staticScore, (int8_t) depth, setFlagsAndAgeInTT(age, flag), key);
+    void clearHashTable() {
+        for (uint64_t i = 0; i < tt.numHashes; i++) {
+            tt.hashTable[i] = TTBucket();
+        }
     }
 
 
-}
+
+    void InitTT(uint64_t hashSize) {
+        tt.numHashes = ((uint64_t) hashSize * 1024 * 1024) / sizeof(TTBucket);
+        tt.numHashes = 1ULL << (63 - __builtin_clzll(tt.numHashes));
+        tt.mask = tt.numHashes - 1;
+
+        tt.hashTable = new TTBucket [tt.numHashes];
+        tt.age = 1;
+
+        clearHashTable();
+    }
 
 
-// Probe the transposition table
-bool TranspositionTable::probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply) {
 
-    bool ret = false;
+    void setSize(uint64_t hashSize) {
+        delete [] tt.hashTable;
 
-    // Store the hash table value
-    hashedBoard = hashTable[key % numHashes];
+        tt.numHashes = ((uint64_t) hashSize * 1024 * 1024) / sizeof(TTBucket);
+        tt.numHashes = 1ULL << (63 - __builtin_clzll(tt.numHashes));
+        tt.mask = tt.numHashes - 1;
 
-    if (hashTable[key % numHashes].posKey == key) {
+        tt.hashTable = new TTBucket [tt.numHashes];
 
-        ret = true;
-        ttMove = hashedBoard.move;
-        hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
+        clearHashTable();
+    }
 
-        // Ensure hashedBoard depth >= current depth
-        if (hashedBoard.depth >= depth) {
-            uint8_t ttFlag = getFlagsFromTT(hashedBoard.flagsAndAge);
-            alpha = ttFlag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
-            beta = ttFlag == UPPER_BOUND? hashedBoard.score : beta; // upper bound
 
-            if (ttFlag == EXACT || alpha >= beta) { // exact or alpha >= beta
-                ttRet = true;
+
+    void DestroyTT() {
+        delete [] tt.hashTable;
+    }
+
+
+
+    int getHashFull(uint64_t writes) {
+        return (1000 * writes) / (tt.numHashes * 4);
+    }
+
+
+
+    void incrementTTAge() {
+        tt.age++;
+        tt.age = tt.age % 64;
+    }
+
+
+
+    void saveTT(ThreadSearch *th, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply) {
+        score += score > MATE_VALUE_MAX? ply : (score < -MATE_VALUE_MAX? -ply : 0);
+        uint32_t lowerKey = key & 0xFFFFFFFFULL;
+        uint32_t upperKey = key >> 32;
+
+        uint64_t posKey = lowerKey & tt.mask;
+        TTBucket& bucket = tt.hashTable[posKey];
+
+        for (TTEntry& entry : bucket.entries) {
+            uint8_t ttAge = getAgeFromTT(entry.flagsAndAge);
+            uint8_t ttFlag = getFlagsFromTT(entry.flagsAndAge);
+
+            if (entry.posKey == upperKey) {
+                if (flag == EXACT || depth >= entry.depth - 2 + (ttFlag == EXACT)) {
+                    // shift tt moves to have most recent one first.
+                    if (move != entry.move && entry.move != NULL_MOVE) {
+                        if (move == entry.move2) {
+                            entry.move2 = entry.move;
+                        }
+                        else {
+                            entry.move3 = entry.move2;
+                            entry.move2 = entry.move;
+                        }
+                    }
+                    entry.move = move;
+                    entry.score = static_cast<int16_t>(score);
+                    entry.staticScore =  static_cast<int16_t>(staticScore);
+                    entry.flagsAndAge = setFlagsAndAgeInTT(tt.age, flag);
+                    entry.depth = static_cast<int8_t>(depth);
+                }
+                return;
             }
-
         }
+
+        for (TTEntry& entry : bucket.entries) {
+            if (entry.posKey == 0) {
+                th->ttWrites++;
+                entry = TTEntry(
+                    upperKey, move,
+                    static_cast<int16_t>(score),
+                    static_cast<int16_t>(staticScore),
+                    setFlagsAndAgeInTT(tt.age, flag),
+                    static_cast<int8_t>(depth)
+                );
+                return;
+            }
+        }
+
+        
+        int replaceIndex = 0;
+        int replaceScore = INT32_MAX;
+        for (int i = 0; i < 4; i++) {
+            TTEntry& entry = bucket.entries[i];
+            int ageDiff = (tt.age - getAgeFromTT(entry.flagsAndAge)) & 63;
+            int score = static_cast<int>(entry.depth) - (ageDiff << (2 + (getFlagsFromTT(entry.flagsAndAge) != EXACT))); 
+
+            if (score < replaceScore) {
+                replaceIndex = i;
+                replaceScore = score;
+            }
+        }
+        
+        bucket.entries[replaceIndex] = TTEntry(
+            upperKey, move,
+            static_cast<int16_t>(score),
+            static_cast<int16_t>(staticScore),
+            setFlagsAndAgeInTT(tt.age, flag),
+            static_cast<int8_t>(depth)
+        );
     }
 
-    return ret;
-
-}
 
 
+    bool probeTT(uint64_t key, TTEntry &hashedBoard, int depth, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply) {
+        bool ret = false;
 
-// Probe the transposition table
-// Currently using: Always Replace
-bool TranspositionTable::probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply) {
+        uint32_t lowerKey = key & 0xFFFFFFFFULL;
+        uint32_t upperKey = key >> 32;
+        uint64_t posKey = lowerKey & tt.mask;
+        TTBucket& bucket = tt.hashTable[posKey];
 
-    bool ret = false;
+        for (TTEntry& entry : bucket.entries) {
+            if (entry.posKey == upperKey) {
+                hashedBoard = entry;
+                ret = true;
+                ttMove = hashedBoard.move;
+                hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
 
-    // Store the hash table value
-    hashedBoard = hashTable[key % numHashes];
+                // Ensure hashedBoard depth >= current depth
+                if (hashedBoard.depth >= depth) {
+                    uint8_t ttFlag = getFlagsFromTT(hashedBoard.flagsAndAge);
+                    alpha = ttFlag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
+                    beta = ttFlag == UPPER_BOUND? hashedBoard.score : beta; // upper bound
 
-    if (hashTable[key % numHashes].posKey == key) {
+                    if (ttFlag == EXACT || alpha >= beta) { // exact or alpha >= beta
+                        ttRet = true;
+                    }
 
-        ret = true;
-        ttMove = hashedBoard.move;
-        hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
-        uint8_t ttFlag = getFlagsFromTT(hashedBoard.flagsAndAge);
-
-        alpha = ttFlag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
-        beta = ttFlag == UPPER_BOUND? hashedBoard.score : beta; // upper bound
-
-        if (ttFlag == EXACT || alpha >= beta) { // exact or alpha >= beta
-            ttRet = true;
-        }
-
-    }
-
-    return ret;
-
-}
-
-
-
-// Return the principal variation as a string.
-// It returns the string as a list of moves, (ex. 'e2e4 e7e5 d2d4 e5d4')
-std::string TranspositionTable::getPv(Board &b) {
-
-    std::string pv = "";
-    std::vector<uint64_t> loopChecker;
-    std::stack<MOVE> movesToUndo;
-
-    while (true) {
-        uint64_t posKey = b.state.posKey;
-        loopChecker.push_back(posKey);
-
-        if (std::count(loopChecker.begin(), loopChecker.end(), loopChecker.back()) >= 3) {
-            break;
-        }
-
-        ZobristVal hashedBoard = hashTable[posKey % numHashes];
-        if (hashedBoard.posKey == posKey) {
-            if (hashedBoard.move == NULL_MOVE) {
+                }
                 break;
             }
-            movesToUndo.push(hashedBoard.move);
-            pv += " " + moveToString(hashedBoard.move);
-            BITBOARD::make_move(b, hashedBoard.move);
         }
-        else {
-            break;
+
+        return ret;
+    }
+
+
+
+    bool probeTTQsearch(uint64_t key, TTEntry &hashedBoard, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply) {
+        bool ret = false;
+
+        uint32_t lowerKey = key & 0xFFFFFFFFULL;
+        uint32_t upperKey = key >> 32;
+        uint64_t posKey = lowerKey & tt.mask;
+        TTBucket& bucket = tt.hashTable[posKey];
+
+        for (TTEntry& entry : bucket.entries) {
+            if (entry.posKey == upperKey) {
+                hashedBoard = entry;
+                ret = true;
+                ttMove = hashedBoard.move;
+                hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
+                uint8_t ttFlag = getFlagsFromTT(hashedBoard.flagsAndAge);
+                alpha = ttFlag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
+                beta = ttFlag == UPPER_BOUND? hashedBoard.score : beta; // upper bound
+
+                if (ttFlag == EXACT || alpha >= beta) { // exact or alpha >= beta
+                    ttRet = true;
+                }
+                break;
+            }
         }
+
+        return ret;
     }
 
-    while (!movesToUndo.empty()) {
-        BITBOARD::undo_move(b, movesToUndo.top());
-        movesToUndo.pop();
+
+
+    // Return the principal variation as a string.
+    // It returns the string as a list of moves, (ex. 'e2e4 e7e5 d2d4 e5d4')
+    std::string getPv(Board &b) {
+
+        std::string pv = "";
+        std::vector<uint64_t> loopChecker;
+        std::stack<MOVE> movesToUndo;
+
+        while (true) {
+            uint64_t posKey = b.state.posKey;
+            loopChecker.push_back(posKey);
+
+            if (std::count(loopChecker.begin(), loopChecker.end(), loopChecker.back()) >= 3) {
+                break;
+            }
+
+            uint32_t lowerKey = posKey & 0xFFFFFFFFULL;
+            uint32_t upperKey = posKey >> 32;
+            TTBucket& bucket = tt.hashTable[lowerKey & tt.mask];
+
+            bool foundMove = false;
+            for (TTEntry& entry : bucket.entries) {
+                if (entry.posKey == upperKey) {
+                    if (entry.move == NULL_MOVE) {
+                        break;
+                    }
+                    movesToUndo.push(entry.move);
+                    pv += " " + moveToString(entry.move);
+                    BITBOARD::make_move(b, entry.move);
+                    foundMove = true;
+                }
+            }
+
+            if (!foundMove) {
+                break;
+            }
+        }
+
+        while (!movesToUndo.empty()) {
+            BITBOARD::undo_move(b, movesToUndo.top());
+            movesToUndo.pop();
+        }
+
+        return pv;
     }
 
-    return pv;
 }
 
 
-// Print hash table statistics
-int TranspositionTable::getHashFull(uint64_t writes) {
-    return (1000 * writes) / numHashes;
-}
-
-
-
-// Clear hash table
-void TranspositionTable::clearHashTable() {
-    for (uint64_t i = 0; i < numHashes; i++) {
-        hashTable[i] = ZobristVal();
-    }
-}

@@ -3,7 +3,6 @@
 #include <vector>
 #include <stack>
 #include "board/bitboard.h"
-#include "board/move.h"
 #include "defs.h"
 #include "thread_search.h"
 
@@ -14,54 +13,51 @@
 #define UPPER_BOUND 2
 
 // This is what is stored in the transposition table
-struct ZobristVal {
-    uint64_t posKey;
+struct TTEntry {
+    uint32_t posKey;
     MOVE move;
+    MOVE move2;
+    MOVE move3;
     int16_t score;
     int16_t staticScore;
     uint8_t flagsAndAge;
     int8_t depth;
 
-    ZobristVal() : posKey(0), move(NO_MOVE), score(0), staticScore(0), flagsAndAge(0), depth(0) {}
+    TTEntry() : posKey(0), move(NO_MOVE), move2(NO_MOVE), move3(NO_MOVE), score(0), staticScore(0), flagsAndAge(0), depth(0) {}
 
-    ZobristVal(MOVE move, int16_t score, int16_t staticScore, int8_t depth, uint8_t flagsAndAge, uint64_t posKey) :
-        posKey(posKey), move(move), score(score), staticScore(staticScore), flagsAndAge(flagsAndAge), depth(depth) {}
+    TTEntry(uint64_t posKey, MOVE move, int16_t score, int16_t staticScore, uint8_t flagsAndAge, int8_t depth) :
+        posKey(posKey), move(move), move2(NO_MOVE), move3(NO_MOVE), score(score), staticScore(staticScore), flagsAndAge(flagsAndAge), depth(depth) {}
 };
 
-
-struct alignas(64) Bucket {
-    ZobristVal entries[4] = {};
-
-    Bucket() {
-        for (int i = 0; i < 4; i++) {
-            entries[i] = ZobristVal();
-        }
-    }
+struct alignas(64) TTBucket {
+    TTEntry entries[4];
 };
 
-static_assert(sizeof(Bucket) == 64, "Bucket size is not 64 bytes");
+struct TranspositionTable {
+    TTBucket *hashTable;
+    uint64_t mask;
+    uint64_t numHashes;
+    uint64_t ttWrites;
+    uint8_t age;
+};
 
-class TranspositionTable{
+static_assert(sizeof(TTBucket) == 64, "TTBucket size is not 64 bytes");
 
-public:
 
-    ~TranspositionTable();
-    TranspositionTable();
-    TranspositionTable(int hashSize);
+namespace TT {
 
+    extern TranspositionTable tt;
+
+    void InitTT(uint64_t hashSize);
+    void DestroyTT();
     void setSize(uint64_t hashSize);
-
     void saveTT(ThreadSearch *th, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply);
-    bool probeTT(uint64_t key, ZobristVal &hashedBoard, int depth, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply);
-    bool probeTTQsearch(uint64_t key, ZobristVal &hashedBoard, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply);
+    bool probeTT(uint64_t key, TTEntry &hashedBoard, int depth, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply);
+    bool probeTTQsearch(uint64_t key, TTEntry &hashedBoard, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply);
     int getHashFull(uint64_t writes);
     void clearHashTable();
     void incrementTTAge();
     std::string getPv(Board &b);
-
-
-
-private:
 
     inline uint8_t getAgeFromTT(uint8_t flagsAndAge) {
         return flagsAndAge >> 2;
@@ -74,10 +70,8 @@ private:
     inline uint8_t setFlagsAndAgeInTT(uint8_t age, uint8_t flag) {
         return (age << 2) | flag;
     }
-    
-    ZobristVal *hashTable;
-    uint64_t numHashes;
-    uint64_t ttWrites;
-    uint8_t age;
 
-};
+    inline void prefetchTT(uint64_t key) {
+        __builtin_prefetch(&tt.hashTable[key & tt.mask], 0, 3);
+    }
+}
