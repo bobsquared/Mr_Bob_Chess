@@ -14,7 +14,7 @@
 
 
 
-Search::Search(Eval *eval) : eval(eval) {
+Search::Search() {
     THREAD::setNThreads(1);
     multiPv = 1;                   /**< Number of pvs to search, default is 1.*/
     stopable = false;              /**< Used to ensure that we search atleast a depth one 1.*/
@@ -68,7 +68,6 @@ void Search::InitLateMoveArray() {
 void Search::cleanUpSearch() {
     TT::DestroyTT();
     delete movePick;
-    delete eval;
 }
 
 
@@ -177,7 +176,7 @@ int Search::qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, in
 
     bool inCheck = BITBOARD::InCheck(b.state);
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
-    int staticEval = hashed? hashedBoard.staticScore : eval->evaluate(b);
+    int staticEval = hashed? hashedBoard.staticScore : EVAL::evaluate(b);
 
     if (!inCheck) {
         stand_pat = staticEval;
@@ -332,13 +331,13 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     }
 
     bool isCheck = BITBOARD::InCheck(b.state);
-    int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b));
+    int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : EVAL::evaluate(b));
     bool improving = !isCheck && (ply >= 2? staticEval > td.searchStack[ply - 2].eval : false);
     bool ttFailLow = (ttRet && (hashedBoard.flagsAndAge & 0b11) == UPPER_BOUND);
     int extLevel = td.searchStack[ply].extLevel;
     int extLevelMax = std::min(20, extLevel);
     int hashLevel = td.searchStack[ply].hashLevel;
-    int phase =  eval->getPhase(b);
+    int phase =  EVAL::getPhase(b);
 
     THREAD::removeKiller(td.historyData, ply + 1);
     td.searchStack[ply].eval = staticEval;
@@ -679,7 +678,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
     PrevMoveInfo prev = GetPreviousMoveInfo(b);
 
     // Initialize evaluation stack
-    int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b));
+    int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : EVAL::evaluate(b));
     td.searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
     int quietsSearched = 0;
     MoveList localMoveList = moveList;

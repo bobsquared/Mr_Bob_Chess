@@ -1,43 +1,28 @@
 #pragma once
-#include "defs.h"
-#include "board/magic_bitboards.h"
 #include "board/bitboard.h"
-#include "nnue/nncpp.h"
-#include "nnue/accumulator/accumulator.h"
 
 
+namespace EVAL {
+    const int PAWNPHASE = 0;
+    const int KNIGHTPHASE = 1;
+    const int BISHOPPHASE = 1;
+    const int ROOKPHASE = 2;
+    const int QUEENPHASE = 4;
+    const int TOTALPHASE = (PAWNPHASE * 16 + KNIGHTPHASE * 4 + BISHOPPHASE * 4 + ROOKPHASE * 4 + QUEENPHASE * 2);
 
-#define PAWNPHASE   0
-#define KNIGHTPHASE 1
-#define BISHOPPHASE 1
-#define ROOKPHASE   2
-#define QUEENPHASE  4
-#define TOTALPHASE (PAWNPHASE * 16 + KNIGHTPHASE * 4 + BISHOPPHASE * 4 + ROOKPHASE * 4 + QUEENPHASE * 2)
+    inline int getPhase(const Board &b) {
+        const BoardState &board = b.state;
+        int phase = TOTALPHASE;
+        phase -= (board.pieceCount[0] + board.pieceCount[1]) * PAWNPHASE;
+        phase -= (board.pieceCount[2] + board.pieceCount[3]) * KNIGHTPHASE;
+        phase -= (board.pieceCount[4] + board.pieceCount[5]) * BISHOPPHASE;
+        phase -= (board.pieceCount[6] + board.pieceCount[7]) * ROOKPHASE;
+        phase -= (board.pieceCount[8] + board.pieceCount[9]) * QUEENPHASE;
 
+        return (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
+    }
 
-#define S(mg, eg) ((int)((unsigned int)(mg) << 16) + (eg))
-#define MGVAL(s) ((int16_t)((uint16_t)((unsigned)((s) + 0x8000) >> 16)))
-#define EGVAL(s) ((int16_t)((uint16_t)((unsigned)((s)))))
-
-
-class Eval {
-
-public:
-
-    Eval(NNCPP &model);
+    void InitEval(std::string nnueFile);
     int evaluate(Board &board);
-    int scaleEndgame(Board &board, int eval);
-    int getPhase(Board &board);
+}
 
-private:
-    void InitLightSquares();
-    void InitDistanceArray();
-    
-
-    uint64_t lightSquares;
-    int manhattanArray[64][64];
-    int chebyshevArray[64][64];
-
-    NNCPP &model;
-
-};

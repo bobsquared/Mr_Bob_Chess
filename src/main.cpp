@@ -51,14 +51,10 @@ int main(int argc, char* argv[]) {
     InitColumnsMask();
     InitRowsMask();
     MAGIC_BITBOARDS::InitMagicBitboards();
-
-    NNCPP net = NNCPP();
-    net.LoadNetwork("nets/bobbrain_34_0.006588.nnue");
-
-    Eval *eval = new Eval(net);                        /**< The evaluator to score the positions*/
+    EVAL::InitEval("nets/bobbrain_34_0.006588.nnue");
     TT::InitTT(HASH_SIZE);                       /**< The transposition table for storing previously searched positions*/
 
-    Search s = Search(eval);
+    Search s = Search();
 
     Board pos;
     BITBOARD::InitBoard();

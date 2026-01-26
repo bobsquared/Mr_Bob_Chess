@@ -40,7 +40,7 @@ public:
         std::string pv;
     };
 
-    Search(Eval *eval);
+    Search();
 
     void InitLateMoveArray();
     void willPrintInfo(bool b);
@@ -109,7 +109,6 @@ private:
     int lmrReduction[64][64];           /**< A 2D array of reduction values for LMR given depth and move count.*/
     TimeManager tm;                     /**< The time manager determines when to stop the search given time parameters.*/
 
-    Eval *eval;                        /**< The evaluator to score the positions*/
     MovePick *movePick;
     
     const int seePruningMargin[2][9] = {{0, -100, -175, -325, -550, -825, -1200, -1675, -2250}, 
