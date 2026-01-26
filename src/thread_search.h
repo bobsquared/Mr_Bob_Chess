@@ -46,9 +46,9 @@ namespace THREAD {
     void InitKillers();
     void ResetHistories();
     void InitCounterMoves();
-    void UpdateHistories(Board &b, PrevMoveInfo &prev, HistoryData &hd, MOVE *quietMoves, MOVE *noisyMoves, int quietCount, int noisyCount, int depth, MOVE ttMove, MOVE bestMove);
     int getNThreads();
     void setNThreads(int n);
+    void UpdateHistories(const Board &b, const PrevMoveInfo &prev, HistoryData &hd, const MOVE *quietMoves, const MOVE *noisyMoves, int quietCount, int noisyCount, int depth, MOVE ttMove, MOVE bestMove);
 
 
 
@@ -79,13 +79,13 @@ namespace THREAD {
 
 
 
-    inline int getHistory(HistoryData& hd, bool toMove, bool isQuiet, int from, int to) {
+    inline int getHistory(const HistoryData& hd, bool toMove, bool isQuiet, int from, int to) {
         return isQuiet? hd.quietHistory[toMove][from][to] : hd.captureHistory[toMove][from][to];
     }
 
 
 
-    inline int getCounterHistory(Board &b, PrevMoveInfo &prev, HistoryData& hd, int from, int to) {
+    inline int getCounterHistory(Board &b, const PrevMoveInfo &prev, const HistoryData& hd, int from, int to) {
         if (prev.prevMove == NULL_MOVE) {
             return 0;
         }
@@ -97,7 +97,7 @@ namespace THREAD {
 
 
 
-    inline MOVE getCounterMove(Board &b, PrevMoveInfo &prev, HistoryData& hd) {
+    inline MOVE getCounterMove(Board &b, const PrevMoveInfo &prev, const HistoryData& hd) {
         MOVE prevMove = prev.prevMove;
 
         if (prevMove == NULL_MOVE || prevMove == NO_MOVE) {
