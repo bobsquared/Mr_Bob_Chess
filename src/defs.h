@@ -6,6 +6,7 @@
 #include <bitset>
 #include <unordered_map>
 #include <cassert>
+#include <array>
 
 #ifdef _WIN32
 #include <intrin.h>
@@ -87,6 +88,42 @@ struct PrevMoveInfo {
 
 
 
+// Initialize the columns bitboard
+constexpr std::array<uint64_t, 64> InitColumnsMask() {
+    std::array<uint64_t, 64> m{};
+    for (int i = 0; i < 64; i++) {
+        m[i] = 1ULL << i;
+        m[i] |= m[i] << 8;
+        m[i] |= m[i] << 16;
+        m[i] |= m[i] << 32;
+
+        m[i] |= m[i] >> 8;
+        m[i] |= m[i] >> 16;
+        m[i] |= m[i] >> 32;
+    }
+    return m;
+}
+
+
+
+// Initialize the rows bitboard
+constexpr std::array<uint64_t, 64> InitRowsMask() {
+    std::array<uint64_t, 64> m{};
+    for (int i = 0; i < 64; i++) {
+        m[i] = 1ULL << (((i / 8) % 8) * 8);
+        m[i] |= m[i] << 1;
+        m[i] |= m[i] << 2;
+        m[i] |= m[i] << 4;
+    }
+    return m;
+}
+
+
+
+inline constexpr auto columnMask = InitColumnsMask();
+inline constexpr auto rowMask = InitRowsMask();
+
+
 // For Bitscanning
 static constexpr uint8_t MSB_TABLE[64] = {
     0, 47,  1, 56, 48, 27,  2, 60,
@@ -144,21 +181,33 @@ inline int bitScan(uint64_t bitboard) {
 
 
 
+// All pawn attacks
+// Useful for obtaining bitboard for multiple pawn attacks
+inline uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag) {
+    return colorFlag? ((bitboard >> 9) & ~columnMask[7]) | ((bitboard >> 7) & ~columnMask[0]) : ((bitboard << 9) & ~columnMask[0]) | ((bitboard << 7) & ~columnMask[7]);
+}
+
+
+
+// All knight attacks
+// Useful for obtaining all knight attacks
+inline uint64_t knightAttacks(uint64_t knights) {
+    uint64_t h1 = ((knights >> 1) & 0x7f7f7f7f7f7f7f7f) | ((knights << 1) & 0xfefefefefefefefe);
+    uint64_t h2 = ((knights >> 2) & 0x3f3f3f3f3f3f3f3f) | ((knights << 2) & 0xfcfcfcfcfcfcfcfc);
+    return (h1 << 16) | (h1 >> 16) | (h2 << 8) | (h2 >> 8);
+}
+
+
+
+inline bool isQuietMove(const MOVE move) {
+    return (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
+}
+
+
+
 // Algebra to number
 extern std::unordered_map<std::string, uint8_t> TO_NUM;
-
-extern uint64_t columnMask[64];
-extern uint64_t rowMask[64];
-
-extern void InitColumnsMask();
-extern void InitRowsMask();
-extern uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag);
-extern uint64_t knightAttacks(uint64_t knights);
 extern int count_population(uint64_t bitboard);
 extern int check_bit(uint64_t bitboard);
 extern void printBoard(const uint64_t board);
-extern bool isCaptureMove(const MOVE move);
-extern bool isCaptureOrPromotionMove(const MOVE move);
-extern bool isQuietMove(const MOVE move);
-
 extern std::string moveToString(MOVE move);

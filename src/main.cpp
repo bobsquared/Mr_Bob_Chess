@@ -48,8 +48,6 @@ void Bench(Board &b, Search &s) {
 
 int main(int argc, char* argv[]) {
 
-    InitColumnsMask();
-    InitRowsMask();
     MAGIC_BITBOARDS::InitMagicBitboards();
     EVAL::InitEval("nets/bobbrain_34_0.006588.nnue");
     TT::InitTT(HASH_SIZE);                       /**< The transposition table for storing previously searched positions*/

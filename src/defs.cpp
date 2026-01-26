@@ -1,8 +1,7 @@
 #include "defs.h"
 
 
-uint64_t columnMask[64];
-uint64_t rowMask[64];
+
 
 
 // Algebra to number
@@ -16,38 +15,6 @@ std::unordered_map<std::string, uint8_t> TO_NUM = {
     {"a7", 48},{"b7", 49},{"c7", 50},{"d7", 51},{"e7", 52},{"f7", 53},{"g7", 54},{"h7", 55},
     {"a8", 56},{"b8", 57},{"c8", 58},{"d8", 59},{"e8", 60},{"f8", 61},{"g8", 62},{"h8", 63}
 };
-
-
-
-// Initialize the columns bitboard
-void InitColumnsMask() {
-
-    for (int i = 0; i < 64; i++) {
-        columnMask[i] = 1ULL << i;
-        columnMask[i] |= columnMask[i] << 8;
-        columnMask[i] |= columnMask[i] << 16;
-        columnMask[i] |= columnMask[i] << 32;
-
-        columnMask[i] |= columnMask[i] >> 8;
-        columnMask[i] |= columnMask[i] >> 16;
-        columnMask[i] |= columnMask[i] >> 32;
-    }
-
-}
-
-
-
-// Initialize the rows bitboard
-void InitRowsMask() {
-
-    for (int i = 0; i < 64; i++) {
-        rowMask[i] = 1ULL << (((i / 8) % 8) * 8);
-        rowMask[i] |= rowMask[i] << 1;
-        rowMask[i] |= rowMask[i] << 2;
-        rowMask[i] |= rowMask[i] << 4;
-    }
-
-}
 
 
 
@@ -82,24 +49,6 @@ std::string moveToString(MOVE move) {
     }
 
     return algMove;
-}
-
-
-
-// All pawn attacks
-// Useful for obtaining bitboard for multiple pawn attacks
-uint64_t pawnAttacksAll(uint64_t bitboard, bool colorFlag) {
-    return colorFlag? ((bitboard >> 9) & ~columnMask[7]) | ((bitboard >> 7) & ~columnMask[0]) : ((bitboard << 9) & ~columnMask[0]) | ((bitboard << 7) & ~columnMask[7]);
-}
-
-
-
-// All knight attacks
-// Useful for obtaining all knight attacks
-uint64_t knightAttacks(uint64_t knights) {
-    uint64_t h1 = ((knights >> 1) & 0x7f7f7f7f7f7f7f7f) | ((knights << 1) & 0xfefefefefefefefe);
-    uint64_t h2 = ((knights >> 2) & 0x3f3f3f3f3f3f3f3f) | ((knights << 2) & 0xfcfcfcfcfcfcfcfc);
-    return (h1 << 16) | (h1 >> 16) | (h2 << 8) | (h2 >> 8);
 }
 
 
@@ -146,19 +95,4 @@ void printBoard(const uint64_t board) {
         std::cout << std::endl;
     }
 
-}
-
-
-bool isCaptureMove(const MOVE move) {
-    return move & CAPTURE_FLAG;
-}
-
-
-bool isCaptureOrPromotionMove(const MOVE move) {
-    return move & (CAPTURE_FLAG | PROMOTION_FLAG);
-}
-
-
-bool isQuietMove(const MOVE move) {
-    return (move & (CAPTURE_FLAG | PROMOTION_FLAG)) == 0;
 }
