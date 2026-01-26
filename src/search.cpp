@@ -14,26 +14,14 @@
 
 
 
-Search::Search(Eval *eval, ThreadSearch *thread) : eval(eval), thread(thread) {
-    nThreads = 1;                   /**< Number of threads to search, default is 1.*/
+Search::Search(Eval *eval) : eval(eval) {
+    THREAD::setNThreads(1);
     multiPv = 1;                   /**< Number of pvs to search, default is 1.*/
     stopable = false;              /**< Used to ensure that we search atleast a depth one 1.*/
     canPrintInfo = true;
 
     movePick = new MovePick;               /**< The move picker gives a score to each generated move*/
     InitLateMoveArray();
-}
-
-
-
-ThreadSearch* Search::getThreads() {
-    return thread;
-}
-
-
-
-int Search::getNThreads() {
-    return nThreads;
 }
 
 
@@ -81,16 +69,8 @@ void Search::cleanUpSearch() {
     TT::DestroyTT();
     delete movePick;
     delete eval;
-    delete [] thread;
 }
 
-
-
-void Search::setNumThreads(const int numThreads) {
-    nThreads = numThreads;
-    delete [] thread;
-    thread = new ThreadSearch[numThreads];
-}
 
 
 void Search::setMultiPVSearch(int pvs) {
@@ -163,13 +143,13 @@ PrevMoveInfo GetPreviousMoveInfo(Board &b) {
 * @param[in]      ply   The current ply/height that the search is at.
 * @return               The score of the best move in the position.
 */
-int Search::qsearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, int ply) {
+int Search::qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, int ply) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
     #endif
 
-    th->nodes++; // update nodes searched
+    td.nodes++; // update nodes searched
 
     // stop the search
     if (stopable && exit_thread_flag) {
@@ -178,7 +158,7 @@ int Search::qsearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, 
 
     // determine if it is a draw
     if (BITBOARD::isDraw(b.state, b.moveHistory, ply)) {
-        return 2 * (th->nodes & 1) - 1;
+        return 2 * (td.nodes & 1) - 1;
     }
 
     // Probe Transpostion Table:
@@ -252,7 +232,7 @@ int Search::qsearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, 
         // Search more captures
         numMoves++;
         BITBOARD::make_move(b, move);
-        int score = -qsearch(b, th, depth - 1, -beta, -alpha, ply + 1);
+        int score = -qsearch(b, td, depth - 1, -beta, -alpha, ply + 1);
         BITBOARD::undo_move(b, move);
 
         if (score > stand_pat) {
@@ -270,7 +250,7 @@ int Search::qsearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, 
 
     if (numMoves > 0) {
         int bound = prevAlpha >= stand_pat? UPPER_BOUND : (stand_pat >= beta? LOWER_BOUND : EXACT);
-        TT::saveTT(th, bestMove, stand_pat, staticEval, depth, bound, posKey, ply);
+        TT::saveTT(td, bestMove, stand_pat, staticEval, depth, bound, posKey, ply);
     }
 
     return stand_pat;
@@ -292,37 +272,37 @@ int Search::qsearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, 
 * @param[in]      ply         The current ply/height that the search is at.
 * @return                     The score of the best move in the position.
 */
-int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply) {
+int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, bool canNullMove, int ply) {
 
     #ifdef DEBUGHASH
     b.debugZobristHash();
     #endif
 
-    th->seldepth = std::max(ply, th->seldepth); // update seldepth
+    td.seldepth = std::max(ply, td.seldepth); // update seldepth
 
     // Check if there are any potential wins that don't require help mate.
     if (beta > 0 && BITBOARD::noPotentialWin(b.state)) {
         if (alpha >= 0) {
-            th->nodes++;
+            td.nodes++;
             return 0;
         }
     }
 
     // Dive into Quiesence search
     if (depth <= 0 || ply >= MAX_PLY - 1) {
-        return qsearch(b, th, depth - 1, alpha, beta, ply);
+        return qsearch(b, td, depth - 1, alpha, beta, ply);
     }
 
-    th->nodes++; // Increment number of nodes
+    td.nodes++; // Increment number of nodes
 
     // Stop the search
-    if (stopable && (exit_thread_flag || ((th->nodes & 1) && tm.outOfTime()))) {
+    if (stopable && (exit_thread_flag || ((td.nodes & 1) && tm.outOfTime()))) {
         return 0;
     }
 
     // Determine if the position is a textbook draw
     if (BITBOARD::isDraw(b.state, b.moveHistory, ply)) {
-        return 2 * (th->nodes & 1) - 1;
+        return 2 * (td.nodes & 1) - 1;
     }
 
     // Mate distance pruning
@@ -335,7 +315,7 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
 
     int prevAlpha = alpha;
     bool isPv = alpha == beta - 1? false : true;
-    MOVE singMove = th->searchStack[ply].singMove;
+    MOVE singMove = td.searchStack[ply].singMove;
     bool hasSingMove = singMove != NO_MOVE;
 
 
@@ -353,22 +333,22 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
 
     bool isCheck = BITBOARD::InCheck(b.state);
     int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b));
-    bool improving = !isCheck && (ply >= 2? staticEval > th->searchStack[ply - 2].eval : false);
+    bool improving = !isCheck && (ply >= 2? staticEval > td.searchStack[ply - 2].eval : false);
     bool ttFailLow = (ttRet && (hashedBoard.flagsAndAge & 0b11) == UPPER_BOUND);
-    int extLevel = th->searchStack[ply].extLevel;
+    int extLevel = td.searchStack[ply].extLevel;
     int extLevelMax = std::min(20, extLevel);
-    int hashLevel = th->searchStack[ply].hashLevel;
+    int hashLevel = td.searchStack[ply].hashLevel;
     int phase =  eval->getPhase(b);
 
-    th->removeKiller(ply + 1);
-    th->searchStack[ply].eval = staticEval;
-    th->searchStack[ply + 1].hashLevel = hashLevel + hashed;
+    THREAD::removeKiller(td.historyData, ply + 1);
+    td.searchStack[ply].eval = staticEval;
+    td.searchStack[ply + 1].hashLevel = hashLevel + hashed;
 
 
     if (!isPv && !isCheck && !hasSingMove) {
         // Razoring
         if (depth <= 5 && staticEval + razorVal * depth <= alpha) {
-            int score = qsearch(b, th, -1, alpha, beta, ply);
+            int score = qsearch(b, td, -1, alpha, beta, ply);
             if (score <= alpha) {
                 return score;
             }
@@ -387,21 +367,21 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
 
         // Null move pruning
         if (canNullMove && staticEval >= beta + 25 * (phase >= 200) && depth >= 2 + !hashed 
-                        && th->nullMoveTree && BITBOARD::nullMoveable(b.state) 
+                        && td.nullMoveTree && BITBOARD::nullMoveable(b.state) 
                         && (!hashed || hashedBoard.score >= beta)) {
             int R = 3 + depth / 5 + std::min((staticEval - beta) / 300, 4);
-            th->searchStack[ply + 1].extLevel = extLevel;
+            td.searchStack[ply + 1].extLevel = extLevel;
 
             BITBOARD::make_null_move(b);
-            int nullRet = -pvSearch(b, th, depth - R - 1, -beta, -beta + 1, false, ply + 1);
+            int nullRet = -pvSearch(b, td, depth - R - 1, -beta, -beta + 1, false, ply + 1);
             BITBOARD::undo_null_move(b);
 
             if (nullRet >= beta && std::abs(nullRet) < MATE_VALUE_MAX) {
 
                 if (depth >= 14 && (!hashed || (hashedBoard.flagsAndAge & 0b11) == UPPER_BOUND)) {
-                    th->nullMoveTree = false;
-                    nullRet = pvSearch(b, th, depth - R - 1, beta - 1, beta, false, ply);
-                    th->nullMoveTree = true;
+                    td.nullMoveTree = false;
+                    nullRet = pvSearch(b, td, depth - R - 1, beta - 1, beta, false, ply);
+                    td.nullMoveTree = true;
                 }
 
                 if (nullRet >= beta) {
@@ -427,15 +407,15 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
                 }
 
                 BITBOARD::make_move(b, move);
-                int score = -qsearch(b, th, -1, -probBeta, -probBeta + 1, ply);
+                int score = -qsearch(b, td, -1, -probBeta, -probBeta + 1, ply);
 
                 if (score >= probBeta) {
-                    score = -pvSearch(b, th, depth - 4, -probBeta, -probBeta + 1, true, ply + 1);
+                    score = -pvSearch(b, td, depth - 4, -probBeta, -probBeta + 1, true, ply + 1);
                 }
                 BITBOARD::undo_move(b, move);
 
                 if (score >= probBeta) {
-                    TT::saveTT(th, move, score, staticEval, depth - 3, LOWER_BOUND, posKey, ply);
+                    TT::saveTT(td, move, score, staticEval, depth - 3, LOWER_BOUND, posKey, ply);
                     return score;
                 }
             }
@@ -465,13 +445,13 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
     PrevMoveInfo prev = GetPreviousMoveInfo(b);
 
     MOVE_GEN::generate_all_moves(moveList, b.state); // Generate moves
-    movePick->scoreMoves(moveList, b, prev, th, ply, ttMove, hashedBoard.move2, hashedBoard.move3);
+    movePick->scoreMoves(moveList, b, prev, td, ply, ttMove, hashedBoard.move2, hashedBoard.move3);
     while (moveList.get_next_move(move)) {
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
-        int hist = th->getHistory(b.state.toMove, isQuiet, moveFrom, moveTo);
-        int cmh = isQuiet * th->getCounterHistory(b, prev, moveFrom, moveTo);
+        int hist = THREAD::getHistory(td.historyData,b.state.toMove, isQuiet, moveFrom, moveTo);
+        int cmh = isQuiet * THREAD::getCounterHistory(b, prev, td.historyData, moveFrom, moveTo);
         int seeScore = 0;
 
         if (singMove == move) {
@@ -529,9 +509,9 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
             && hashedBoard.depth >= depth - 3 && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
             int singVal = hashedBoard.score - (1 + isPv) * depth;
 
-            th->searchStack[ply].singMove = move;
-            score = pvSearch(b, th, depth / 2 - 1, singVal - 1, singVal, false, ply);
-            th->searchStack[ply].singMove = NO_MOVE;
+            td.searchStack[ply].singMove = move;
+            score = pvSearch(b, td, depth / 2 - 1, singVal - 1, singVal, false, ply);
+            td.searchStack[ply].singMove = NO_MOVE;
 
             if (score < singVal) {
                 isSingular = true;
@@ -559,19 +539,19 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
         }
 
         int newDepth = depth + extension; // Extend
-        th->searchStack[ply + 1].extLevel = extLevel + extension;
+        td.searchStack[ply + 1].extLevel = extLevel + extension;
 
         BITBOARD::make_move(b, move); // Make move
 
         // First move search at full depth and full window
         if (numMoves == 0) {
-            score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
+            score = -pvSearch(b, td, newDepth - 1, -beta, -alpha, true, ply + 1);
         }
         // Late move reductions
         else if (depth >= 3 && numMoves > isPv && (!isPv || (hashed && TTFlag != EXACT) || isQuiet)) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)] * (100 + extLevel) / 100; // Base reduction
 
-            lmr -= th->isKiller(ply, move); // Don't reduce as much for killer moves
+            lmr -= THREAD::isKiller(td.historyData, ply, move); // Don't reduce as much for killer moves
             lmr -= !isQuiet && seeScore > 0;
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
@@ -587,21 +567,21 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
             
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
-            score = -pvSearch(b, th, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
+            score = -pvSearch(b, td, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
             if (score > alpha) {
                 if (lmr > 0) {
-                    score = -pvSearch(b, th, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
+                    score = -pvSearch(b, td, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
                 }
                 if (score > alpha && score < beta) {
-                    score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
+                    score = -pvSearch(b, td, newDepth - 1, -beta, -alpha, true, ply + 1);
                 }
             }
         }
         // Null window search
         else {
-            score = -pvSearch(b, th, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
+            score = -pvSearch(b, td, newDepth - 1, -alpha - 1, -alpha, true, ply + 1);
             if (score > alpha && score < beta) {
-                score = -pvSearch(b, th, newDepth - 1, -beta, -alpha, true, ply + 1);
+                score = -pvSearch(b, td, newDepth - 1, -beta, -alpha, true, ply + 1);
             }
         }
 
@@ -643,9 +623,9 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
     // Update Histories
     if (alpha >= beta) {
         if (isQuietMove(bestMove)) {
-            th->insertKiller(ply, bestMove);
+            THREAD::insertKiller(td.historyData,ply, bestMove);
         }
-        th->UpdateHistories(b, prev, quiets, noisys, quietsSearched, noisysSearched, depth + (isSingular || isPv), ttMove, bestMove);
+        THREAD::UpdateHistories(b, prev, td.historyData, quiets, noisys, quietsSearched, noisysSearched, depth + (isSingular || isPv), ttMove, bestMove);
     }
 
     // Update Transposition tables
@@ -653,7 +633,7 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
     assert (bestMove != 0);
     if (!hasSingMove) {
         int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
-        TT::saveTT(th, bestMove, ret, staticEval, depth, bound, posKey, ply);
+        TT::saveTT(td, bestMove, ret, staticEval, depth, bound, posKey, ply);
     }
     
 
@@ -679,9 +659,9 @@ int Search::pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta,
 * @param[in]      id       The ID of the thread that calls it.
 * @return                  The info of the best move in the position.
 */
-Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth, const MoveList &moveList, int alpha, int beta, bool analysis, int id) {
+Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, const MoveList &moveList, int alpha, int beta, bool analysis) {
 
-    th->nodes++;
+    td.nodes++;
     MOVE move;
     MOVE bestMove = NULL_MOVE;
     int numMoves = 0;
@@ -700,7 +680,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth,
 
     // Initialize evaluation stack
     int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : eval->evaluate(b));
-    th->searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
+    td.searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
     int quietsSearched = 0;
     MoveList localMoveList = moveList;
 
@@ -711,8 +691,8 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth,
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
-        int hist = th->getHistory(b.state.toMove, isQuiet, moveFrom, moveTo);
-        int cmh = isQuiet? th->getCounterHistory(b, prev, moveFrom, moveTo) : 0;
+        int hist = THREAD::getHistory(td.historyData, b.state.toMove, isQuiet, moveFrom, moveTo);
+        int cmh = isQuiet? THREAD::getCounterHistory(b, prev, td.historyData, moveFrom, moveTo) : 0;
 
         // Check for legality
         if (!BITBOARD::isLegal(b, move)) {
@@ -720,7 +700,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth,
         }
 
         // UCI information
-        if (totalTime > 3000 && canPrintInfo && id == 0 && multiPv == 1) {
+        if (totalTime > 3000 && canPrintInfo && td.id == 0 && multiPv == 1) {
             std::cout << "info depth " << depth << " currmove " << TO_ALG[get_move_from(move)] + TO_ALG[get_move_to(move)] << " currmovenumber "<< numMoves + 1 << std::endl;
         }
 
@@ -728,7 +708,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth,
 
         // First move search at full depth and full window
         if (numMoves == 0) {
-            tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
+            tempRet = -pvSearch(b, td, depth - 1, -beta, -alpha, true, ply + 1);
         }
         // Late move reductions
         else if (depth >= 3 && numMoves > 1 && ((hashed && (hashedBoard.flagsAndAge & 0b11) != EXACT) || isQuiet)) {
@@ -742,21 +722,21 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth,
             }
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
-            tempRet = -pvSearch(b, th, depth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
+            tempRet = -pvSearch(b, td, depth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
             if (tempRet > alpha) {
                 if (lmr > 0) {
-                    tempRet = -pvSearch(b, th, depth - 1, -alpha - 1, -alpha, true, ply + 1);
+                    tempRet = -pvSearch(b, td, depth - 1, -alpha - 1, -alpha, true, ply + 1);
                 }
                 if (tempRet > alpha && tempRet < beta) {
-                    tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
+                    tempRet = -pvSearch(b, td, depth - 1, -beta, -alpha, true, ply + 1);
                 }
             }
         }
         // Null window search
         else {
-            tempRet = -pvSearch(b, th, depth - 1, -alpha - 1, -alpha, true, ply + 1);
+            tempRet = -pvSearch(b, td, depth - 1, -alpha - 1, -alpha, true, ply + 1);
             if (tempRet > alpha && tempRet < beta) {
-                tempRet = -pvSearch(b, th, depth - 1, -beta, -alpha, true, ply + 1);
+                tempRet = -pvSearch(b, td, depth - 1, -beta, -alpha, true, ply + 1);
             }
         }
 
@@ -791,14 +771,14 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth,
     }
 
     // Stop the search
-    if ((id == 0 && depth == 2 && alpha < beta && numMoves == 1 && !analysis)) {
+    if ((td.id == 0 && depth == 2 && alpha < beta && numMoves == 1 && !analysis)) {
         exit_thread_flag = true;
     }
 
     // Update transposition table
     if (!exit_thread_flag && !tm.outOfTime()) {
         assert (bestMove != 0);
-        TT::saveTT(th, bestMove, ret, staticEval, depth, EXACT, posKey, ply);
+        TT::saveTT(td, bestMove, ret, staticEval, depth, EXACT, posKey, ply);
     }
 
     return BestMoveInfo(bestMove, ret);
@@ -814,8 +794,8 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadSearch *th, int depth,
 */
 int Search::getSeldepth() {
     int ret = 0;
-    for (int id = 0; id < nThreads; id++) {
-        ret = std::max(ret, thread[id].seldepth);
+    for (int id = 0; id < THREAD::getNThreads(); id++) {
+        ret = std::max(ret, THREAD::threadData[id].seldepth);
     }
     return ret;
 }
@@ -829,8 +809,8 @@ int Search::getSeldepth() {
 */
 uint64_t Search::getTotalNodesSearched() {
     uint64_t ret = 0;
-    for (int id = 0; id < nThreads; id++) {
-        ret += thread[id].nodes;
+    for (int id = 0; id < THREAD::getNThreads(); id++) {
+        ret += THREAD::threadData[id].nodes;
     }
     return ret;
 }
@@ -844,8 +824,8 @@ uint64_t Search::getTotalNodesSearched() {
 */
 uint64_t Search::getHashFullTotal() {
     uint64_t writes = 0;
-    for (int id = 0; id < nThreads; id++) {
-        writes += thread[id].ttWrites;
+    for (int id = 0; id < THREAD::getNThreads(); id++) {
+        writes += THREAD::threadData[id].ttWrites;
     }
     return TT::getHashFull(writes);
 }
@@ -957,7 +937,7 @@ void Search::printSearchInfo(SearchInfo &printInfo, std::string &pstring, MOVE m
 * @param[in] analysis True if we are in analysis mode.
 * @param[in] b        The board representation.
 */
-Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool analysis, Board& b) {
+Search::SearchInfo Search::search(int id, ThreadData &td, int depth, bool analysis, Board& b) {
 
     MOVE tempBestMove = NO_MOVE;
     MOVE bestMove = NO_MOVE;
@@ -973,7 +953,7 @@ Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool anal
 
     MoveList moveListOriginal;
     MOVE_GEN::generate_all_moves(moveListOriginal, b.state);
-    movePick->scoreMoves(moveListOriginal, b, prev, th, 0, NO_MOVE, NO_MOVE, NO_MOVE);
+    movePick->scoreMoves(moveListOriginal, b, prev, td, 0, NO_MOVE, NO_MOVE, NO_MOVE);
 
     if (id == 0) {
         tm.setTimer(moveListOriginal.count);
@@ -997,8 +977,8 @@ Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool anal
         for (int pv = 1; pv < multiPv + 1; pv++) {
             while (true) {
                 d = std::min(i, std::max(d, 1));
-                th->seldepth = 1;
-                BestMoveInfo bm = pvSearchRoot(b, th, d, moveList, alpha, beta, analysis, id);
+                td.seldepth = 1;
+                BestMoveInfo bm = pvSearchRoot(b, td, d, moveList, alpha, beta, analysis);
                 moveList.set_score_move(bm.move, 1400000 + (i * 100) + aspNum);
                 searchedEval = bm.eval;
 
@@ -1092,27 +1072,13 @@ Search::SearchInfo Search::search(int id, ThreadSearch *th, int depth, bool anal
 
     }
 
-    th->bestMove = bestMove;
+    td.bestMove = bestMove;
 
     if (id == 0) {
         exit_thread_flag = true;
     }
 
     return printInfo;
-}
-
-
-
-/**
-* Clears all the data for all threads
-*/
-void Search::clearThreadData() {
-    for (int id = 0; id < nThreads; id++) {
-        thread[id].nodes = 0;
-        thread[id].seldepth = 0;
-        thread[id].nullMoveTree = true;
-        thread[id].bestMove = NO_MOVE;
-    }
 }
 
 
@@ -1172,22 +1138,22 @@ Search::SearchInfo Search::beginSearch(Board &b, int depth, int wtime, int btime
 
     tm = TimeManager(b.state.toMove, wtime, btime, winc, binc, movesToGo);
     TT::incrementTTAge();
-    clearThreadData();
+    THREAD::ClearData();
 
     std::deque<std::thread> threads;
-    std::vector<Board> boards(nThreads - 1);
-    for (int id = 1; id < nThreads; id++) {
+    std::vector<Board> boards(THREAD::getNThreads() - 1);
+    for (int id = 1; id < THREAD::getNThreads(); id++) {
         BITBOARD::CopyAllBoard(b, boards[id - 1]);
-        threads.emplace_back(&Search::search, this, id, &thread[id], depth, analysis, std::ref(boards[id - 1]));
+        threads.emplace_back(&Search::search, this, id, std::ref(THREAD::threadData[id]), depth, analysis, std::ref(boards[id - 1]));
     }
 
-    Search::SearchInfo ret = search(0, &thread[0], depth, analysis, b);
+    Search::SearchInfo ret = search(0, std::ref(THREAD::threadData[0]), depth, analysis, b);
 
     for (auto &t : threads) {
         t.join();
     }
 
-    MOVE bestMove = thread[0].bestMove;
+    MOVE bestMove = THREAD::threadData[0].bestMove;
     assert(bestMove != NULL_MOVE);
     if (canPrintInfo) {
         std::cout << "bestmove " << moveToString(bestMove) << std::endl;

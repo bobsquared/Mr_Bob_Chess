@@ -45,7 +45,7 @@ void MovePick::InitMvvLva() {
 * @param[in]      ply      The current ply/height that the search is at.
 * @param[in]      pvMove   The principal variation move found in the transposition table.
 */
-void MovePick::scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, ThreadSearch *th, int ply, MOVE pvMove, MOVE pvMove2, MOVE pvMove3) {
+void MovePick::scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, ThreadData &td, int ply, MOVE pvMove, MOVE pvMove2, MOVE pvMove3) {
 
     MOVE move;
     int from;
@@ -78,7 +78,7 @@ void MovePick::scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, Thre
             else {
                 int see = BITBOARD::seeCapture(b.state, move);
                 int score = (see > 0? 1000000 : (see == 0? 950000 : -1500));
-                moveList.set_score_index(i, score + mvvlva[from][to] + th->getHistory(b.state.toMove, false, moveFrom, moveTo) / 256);
+                moveList.set_score_index(i, score + mvvlva[from][to] + THREAD::getHistory(td.historyData, b.state.toMove, false, moveFrom, moveTo) / 256);
             }
 
         }
@@ -93,18 +93,18 @@ void MovePick::scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, Thre
                 moveList.set_score_index(i, 0);
             }
         }
-        else if (th->killers[ply][0] == move) {
+        else if (td.historyData.killers[ply][0] == move) {
             moveList.set_score_index(i, 900000);
         }
-        else if (th->killers[ply][1] == move) {
+        else if (td.historyData.killers[ply][1] == move) {
             moveList.set_score_index(i, 800000);
         }
-        else if (th->getCounterMove(b, prev) == move) {
+        else if (THREAD::getCounterMove(b, prev, td.historyData) == move) {
             moveList.set_score_index(i, 700000);
         }
         else {
-            int cmh = isValidPrevMove * th->getCounterHistory(b, prev, moveFrom, moveTo);
-            moveList.set_score_index(i, th->getHistory(b.state.toMove, true, moveFrom, moveTo) + cmh);
+            int cmh = isValidPrevMove * THREAD::getCounterHistory(b, prev, td.historyData,  moveFrom, moveTo);
+            moveList.set_score_index(i, THREAD::getHistory(td.historyData, b.state.toMove, true, moveFrom, moveTo) + cmh);
         }
     }
 

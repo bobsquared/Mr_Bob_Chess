@@ -7,7 +7,6 @@
 #include "layers/relu.h"
 #include "layers/layer.h"
 #include "layers/sigmoid.h"
-#include "optimizers/adamw.h"
 #include "layers/concatenate.h"
 
 // Example of a simple neural network class in C++ using the defined layers and optimizers
@@ -25,9 +24,6 @@ private:
 
     CRelu<1536> relu = CRelu<1536>(false);
     Layer::Linear<int8_t, 1536, 1> l2[9];
-    AdamW* adam = nullptr;
-
-    bool training;
 
     static constexpr int nPawnMapping[17] = {
         0, 0, 0, 0,  // 0-3
@@ -44,22 +40,9 @@ private:
 public:
 
     NNCPP() {
-        training = true;
         for (int i = 0; i < 9; i++) {
             l2[i] = Layer::Linear<int8_t, 1536, 1>(false, scaleA, scaleS, Layer::INIT_XAVIAR, scaleO);
         }
-    }
-
-    void eval() {
-        training = false;
-    }
-
-    void train() {
-        training = true;
-    }
-
-    const bool isTraining() {
-        return training;
     }
 
     inline const auto& getL1White() const {

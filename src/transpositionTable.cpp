@@ -64,7 +64,7 @@ namespace TT {
 
 
 
-    void saveTT(ThreadSearch *th, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply) {
+    void saveTT(ThreadData &td, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply) {
         score += score > MATE_VALUE_MAX? ply : (score < -MATE_VALUE_MAX? -ply : 0);
         uint32_t lowerKey = key & 0xFFFFFFFFULL;
         uint32_t upperKey = key >> 32;
@@ -73,7 +73,6 @@ namespace TT {
         TTBucket& bucket = tt.hashTable[posKey];
 
         for (TTEntry& entry : bucket.entries) {
-            uint8_t ttAge = getAgeFromTT(entry.flagsAndAge);
             uint8_t ttFlag = getFlagsFromTT(entry.flagsAndAge);
 
             if (entry.posKey == upperKey) {
@@ -100,7 +99,7 @@ namespace TT {
 
         for (TTEntry& entry : bucket.entries) {
             if (entry.posKey == 0) {
-                th->ttWrites++;
+                td.ttWrites++;
                 entry = TTEntry(
                     upperKey, move,
                     static_cast<int16_t>(score),

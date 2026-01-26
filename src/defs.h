@@ -71,15 +71,6 @@ typedef uint16_t MOVE;
 
 
 
-// Information for search
-struct SearchStack {
-    int eval;
-    int extLevel;
-    int hashLevel;
-    MOVE singMove;
-
-    SearchStack() : eval(0), extLevel(0), hashLevel(0), singMove(NO_MOVE) {};
-};
 
 
 

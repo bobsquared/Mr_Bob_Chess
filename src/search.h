@@ -40,13 +40,12 @@ public:
         std::string pv;
     };
 
-    Search(Eval *eval, ThreadSearch *thread);
+    Search(Eval *eval);
 
     void InitLateMoveArray();
     void willPrintInfo(bool b);
     
     // void setNNUE(const std::string file);
-    void setNumThreads(const int numThreads);
     void setRFPsearch(const int value);
     void setRazorsearch(const int value);
     void setProbcutsearch(const int value);
@@ -56,7 +55,6 @@ public:
     void setTTSize(int hashSize);
     void setMultiPVSearch(int pvs);
 
-    ThreadSearch* getThreads();
     uint64_t getTotalNodesSearched();
     int getNThreads();
     int getTotalTime();
@@ -98,15 +96,14 @@ private:
     static bool isMateScore(int eval);
     static int getSearchedScore(int eval);
     
-    SearchInfo search(int id, ThreadSearch *th, int depth, bool analysis, Board& b);
-    BestMoveInfo pvSearchRoot(Board &b, ThreadSearch *th, int depth, const MoveList &moveList, int alpha, int beta, bool analysis, int id);
-    int pvSearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, bool canNullMove, int ply);
-    int qsearch(Board &b, ThreadSearch *th, int depth, int alpha, int beta, int ply);
+    SearchInfo search(int id, ThreadData &td, int depth, bool analysis, Board& b);
+    BestMoveInfo pvSearchRoot(Board &b, ThreadData &td, int depth, const MoveList &moveList, int alpha, int beta, bool analysis);
+    int pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, bool canNullMove, int ply);
+    int qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, int ply);
 
     std::atomic<bool> exit_thread_flag;
     int totalTime;
     bool canPrintInfo;
-    int nThreads;
     int multiPv;                   /**< Number of pvs to search, default is 1.*/
     bool stopable;              /**< Used to ensure that we search atleast a depth one 1.*/
     int lmrReduction[64][64];           /**< A 2D array of reduction values for LMR given depth and move count.*/
@@ -114,7 +111,6 @@ private:
 
     Eval *eval;                        /**< The evaluator to score the positions*/
     MovePick *movePick;
-    ThreadSearch *thread;
     
     const int seePruningMargin[2][9] = {{0, -100, -175, -325, -550, -825, -1200, -1675, -2250}, 
                                         {0, -125, -200, -275, -350, -425, -500, -575, -650}}; /**< Margins for SEE pruning in pvSearch*/

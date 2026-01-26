@@ -51,7 +51,7 @@ namespace TT {
     void InitTT(uint64_t hashSize);
     void DestroyTT();
     void setSize(uint64_t hashSize);
-    void saveTT(ThreadSearch *th, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply);
+    void saveTT(ThreadData& td, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply);
     bool probeTT(uint64_t key, TTEntry &hashedBoard, int depth, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply);
     bool probeTTQsearch(uint64_t key, TTEntry &hashedBoard, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply);
     int getHashFull(uint64_t writes);

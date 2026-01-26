@@ -54,13 +54,11 @@ int main(int argc, char* argv[]) {
 
     NNCPP net = NNCPP();
     net.LoadNetwork("nets/bobbrain_34_0.006588.nnue");
-    net.eval();
 
     Eval *eval = new Eval(net);                        /**< The evaluator to score the positions*/
     TT::InitTT(HASH_SIZE);                       /**< The transposition table for storing previously searched positions*/
-    ThreadSearch *thread = new ThreadSearch[1];
 
-    Search s = Search(eval, thread);
+    Search s = Search(eval);
 
     Board pos;
     BITBOARD::InitBoard();
@@ -75,7 +73,7 @@ int main(int argc, char* argv[]) {
     CommandInterface* c = nullptr;
     
     options.addOption([&](int n){s.setTTSize(n);}, "Hash", 256, 1, 131072);
-    options.addOption([&](int n){s.setNumThreads(n);}, "Threads", 1, 1, 256);
+    options.addOption([&](int n){THREAD::setNThreads(n);}, "Threads", 1, 1, 256);
     options.addOption([&](int n){s.setMultiPVSearch(n);}, "MultiPV", 1, 1, 256);
 
     options.addOption([&](int n){s.setRFPsearch(n);}, "rfp", 64, 1, 500);
