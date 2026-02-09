@@ -52,7 +52,6 @@ public:
     void setFutilitysearch(const int value);
     void setHistoryLMRsearch(const int value);
     void setHistoryLMRNoisysearch(const int value);
-    void setTTSize(int hashSize);
     void setMultiPVSearch(int pvs);
 
     uint64_t getTotalNodesSearched();
@@ -85,7 +84,6 @@ private:
         std::string pv;
     };
 
-    void clearThreadData();
     void printSearchInfo(SearchInfo &printInfo, std::string &pstring, MOVE move, int bound, int pv);
     void moveToStruct(SearchInfo &si, MOVE move);
 
@@ -108,8 +106,6 @@ private:
     bool stopable;              /**< Used to ensure that we search atleast a depth one 1.*/
     int lmrReduction[64][64];           /**< A 2D array of reduction values for LMR given depth and move count.*/
     TimeManager tm;                     /**< The time manager determines when to stop the search given time parameters.*/
-
-    MovePick *movePick;
     
     const int seePruningMargin[2][9] = {{0, -100, -175, -325, -550, -825, -1200, -1675, -2250}, 
                                         {0, -125, -200, -275, -350, -425, -500, -575, -650}}; /**< Margins for SEE pruning in pvSearch*/

@@ -331,4 +331,16 @@ namespace MOVE_GEN {
         generate_king_moves_noisy(moveList, b);
     }
 
+
+
+    // Generate all pseudo-legal captures
+    void generate_quiets(MoveList &moveList, BoardState &b) {
+        generate_pawn_moves_quiet(moveList, b);
+        generate_knight_moves_quiet(moveList, b);
+        generate_bishop_moves_quiet(moveList, b);
+        generate_rook_moves_quiet(moveList, b);
+        generate_queen_moves_quiet(moveList, b);
+        generate_king_moves_quiet(moveList, b);
+    }
+
 }

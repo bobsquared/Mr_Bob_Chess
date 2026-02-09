@@ -14,6 +14,7 @@
 #include "uci_commands.h"
 #include "uci.h"
 #include "nnue/nncpp.h"
+#include "transpositionTable.h"
 
 
 
@@ -66,7 +67,7 @@ int main(int argc, char* argv[]) {
 
     CommandInterface* c = nullptr;
     
-    options.addOption([&](int n){s.setTTSize(n);}, "Hash", 256, 1, 131072);
+    options.addOption([&](int n){TT::setSize(n);}, "Hash", 256, 1, 131072);
     options.addOption([&](int n){THREAD::setNThreads(n);}, "Threads", 1, 1, 256);
     options.addOption([&](int n){s.setMultiPVSearch(n);}, "MultiPV", 1, 1, 256);
 

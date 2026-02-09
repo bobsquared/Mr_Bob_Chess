@@ -148,96 +148,194 @@ namespace BITBOARD {
     // Determines if a move is pseudo legal
     bool isPseudoLegal(BoardState& bs, MOVE move) {
 
-        BITBOARD::PieceMoves& pm = BITBOARD::pieceMoves;
         int from = get_move_from(move);
         int to = get_move_to(move);
-        int pieceMoved = bs.pieceAt[from];
+        int piece = bs.pieceAt[from] >> 1;
+        uint64_t to64 = 1ULL << to;
+        uint64_t from64 = 1ULL << from;
+        uint64_t valid = to64 & ~bs.color[bs.toMove] & ~bs.pieces[10 + !bs.toMove];
+        int moveFlags = move & MOVE_FLAGS;
 
-        // who to move and is there piece
-        if (pieceMoved == -1 || pieceMoved % 2 != bs.toMove || move == NULL_MOVE || move == NO_MOVE) {
+        if (!valid || move == NO_MOVE || move == NULL_MOVE || bs.pieceAt[from] == -1 || (bs.pieceAt[from] % 2) != bs.toMove || from == to) {
             return false;
         }
 
-        // Enpassant
-        if ((MOVE_FLAGS & move) == ENPASSANT_FLAG && pieceMoved / 2 == 0 && (pm.pawnAttacks[from][bs.toMove] & (1ULL << bs.enpassantSq))) {
-            return true;
-        }
+        if ((move & PROMOTION_FLAG) || (moveFlags == ENPASSANT_FLAG) || (moveFlags == DOUBLE_PAWN_PUSH_FLAG)) {
+            if (piece != 0) {
+                return false;
+            }
+        }   
 
         if (move & CAPTURE_FLAG) {
-            if (((1ULL << to) & bs.color[!bs.toMove]) == 0 || ((1ULL << to) & bs.color[bs.toMove])) {
+            if (!((bs.color[!bs.toMove] | (1ULL << bs.enpassantSq)) & to64)) {
                 return false;
             }
-
-            switch (pieceMoved / 2) {
-                case 0:
-                    return (pm.pawnAttacks[from][bs.toMove] & (1ULL << to)) != 0;
-                case 1:
-                    return (pm.knightMoves[from] & (1ULL << to)) != 0;
-                case 2:
-                    return (MAGIC_BITBOARDS::bishopAttacksMask(bs.occupied, from) & (1ULL << to)) != 0;
-                case 3:
-                    return (MAGIC_BITBOARDS::rookAttacksMask(bs.occupied, from) & (1ULL << to)) != 0;
-                case 4:
-                    return (MAGIC_BITBOARDS::queenAttacksMask(bs.occupied, from) & (1ULL << to)) != 0;
-                case 5:
-                    return (pm.kingMoves[from] & (1ULL << to)) != 0;
-            }
         }
 
-        if (pieceMoved / 2 == 0) {
-            if (((bs.toMove? (1ULL << (from - 8)) : (1ULL << (from + 8))) & bs.occupied)) {
+        if (moveFlags == KING_CASTLE_FLAG || moveFlags == QUEEN_CASTLE_FLAG) {
+            if (piece != 5) {
                 return false;
             }
-
-            if ((move & MOVE_FLAGS) == DOUBLE_PAWN_PUSH_FLAG) {
-                if ((rowMask[8 + bs.toMove * 40] & (1ULL << from)) && ((bs.toMove? (1ULL << (from - 16)) : (1ULL << (from + 16))) & bs.occupied)) {
-                    return false;
-                }
-            }
-
-            return true;
         }
 
-
-
-        if (pieceMoved / 2 == 5) {
-            if ((MOVE_FLAGS & move) == KING_CASTLE_FLAG || (MOVE_FLAGS & move) == QUEEN_CASTLE_FLAG) {
-                if (from != 4 && from != 60) {
-                    return false;
-                }
-
-                if ((MOVE_FLAGS & move) == KING_CASTLE_FLAG && can_castle_king(bs)) {
-                    return true;
-                }
-
-                if ((MOVE_FLAGS & move) == QUEEN_CASTLE_FLAG && can_castle_queen(bs)) {
-                    return true;
-                }
-            }
-        }
-
-
-        if ((move & MOVE_FLAGS) == QUIET_MOVES_FLAG) {
-
-            if (((1ULL << to) & bs.occupied) != 0) {
+        if (moveFlags == ENPASSANT_FLAG) {
+            if (bs.enpassantSq == 0 || to != bs.enpassantSq)
                 return false;
-            }
-
-            assert (pieceMoved / 2 != 0);
-            switch (pieceMoved / 2) {
-                case 1:
-                    return (pm.knightMoves[from] & (1ULL << to)) != 0;
-                case 2:
-                    return (MAGIC_BITBOARDS::bishopAttacksMask(bs.occupied, from) & (1ULL << to)) != 0;
-                case 3:
-                    return (MAGIC_BITBOARDS::rookAttacksMask(bs.occupied, from) & (1ULL << to)) != 0;
-                case 4:
-                    return (MAGIC_BITBOARDS::queenAttacksMask(bs.occupied, from) & (1ULL << to)) != 0;
-                case 5:
-                    return (pm.kingMoves[from] & (1ULL << to)) != 0;
-            }
         }
 
+        
+        switch (piece) {
+            // PAWN
+            case 0: {
+                // En passant
+                if (moveFlags == ENPASSANT_FLAG) {
+                    uint64_t enpassantPawns = bs.enpassantSq? BITBOARD::pieceMoves.pawnAttacks[bs.enpassantSq][!bs.toMove] & bs.pieces[bs.toMove] : 0;
+                    if ((enpassantPawns & from64) && to == bs.enpassantSq) {
+                        return true;
+                    }
+                }
+
+                if (move & CAPTURE_FLAG) {
+                    uint64_t attacks = BITBOARD::pieceMoves.pawnAttacks[from][bs.toMove] & bs.color[!bs.toMove] & valid;
+                    uint64_t pawnAtts = pawnAttacksAll(valid, !bs.toMove);
+                    uint64_t promotionCapturePawns = (rowMask[48 - bs.toMove * 40] & bs.pieces[bs.toMove] & pawnAtts);
+                    // Capture promotions
+                    if (move & PROMOTION_FLAG) {
+                        if (promotionCapturePawns & from64) {
+                            return true;
+                        }
+                    }
+                    // Regular captures
+                    else if (attacks){
+                        return true;
+                    }
+                    
+                } else {
+                    const int normalPush = (bs.toMove << 4) - 8;
+                
+                    // Quiet promotions
+                    if (move & PROMOTION_FLAG) {
+                        uint64_t promotionPawns = rowMask[48 - bs.toMove * 40] & (bs.toMove? (~bs.occupied << 8) : (~bs.occupied >> 8)) & bs.pieces[bs.toMove];
+                        if ((promotionPawns & from64) && to == (from - normalPush) ) {
+                            return true;
+                        }
+                    }
+                    // Regular pushes
+                    else if (isQuietMove(move)) {
+                        const int doublePush = (bs.toMove << 5) - 16;
+                        uint64_t normalPawns = (bs.toMove? (~bs.occupied << 8) & ~rowMask[8] : (~bs.occupied >> 8) & ~rowMask[48]) & bs.pieces[bs.toMove];
+                        uint64_t doublePushablePawns = normalPawns & (bs.toMove? (~bs.occupied << 16) & rowMask[48] : (~bs.occupied >> 16) & rowMask[8]);
+
+                        if (moveFlags == DOUBLE_PAWN_PUSH_FLAG && (doublePushablePawns & from64) && (to == (from - doublePush))) {
+                            return true;
+                        }
+
+                        if ((normalPawns & from64) && (to == (from - normalPush)) && (~bs.occupied & valid)) {
+                            return true;
+                        }
+                    }
+                }
+
+                break;
+            }
+            // KNIGHT
+            case 1: {
+                uint64_t knightMoves = BITBOARD::pieceMoves.knightMoves[from];
+                if (knightMoves & valid) {
+                    if (move & CAPTURE_FLAG) {
+                        if (bs.color[!bs.toMove] & valid) {
+                            return true;
+                        }
+                    }
+                    else if (isQuietMove(move)){
+                        if (~bs.occupied & valid) {
+                            return true;
+                        }
+                    }
+                }
+                break;
+            }
+            // BISHOP
+            case 2: {
+                uint64_t bishopMoves = MAGIC_BITBOARDS::bishopAttacksMask(bs.occupied, from);
+                if (bishopMoves & valid) {
+                    if (move & CAPTURE_FLAG) {
+                        if (bs.color[!bs.toMove] & valid) {
+                            return true;
+                        }
+                    }
+                    else if (isQuietMove(move)){
+                        if (~bs.occupied & valid) {
+                            return true;
+                        }
+                    }
+                }
+                break;
+            }
+            // ROOK
+            case 3: {
+                uint64_t rookMoves = MAGIC_BITBOARDS::rookAttacksMask(bs.occupied, from);
+                if (rookMoves & valid) {
+                    if (move & CAPTURE_FLAG) {
+                        if (bs.color[!bs.toMove] & valid) {
+                            return true;
+                        }
+                    }
+                    else if (isQuietMove(move)){
+                        if (~bs.occupied & valid) {
+                            return true;
+                        }
+                    }
+                }
+                break;
+            }
+            // QUEEN
+            case 4: {
+                uint64_t queenMoves = MAGIC_BITBOARDS::queenAttacksMask(bs.occupied, from);
+                if (queenMoves & valid) {
+                    if (move & CAPTURE_FLAG) {
+                        if (bs.color[!bs.toMove] & valid) {
+                            return true;
+                        }
+                    }
+                    else if (isQuietMove(move)){
+                        if (~bs.occupied & valid) {
+                            return true;
+                        }
+                    }
+                }
+                break;
+            }
+            // KING
+            case 5: {
+                uint64_t kingMoves = BITBOARD::pieceMoves.kingMoves[from];
+                if (kingMoves & valid) {
+                    if (move & CAPTURE_FLAG) {
+                        if (bs.color[!bs.toMove] & valid) {
+                            return true;
+                        }
+                    }
+                    else if (isQuietMove(move)){
+                        if (~bs.occupied & valid) {
+                            return true;
+                        }
+                    }
+                }
+
+                if (moveFlags == KING_CASTLE_FLAG && BITBOARD::can_castle_king(bs)) {
+                    if (to == (bs.toMove? 62 : 6)) {
+                        return true;
+                    }
+                }
+
+                if (moveFlags == QUEEN_CASTLE_FLAG && BITBOARD::can_castle_queen(bs)) {
+                    if (to == (bs.toMove? 58 : 2)) {
+                        return true;
+                    }
+                }
+                break;
+            }
+        }
 
         return false;
     }

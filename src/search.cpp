@@ -19,8 +19,6 @@ Search::Search() {
     multiPv = 1;                   /**< Number of pvs to search, default is 1.*/
     stopable = false;              /**< Used to ensure that we search atleast a depth one 1.*/
     canPrintInfo = true;
-
-    movePick = new MovePick;               /**< The move picker gives a score to each generated move*/
     InitLateMoveArray();
 }
 
@@ -67,19 +65,12 @@ void Search::InitLateMoveArray() {
 */
 void Search::cleanUpSearch() {
     TT::DestroyTT();
-    delete movePick;
 }
 
 
 
 void Search::setMultiPVSearch(int pvs) {
     multiPv = pvs;
-}
-
-
-
-void Search::setTTSize(int hashSize) {
-    TT::setSize(hashSize);
 }
 
 
@@ -199,9 +190,8 @@ int Search::qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, in
     MOVE prevMove = b.moveHistory.moves[b.moveHistory.count - 1].move;
     int prevMoveTo = get_move_to(prevMove);
 
-    inCheck? MOVE_GEN::generate_all_moves(moveList, b.state) : MOVE_GEN::generate_captures_promotions(moveList, b.state);
-    movePick->scoreMovesQS(moveList, b, ttMove);
-    while (moveList.get_next_move(move)) {
+    MovePickDataQS mpd = MovePickDataQS(ttMove);
+    while (MOVEPICK::pick_move_qs(move, b, mpd, inCheck)) {
 
         if (!inCheck) {
             int see = BITBOARD::seeCapture(b.state, move);
@@ -396,9 +386,8 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
             MoveList moveList;
             MOVE move;
 
-            MOVE_GEN::generate_captures_promotions(moveList, b.state);
-            movePick->scoreMovesQS(moveList, b, ttMove);
-            while (moveList.get_next_move(move)) {
+            MovePickDataQS mpd = MovePickDataQS(ttMove);
+            while (MOVEPICK::pick_move_qs(move, b, mpd, false)) {
 
                 // Skip the move it is not legal
                 if (!BITBOARD::isLegal(b, move)) {
@@ -438,14 +427,11 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     int noisysSearched = 0;
     int numMoves = 0;
     bool isSingular = false;
-    MoveList moveList;
     MOVE quiets[MAX_NUM_MOVES];
     MOVE noisys[MAX_NUM_MOVES];
     PrevMoveInfo prev = GetPreviousMoveInfo(b);
-
-    MOVE_GEN::generate_all_moves(moveList, b.state); // Generate moves
-    movePick->scoreMoves(moveList, b, prev, td, ply, ttMove, hashedBoard.move2, hashedBoard.move3);
-    while (moveList.get_next_move(move)) {
+    MovePickData mpd = MovePickData(ttMove, hashedBoard.move2, hashedBoard.move3, td.historyData.killers[ply][0], td.historyData.killers[ply][1], THREAD::getCounterMove(b, prev, td.historyData));
+    while (MOVEPICK::pick_move(move, b, prev, td, mpd)) {
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
@@ -463,11 +449,13 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
 
                 // Futility pruning
                 if (!isCheck && fDepth <= 7 && staticEval + (futilityVal - extLevelMax) * fDepth + 250 <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
+                    mpd.stage = BAD_CAPTURES;
                     continue;
                 }
 
                 // Late move pruning
                 if (depth <= 8 && quietsSearched > lateMoveMargin[improving][std::max(1, depth - 2 * ttFailLow)]) {
+                    mpd.stage = BAD_CAPTURES;
                     continue;
                 }
 
@@ -952,7 +940,7 @@ Search::SearchInfo Search::search(int id, ThreadData &td, int depth, bool analys
 
     MoveList moveListOriginal;
     MOVE_GEN::generate_all_moves(moveListOriginal, b.state);
-    movePick->scoreMoves(moveListOriginal, b, prev, td, 0, NO_MOVE, NO_MOVE, NO_MOVE);
+    MOVEPICK::scoreMoves(moveListOriginal, b, prev, td);
 
     if (id == 0) {
         tm.setTimer(moveListOriginal.count);
