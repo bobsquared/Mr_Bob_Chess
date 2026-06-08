@@ -1,6 +1,7 @@
 
 #include "transpositionTable.h"
 #include "board/move.h"
+#include "board/legality.h"
 
 
 
@@ -76,22 +77,24 @@ namespace TT {
             uint8_t ttFlag = getFlagsFromTT(entry.flagsAndAge);
 
             if (entry.posKey == upperKey) {
-                if (flag == EXACT || depth >= entry.depth - 2 + (ttFlag == EXACT)) {
+                TTEntry newEntry = entry;
+                if (flag == EXACT || depth >= newEntry.depth - 2 + (ttFlag == EXACT)) {
                     // shift tt moves to have most recent one first.
-                    if (move != entry.move && entry.move != NULL_MOVE) {
-                        if (move == entry.move2) {
-                            entry.move2 = entry.move;
+                    if (move != newEntry.move && newEntry.move != NULL_MOVE) {
+                        if (move == newEntry.move2) {
+                            newEntry.move2 = newEntry.move;
                         }
                         else {
-                            entry.move3 = entry.move2;
-                            entry.move2 = entry.move;
+                            newEntry.move3 = newEntry.move2;
+                            newEntry.move2 = newEntry.move;
                         }
                     }
-                    entry.move = move;
-                    entry.score = static_cast<int16_t>(score);
-                    entry.staticScore =  static_cast<int16_t>(staticScore);
-                    entry.flagsAndAge = setFlagsAndAgeInTT(tt.age, flag);
-                    entry.depth = static_cast<int8_t>(depth);
+                    newEntry.move = move;
+                    newEntry.score = static_cast<int16_t>(score);
+                    newEntry.staticScore =  static_cast<int16_t>(staticScore);
+                    newEntry.flagsAndAge = setFlagsAndAgeInTT(tt.age, flag);
+                    newEntry.depth = static_cast<int8_t>(depth);
+                    entry = newEntry;
                 }
                 return;
             }
@@ -222,15 +225,16 @@ namespace TT {
             TTBucket& bucket = tt.hashTable[lowerKey & tt.mask];
 
             bool foundMove = false;
-            for (TTEntry& entry : bucket.entries) {
+            for (TTEntry entry : bucket.entries) {
                 if (entry.posKey == upperKey) {
-                    if (entry.move == NULL_MOVE) {
-                        break;
+                    if (entry.move == NULL_MOVE || !BITBOARD::isPseudoLegal(b.state, entry.move) || !BITBOARD::isLegal(b, entry.move)) {
+                        continue;
                     }
                     movesToUndo.push(entry.move);
                     pv += " " + moveToString(entry.move);
                     BITBOARD::make_move(b, entry.move);
                     foundMove = true;
+                    break;
                 }
             }
 
