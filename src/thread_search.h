@@ -31,6 +31,7 @@ struct alignas(64) ThreadData {
     SearchStackData searchStack[MAX_PLY] = {};
 
     uint64_t ttWrites;
+    uint64_t tbHits;
     uint64_t nodes;
     int seldepth;
     int id;

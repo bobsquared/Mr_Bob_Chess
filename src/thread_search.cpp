@@ -67,6 +67,7 @@ namespace THREAD {
         for (std::size_t i = 0; i < threadData.size(); i++) {
             threadData[i].id = i;
             threadData[i].ttWrites = 0;
+            threadData[i].tbHits = 0;
             threadData[i].nodes = 0;
             threadData[i].seldepth = 0;
             threadData[i].bestMove = NO_MOVE;
