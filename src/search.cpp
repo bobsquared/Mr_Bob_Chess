@@ -550,7 +550,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
             if (hashed && !isCheck) {
                 if (TTFlag == UPPER_BOUND && hashedBoard.score >= staticEval
                     && hashedBoard.depth >= depth - 2 && std::abs(alpha) < MATE_VALUE_MAX) {
-                    lmr -= (!isPv * 2) + std::max(-4 + 2 * isPv, std::min(0, (staticEval - alpha) / (250 + 100 * isPv)));
+                    lmr -= (isPv * 2) + std::max(-4 + 2 * !isPv, std::min(0, (staticEval - alpha) / (45 * depth + 100 * isPv)));
                 }
             }
             

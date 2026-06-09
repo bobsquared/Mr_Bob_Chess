@@ -78,18 +78,20 @@ namespace TT {
 
             if (entry.posKey == upperKey) {
                 TTEntry newEntry = entry;
-                if (flag == EXACT || depth >= newEntry.depth - 2 + (ttFlag == EXACT)) {
+                if (flag == EXACT || (depth >= newEntry.depth - 2 + (ttFlag == EXACT))) {
                     // shift tt moves to have most recent one first.
-                    if (move != newEntry.move && newEntry.move != NULL_MOVE) {
-                        if (move == newEntry.move2) {
-                            newEntry.move2 = newEntry.move;
+                    if (move != NULL_MOVE) {
+                        if (move != newEntry.move && newEntry.move != NULL_MOVE) {
+                            if (move == newEntry.move2) {
+                                newEntry.move2 = newEntry.move;
+                            }
+                            else {
+                                newEntry.move3 = newEntry.move2;
+                                newEntry.move2 = newEntry.move;
+                            }
                         }
-                        else {
-                            newEntry.move3 = newEntry.move2;
-                            newEntry.move2 = newEntry.move;
-                        }
+                        newEntry.move = move;
                     }
-                    newEntry.move = move;
                     newEntry.score = static_cast<int16_t>(score);
                     newEntry.staticScore =  static_cast<int16_t>(staticScore);
                     newEntry.flagsAndAge = setFlagsAndAgeInTT(tt.age, flag);
