@@ -355,10 +355,10 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
         }
 
         // Null move pruning
-        if (canNullMove && staticEval >= beta + 25 * (phase >= 200) && depth >= 2 + !hashed 
+        if (canNullMove && staticEval >= beta + 25 * (phase >= 200) + 128 - depth * 4 && depth >= 2 + !hashed 
                         && td.nullMoveTree && BITBOARD::nullMoveable(b.state) 
                         && (!hashed || hashedBoard.score >= beta)) {
-            int R = 3 + depth / 5 + std::min((staticEval - beta) / 300, 4);
+            int R = 3 + depth / 3 + std::min((staticEval - beta) / 300, 4);
             td.searchStack[ply + 1].extLevel = extLevel;
 
             BITBOARD::make_null_move(b);
