@@ -61,10 +61,10 @@ void GoCommand::execute() {
     else {
         for (auto param : params->getParameters(command)) {
             if (param.name == "wtime") {
-                wtime = param.val;
+                wtime = std::max(1, param.val);
             }
             else if (param.name == "btime") {
-                btime = param.val;
+                btime = std::max(1, param.val);
             }
             else if (param.name == "winc") {
                 winc = param.val;

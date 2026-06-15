@@ -102,7 +102,7 @@ int ParameterInt::getParameter(std::string command) {
     std::transform(command.begin(), command.end(), command.begin(), ::tolower);
     
 
-    std::regex sp (".*" + tempName + "\\s(\\d+).*");
+    std::regex sp (".*" + tempName + "\\s(-?\\d+).*");
     std::smatch m;
 
     if (std::regex_search(command, m, sp)) {
