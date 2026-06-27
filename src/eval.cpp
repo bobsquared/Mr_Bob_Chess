@@ -49,8 +49,9 @@ namespace EVAL {
         assert(kingCount == board.pieceCount[11]);
         #endif
 
+        int queenBit = ((board.pieceCount[8] + board.pieceCount[9]) > 0) << 2;
         b.acc.Accumulate(model.getL1White(), model.getL1Black(), false);
-        int retm = model.evaluate(b.acc.getOutputVectorWhite(), b.acc.getOutputVectorBlack(), board.toMove, board.pieceCount[0] + board.pieceCount[1]);
+        int retm = model.evaluate(b.acc.getOutputVectorWhite(), b.acc.getOutputVectorBlack(), board.toMove, std::max(0, ((getPhaseEval(b) >> 6) | queenBit)));
         
         return retm;
     }

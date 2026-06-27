@@ -15,6 +15,7 @@
 #include "uci.h"
 #include "nnue/nncpp.h"
 #include "transpositionTable.h"
+#include "board/syzygy_probe.h"
 
 
 
@@ -50,7 +51,7 @@ void Bench(Board &b, Search &s) {
 int main(int argc, char* argv[]) {
 
     MAGIC_BITBOARDS::InitMagicBitboards();
-    EVAL::InitEval("nets/bobbrain_34_0.006588.nnue");
+    EVAL::InitEval("nets/b_bobbrain_31_0.003372.nnue");
     TT::InitTT(HASH_SIZE);                       /**< The transposition table for storing previously searched positions*/
 
     Search s = Search();
@@ -77,7 +78,9 @@ int main(int argc, char* argv[]) {
     options.addOption([&](int n){s.setFutilitysearch(n);}, "futility", 214, 1, 1000);
     options.addOption([&](int n){s.setHistoryLMRsearch(n);}, "histlmr", 2084, 1, 10000);
     options.addOption([&](int n){s.setHistoryLMRNoisysearch(n);}, "histlmrnoisy", 2534, 1, 10000);
+    options.addOption([&](std::string path){SYZYGY_PROBE::setPath(path);}, "SyzygyPath", "tb/syzygy");
 
+    params.addParameter("movetime");
     params.addParameter("wtime");
     params.addParameter("btime");
     params.addParameter("winc");

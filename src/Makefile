@@ -45,7 +45,7 @@ ifeq ($(debug_zobrist), yes)
 CXXFLAGS += -DDEBUGHASH
 endif
 
-CXX := nnue/layers/concatenate.cpp board/detections.cpp board/debug.cpp board/see.cpp board/fen.cpp board/move.cpp board/bitboard.cpp board/magic_bitboards.cpp defs.cpp board/movegen.cpp board/legality.cpp perft.cpp eval.cpp search.cpp uci.cpp uci_commands.cpp board/movepick.cpp transpositionTable.cpp timeman.cpp thread_search.cpp
+CXX := syzygy/fathom/src/tbprobe.c nnue/layers/concatenate.cpp board/syzygy_probe.cpp board/detections.cpp board/debug.cpp board/see.cpp board/fen.cpp board/move.cpp board/bitboard.cpp board/magic_bitboards.cpp defs.cpp board/movegen.cpp board/legality.cpp perft.cpp eval.cpp search.cpp uci.cpp uci_commands.cpp board/movepick.cpp transpositionTable.cpp timeman.cpp thread_search.cpp
 
 openbench: $(CXX)
 	g++ -O3 -o $(EXE) $(OBCXXFLAGS) main.cpp $(CXX)

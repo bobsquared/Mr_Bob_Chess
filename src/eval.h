@@ -9,6 +9,7 @@ namespace EVAL {
     const int ROOKPHASE = 2;
     const int QUEENPHASE = 4;
     const int TOTALPHASE = (PAWNPHASE * 16 + KNIGHTPHASE * 4 + BISHOPPHASE * 4 + ROOKPHASE * 4 + QUEENPHASE * 2);
+    const int TOTALPHASEEVAL = (PAWNPHASE * 16 + KNIGHTPHASE * 4 + BISHOPPHASE * 4 + ROOKPHASE * 4);
 
     inline int getPhase(const Board &b) {
         const BoardState &board = b.state;
@@ -20,6 +21,16 @@ namespace EVAL {
         phase -= (board.pieceCount[8] + board.pieceCount[9]) * QUEENPHASE;
 
         return (phase * 256 + (TOTALPHASE / 2)) / TOTALPHASE;
+    }
+
+    inline int getPhaseEval(const Board &b) {
+        const BoardState &board = b.state;
+        int phase = TOTALPHASEEVAL;
+        phase -= (board.pieceCount[2] + board.pieceCount[3]) * KNIGHTPHASE;
+        phase -= (board.pieceCount[4] + board.pieceCount[5]) * BISHOPPHASE;
+        phase -= (board.pieceCount[6] + board.pieceCount[7]) * ROOKPHASE;
+
+        return (phase * 255 + (TOTALPHASEEVAL / 2)) / TOTALPHASEEVAL;
     }
 
     void InitEval(std::string nnueFile);
