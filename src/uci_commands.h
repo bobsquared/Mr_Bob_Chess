@@ -3,7 +3,7 @@
 
 #define AUTHOR "Vincent Yu"
 #define ENGINE_NAME "Mr Bob"
-#define ENGINE_VERSION "v1.3.0"
+#define ENGINE_VERSION "v2.0.0 DEV"
 
 #include "board/bitboard.h"
 #include "board/move.h"

@@ -60,7 +60,10 @@ void GoCommand::execute() {
     }
     else {
         for (auto param : params->getParameters(command)) {
-            if (param.name == "wtime") {
+            if (param.name == "movetime") {
+                wtime = btime = param.val;
+            }
+            else if (param.name == "wtime") {
                 wtime = std::max(1, param.val);
             }
             else if (param.name == "btime") {
