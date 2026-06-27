@@ -1179,9 +1179,7 @@ Search::SearchInfo Search::beginSearch(Board &b, int depth, int wtime, int btime
             THREAD::threadData[0].tbHits++;
 
             if (canPrintInfo) {
-                // If you want a proper mate score in the info line:
                 if (tbScore > 0) {
-                    // DTZ is moves to zeroing move, not mate — add a buffer
                     std::cout << "info depth 1 score mate " << (tbDtz + 5) / 2 << " pv " << moveToString(tbMove) << std::endl;
                 } else if (tbScore < 0) {
                     std::cout << "info depth 1 score mate " << -((tbDtz + 5) / 2) << " pv " << moveToString(tbMove) << std::endl;
