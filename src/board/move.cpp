@@ -14,8 +14,8 @@ namespace BITBOARD::detail {
         bs.occupied      ^= i1i2;
         bs.pieceAt[to]    = piece;
         bs.pieceAt[from]  = -1;
-        acc.Add(piece * 64 + to);
-        acc.Remove(piece * 64 + from);
+        acc.Add(piece, to);
+        acc.Remove(piece, from);
     }
 
 
@@ -114,7 +114,7 @@ namespace BITBOARD::detail {
             bs.occupied ^= 1ULL << toCap;
             bs.pieceAt[toCap] = -1;
             bs.pieceCount[!bs.toMove]--;
-            acc.Remove(!bs.toMove * 64 + toCap);
+            acc.Remove(!bs.toMove, toCap);
         }
         else if (move & CAPTURE_FLAG) {
             assert(toPiece != -1);
@@ -130,8 +130,8 @@ namespace BITBOARD::detail {
             bs.pieces[toPiece] ^= i2;
             bs.occupied ^= i1;
             bs.pieceCount[toPiece]--;
-            acc.Remove(fromPiece * 64 + from);
-            acc.Remove(toPiece * 64 + to);
+            acc.Remove(fromPiece, from);
+            acc.Remove(toPiece, to);
 
             if (move & PROMOTION_FLAG) {
                 assert(fromPiece == bs.toMove);
@@ -143,13 +143,13 @@ namespace BITBOARD::detail {
                 bs.pieceCount[bs.toMove]--;
                 bs.pieceCount[promotePiece]++;
                 ZOBRIST::hashBoard_capture_promotion(bs.posKey, from, to, fromPiece, toPiece, promotePiece);
-                acc.Add(promotePiece * 64 + to);
+                acc.Add(promotePiece, to);
             }
             else {
                 bs.pieceAt[to] = fromPiece;
                 bs.pieces[fromPiece] ^= i1i2;
                 ZOBRIST::hashBoard_capture(bs.posKey, from, to, fromPiece, toPiece);
-                acc.Add(fromPiece * 64 + to);
+                acc.Add(fromPiece, to);
             }
 
             bs.halfMoves = 0;
@@ -176,8 +176,8 @@ namespace BITBOARD::detail {
             bs.pieceCount[bs.toMove]--;
             bs.pieceCount[promotePiece]++;
             ZOBRIST::hashBoard_promotion(bs.posKey, from, to, fromPiece, promotePiece);
-            acc.Add(promotePiece * 64 + to);
-            acc.Remove(fromPiece * 64 + from);
+            acc.Add(promotePiece, to);
+            acc.Remove(fromPiece, from);
         }
         else if (moveFlags == KING_CASTLE_FLAG) {
             assert(toPiece == -1);
@@ -241,7 +241,7 @@ namespace BITBOARD::detail {
             bs.occupied ^= 1ULL << toCap;
             bs.pieceAt[toCap] = !bs.toMove;
             bs.pieceCount[!bs.toMove]++;
-            acc.Add(!bs.toMove * 64 + toCap);
+            acc.Add(!bs.toMove, toCap);
         }
         else if (move & CAPTURE_FLAG) {
 
@@ -251,7 +251,7 @@ namespace BITBOARD::detail {
             bs.pieceAt[to] = moveInfo.captureType;
             bs.occupied ^= i1;
             bs.pieceCount[moveInfo.captureType]++;
-            acc.Add(moveInfo.captureType * 64 + to);
+            acc.Add(moveInfo.captureType, to);
 
             if (move & PROMOTION_FLAG) {
                 int pieceVal = (moveFlags - 11);
@@ -261,14 +261,14 @@ namespace BITBOARD::detail {
                 bs.pieces[promotePiece] ^= i2;
                 bs.pieceCount[bs.toMove]++;
                 bs.pieceCount[promotePiece]--;
-                acc.Remove(promotePiece * 64 + to);
-                acc.Add(bs.toMove * 64 + from);
+                acc.Remove(promotePiece, to);
+                acc.Add(bs.toMove, from);
             }
             else {
                 bs.pieces[toPiece] ^= i1i2;
                 bs.pieceAt[from] = toPiece;
-                acc.Remove(toPiece * 64 + to);
-                acc.Add(toPiece * 64 + from);
+                acc.Remove(toPiece, to);
+                acc.Add(toPiece, from);
             }
 
         }
@@ -288,8 +288,8 @@ namespace BITBOARD::detail {
             bs.pieces[promotePiece] ^= i2;
             bs.pieceCount[bs.toMove]++;
             bs.pieceCount[promotePiece]--;
-            acc.Remove(promotePiece * 64 + to);
-            acc.Add(bs.toMove * 64 + from);
+            acc.Remove(promotePiece, to);
+            acc.Add(bs.toMove, from);
 
         }
         else if (moveFlags == KING_CASTLE_FLAG) {

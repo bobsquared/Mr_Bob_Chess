@@ -23,7 +23,8 @@ private:
     Layer::Linear<int16_t, 768, 768> *l1_vop = new Layer::Linear<int16_t, 768, 768>(false, scaleA, scaleS, Layer::INIT_HE, 1.0f);
 
     CRelu<1536> relu = CRelu<1536>(false);
-    Layer::Linear<int8_t, 1536, 1> l2[9];
+    // Layer::Linear<int8_t, 1536, 1> l2r;
+    Layer::Linear<int8_t, 1536, 1> l2[8];
 
     static constexpr int nPawnMapping[17] = {
         0, 0, 0, 0,  // 0-3
@@ -40,7 +41,8 @@ private:
 public:
 
     NNCPP() {
-        for (int i = 0; i < 9; i++) {
+        // l2r = Layer::Linear<int8_t, 1536, 1>(false, scaleA, scaleS, Layer::INIT_XAVIAR, scaleO);
+        for (int i = 0; i < 8; i++) {
             l2[i] = Layer::Linear<int8_t, 1536, 1>(false, scaleA, scaleS, Layer::INIT_XAVIAR, scaleO);
         }
     }
@@ -53,7 +55,7 @@ public:
         return *l1_vop;
     }
 
-    int32_t evaluate(const int16_t *whitepov, const int16_t *blackpov, bool blackToMove, int nPawns) {
+    int32_t evaluate(const int16_t *whitepov, const int16_t *blackpov, bool blackToMove, int outBucketIndex) {
         alignas(64) int16_t catBuffer[1536] = {0};
         alignas(64) uint8_t l1ReluBuffer[1536] = {0};
         alignas(64) int32_t l2Buffer[4] = {0};
@@ -66,7 +68,8 @@ public:
         }
 
         relu.execute(catBuffer, l1ReluBuffer, scaleA);
-        l2[nPawnMapping[nPawns]].execute(l1ReluBuffer, l2Buffer);
+        l2[outBucketIndex].execute(l1ReluBuffer, l2Buffer);
+        // l2r.execute(l1ReluBuffer, l2Buffer);
 
         return l2Buffer[0];
     }
@@ -81,7 +84,8 @@ public:
 
         l1_pov->Load(in);
         l1_vop->Load(in);
-        for (int i = 0; i < 9; i++)
+        // l2r.Load(in);
+        for (int i = 0; i < 8; i++)
             l2[i].Load(in);
         in.close();
     }

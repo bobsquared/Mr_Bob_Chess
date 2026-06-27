@@ -146,7 +146,7 @@ namespace BITBOARD {
                 bs.pieceCount[piece]++;
                 bs.pieceAt[lineOffset] = piece;
                 ZOBRIST::hashBoard_square(bs.posKey, lineOffset, piece);
-                acc.Add(piece * 64 + lineOffset);
+                acc.Add(piece, lineOffset);
 
                 if (piece / 2 == 5) {
                     bs.kingLoc[piece - 10] = lineOffset;

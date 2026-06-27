@@ -11,7 +11,7 @@ namespace BITBOARD {
         for (int i = 0; i < 12; i++) {
             uint64_t piece = bs.pieces[i];
             while (piece) {
-                acc.Add(i * 64 + bitScan(piece));
+                acc.Add(i, bitScan(piece));
                 piece &= piece - 1;
             }
         }
