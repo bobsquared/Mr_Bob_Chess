@@ -229,7 +229,8 @@ namespace TT {
             bool foundMove = false;
             for (TTEntry entry : bucket.entries) {
                 if (entry.posKey == upperKey) {
-                    if (entry.move == NULL_MOVE || !BITBOARD::isPseudoLegal(b.state, entry.move) || !BITBOARD::isLegal(b, entry.move)) {
+                    uint8_t ttFlag = getFlagsFromTT(entry.flagsAndAge);
+                    if (ttFlag == UPPER_BOUND || entry.move == NULL_MOVE || !BITBOARD::isPseudoLegal(b.state, entry.move) || !BITBOARD::isLegal(b, entry.move)) {
                         continue;
                     }
                     movesToUndo.push(entry.move);
