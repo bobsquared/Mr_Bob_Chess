@@ -86,6 +86,7 @@ private:
 
     void printSearchInfo(SearchInfo &printInfo, std::string &pstring, MOVE move, int bound, int pv);
     void moveToStruct(SearchInfo &si, MOVE move);
+    uint64_t getTBHits();
 
     void setSearchInfo(SearchInfo &printInfo, Board &board, int depth, int eval);
     uint64_t getHashFullTotal();
@@ -100,16 +101,16 @@ private:
     int qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, int ply);
 
     std::atomic<bool> exit_thread_flag;
+    std::atomic<bool> stopable;
     int totalTime;
     bool canPrintInfo;
     int multiPv;                   /**< Number of pvs to search, default is 1.*/
-    bool stopable;              /**< Used to ensure that we search atleast a depth one 1.*/
     int lmrReduction[64][64];           /**< A 2D array of reduction values for LMR given depth and move count.*/
     TimeManager tm;                     /**< The time manager determines when to stop the search given time parameters.*/
     
     const int seePruningMargin[2][9] = {{0, -100, -175, -325, -550, -825, -1200, -1675, -2250}, 
                                         {0, -125, -200, -275, -350, -425, -500, -575, -650}}; /**< Margins for SEE pruning in pvSearch*/
-    const int lateMoveMargin[2][9] = {{0, 3, 5, 7, 10, 14, 20, 26, 32}, {0, 6, 9, 13, 19, 27, 35, 43, 50}};    /**< Margins for late move pruning in pvSearch*/
+    const int lateMoveMargin[2][9] = {{0, 3, 5, 7, 9, 12, 16, 21, 27}, {0, 4, 6, 10, 16, 24, 32, 40, 48}};    /**< Margins for late move pruning in pvSearch*/
 
     int rfpVal = 64;
     int razorVal = 361;

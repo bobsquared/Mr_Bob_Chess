@@ -11,7 +11,7 @@
 #include "search.h"
 #include <cmath>
 #include <thread>
-
+#include "board/syzygy_probe.h"
 
 
 Search::Search() {
@@ -295,11 +295,11 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     }
 
     // Mate distance pruning
-    beta = MATE_VALUE - ply < beta? MATE_VALUE - ply : beta;
-    alpha = -MATE_VALUE + ply > alpha? -MATE_VALUE + ply : alpha;
+    beta = std::min(beta,  MATE_VALUE - ply);
+    alpha = std::max(alpha, -MATE_VALUE + ply);
 
     if (alpha >= beta) {
-        return alpha == -MATE_VALUE + ply? alpha : beta;
+        return alpha;
     }
 
     int prevAlpha = alpha;
@@ -315,6 +315,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     MOVE ttMove = NO_MOVE;
     bool hashed = hasSingMove? false : TT::probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
     uint8_t TTFlag = TT::getFlagsFromTT(hashedBoard.flagsAndAge);
+    int numHashMoves = hashed * ((hashedBoard.move != NO_MOVE) + (hashedBoard.move2 != NO_MOVE) + (hashedBoard.move3 != NO_MOVE));
 
     if (ttRet && !isPv) {
         return hashedBoard.score;
@@ -332,6 +333,31 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     THREAD::removeKiller(td.historyData, ply + 1);
     td.searchStack[ply].eval = staticEval;
     td.searchStack[ply + 1].hashLevel = hashLevel + hashed;
+
+    // Probe Syzygy Tablebases
+    int res = SYZYGY_PROBE::probe_wdl(b.state, ply);
+
+    if (res != -1) {
+        td.tbHits++;
+
+        int bound = EXACT;
+        if (res > MATE_VALUE_MAX) {
+            bound = LOWER_BOUND;
+        }
+        else if (res < -MATE_VALUE_MAX) {
+            bound = UPPER_BOUND;
+        }
+
+        TT::saveTT(td, NULL_MOVE, res, staticEval, depth, bound, posKey, ply);
+
+        if (bound == EXACT || (bound == LOWER_BOUND && res >= beta) || (bound == UPPER_BOUND && res <= alpha)) {
+            return res;
+        }
+        
+        if (isPv && bound == LOWER_BOUND)
+            alpha = std::max(alpha, res);
+    }
+    
 
 
     if (!isPv && !isCheck && !hasSingMove) {
@@ -553,7 +579,6 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                     lmr -= (isPv * 2) + std::max(-4 + 2 * !isPv, std::min(0, (staticEval - alpha) / (45 * depth + 100 * isPv)));
                 }
             }
-            
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
             score = -pvSearch(b, td, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1);
@@ -822,6 +847,21 @@ uint64_t Search::getHashFullTotal() {
 
 
 /**
+* The function that gets the hash usage across all threads
+*
+* @return Returns the hash usage in permill.
+*/
+uint64_t Search::getTBHits() {
+    uint64_t tbHits = 0;
+    for (int id = 0; id < THREAD::getNThreads(); id++) {
+        tbHits += THREAD::threadData[id].tbHits;
+    }
+    return tbHits;
+}
+
+
+
+/**
 * Return true if the eval is mating
 */
 bool Search::isMateScore(int eval) {
@@ -900,6 +940,7 @@ void Search::printSearchInfo(SearchInfo &printInfo, std::string &pstring, MOVE m
     pstring += "info depth " + std::to_string(printInfo.depth) + " seldepth " + std::to_string(printInfo.seldepth) +
         " multipv " + std::to_string(pv) + cpScoreOrMate + std::to_string(printInfo.score) + printedBound +
         " nodes " + std::to_string(printInfo.nodes) + " nps " + std::to_string(printInfo.nps) + " hashfull " + std::to_string(printInfo.hashUsage) + 
+        " tbhits " + std::to_string(getTBHits()) +
         " time " + std::to_string(printInfo.totalTime) + " pv" + printInfo.pv;
 
     if (pv == multiPv) {
@@ -1128,6 +1169,34 @@ Search::SearchInfo Search::beginSearch(Board &b, int depth, int wtime, int btime
     tm = TimeManager(b.state.toMove, wtime, btime, winc, binc, movesToGo);
     TT::incrementTTAge();
     THREAD::ClearData();
+
+    if (TB_LARGEST > 0) {
+        int tbScore = 0, tbDtz = 0;
+        MOVE tbMove = SYZYGY_PROBE::probe_dtz(b.state, tbScore, tbDtz);
+
+        if (tbMove != NO_MOVE) {
+            THREAD::threadData[0].bestMove = tbMove;
+            THREAD::threadData[0].tbHits++;
+
+            if (canPrintInfo) {
+                // If you want a proper mate score in the info line:
+                if (tbScore > 0) {
+                    // DTZ is moves to zeroing move, not mate — add a buffer
+                    std::cout << "info depth 1 score mate " << (tbDtz + 5) / 2 << " pv " << moveToString(tbMove) << std::endl;
+                } else if (tbScore < 0) {
+                    std::cout << "info depth 1 score mate " << -((tbDtz + 5) / 2) << " pv " << moveToString(tbMove) << std::endl;
+                } else {
+                    std::cout << "info depth 1 score cp 0 pv " << moveToString(tbMove) << std::endl;
+                }
+
+                std::cout << "bestmove " << moveToString(tbMove) << std::endl;
+            }
+
+            SearchInfo ret{};
+            moveToStruct(ret, tbMove);
+            return ret;
+        }
+    }
 
     std::deque<std::thread> threads;
     std::vector<Board> boards(THREAD::getNThreads() - 1);
