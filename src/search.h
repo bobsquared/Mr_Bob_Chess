@@ -110,7 +110,7 @@ private:
     
     const int seePruningMargin[2][9] = {{0, -100, -175, -325, -550, -825, -1200, -1675, -2250}, 
                                         {0, -125, -200, -275, -350, -425, -500, -575, -650}}; /**< Margins for SEE pruning in pvSearch*/
-    const int lateMoveMargin[2][9] = {{0, 3, 5, 7, 9, 12, 16, 21, 27}, {0, 4, 6, 10, 16, 24, 32, 40, 48}};    /**< Margins for late move pruning in pvSearch*/
+    const int lateMoveMargin[2][9] = {{0, 2, 3, 5, 8, 12, 18, 25, 32}, {0, 5, 7, 13, 19, 27, 35, 43, 50}};    /**< Margins for late move pruning in pvSearch*/
 
     int rfpVal = 64;
     int razorVal = 361;
