@@ -315,7 +315,6 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     MOVE ttMove = NO_MOVE;
     bool hashed = hasSingMove? false : TT::probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
     uint8_t TTFlag = TT::getFlagsFromTT(hashedBoard.flagsAndAge);
-    int numHashMoves = hashed * ((hashedBoard.move != NO_MOVE) + (hashedBoard.move2 != NO_MOVE) + (hashedBoard.move3 != NO_MOVE));
 
     if (ttRet && !isPv) {
         return hashedBoard.score;
@@ -324,7 +323,6 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     bool isCheck = BITBOARD::InCheck(b.state);
     int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : EVAL::evaluate(b));
     bool improving = !isCheck && (ply >= 2? staticEval > td.searchStack[ply - 2].eval : false);
-    bool ttFailLow = (ttRet && (hashedBoard.flagsAndAge & 0b11) == UPPER_BOUND);
     int extLevel = td.searchStack[ply].extLevel;
     int extLevelMax = std::min(20, extLevel);
     int hashLevel = td.searchStack[ply].hashLevel;
@@ -480,7 +478,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 }
 
                 // Late move pruning
-                if (depth <= 8 && quietsSearched > lateMoveMargin[improving][std::max(1, depth - 2 * ttFailLow)]) {
+                if (depth <= 8 && quietsSearched > lateMoveMargin[improving][std::max(1, depth - (isPv * extLevelMax / 8))]) {
                     mpd.stage = BAD_CAPTURES;
                     continue;
                 }
