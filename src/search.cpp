@@ -478,7 +478,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 }
 
                 // Late move pruning
-                if (depth <= 8 && quietsSearched > lateMoveMargin[improving][std::max(1, depth - (isPv * extLevelMax / 8))]) {
+                if (depth <= 8 && quietsSearched > lateMoveMargin[improving][std::max(1, depth - (!isPv * extLevelMax / 8))]) {
                     mpd.stage = BAD_CAPTURES;
                     continue;
                 }
