@@ -97,7 +97,7 @@ private:
     
     SearchInfo search(int id, ThreadData &td, int depth, bool analysis, Board& b);
     BestMoveInfo pvSearchRoot(Board &b, ThreadData &td, int depth, const MoveList &moveList, int alpha, int beta, bool analysis);
-    int pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, bool canNullMove, int ply);
+    int pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, bool canNullMove, int ply, bool cutNode);
     int qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, int ply);
 
     std::atomic<bool> exit_thread_flag;
