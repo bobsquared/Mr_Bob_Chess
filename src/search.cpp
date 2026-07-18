@@ -232,9 +232,6 @@ int Search::qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, in
                 if (score >= beta) {
                     break;
                 }
-                pvLine.moves[ply] = move;
-                pvLine.zobrist[ply] = b.state.posKey;
-                pvLine.count = ply + 1;
             }
         }
 
@@ -610,9 +607,6 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 if (score >= beta) {
                     break;
                 }
-                pvLine.moves[ply] = move;
-                pvLine.zobrist[ply] = b.state.posKey;
-                pvLine.count = ply + 1;
             }
         }
 
@@ -774,9 +768,6 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
                 if (tempRet >= beta) {
                     break;
                 }
-                pvLine.moves[ply] = move;
-                pvLine.zobrist[ply] = b.state.posKey;
-                pvLine.count = ply + 1;
             }
         }
 
