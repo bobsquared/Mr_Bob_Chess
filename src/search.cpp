@@ -232,6 +232,9 @@ int Search::qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, in
                 if (score >= beta) {
                     break;
                 }
+                pvLine.moves[ply] = move;
+                pvLine.zobrist[ply] = b.state.posKey;
+                pvLine.count = ply + 1;
             }
         }
 
@@ -285,7 +288,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     td.nodes++; // Increment number of nodes
 
     // Stop the search
-    if (stopable && (exit_thread_flag || ((td.nodes & 1) && tm.outOfTime()))) {
+    if (stopable && (exit_thread_flag || ((td.nodes & 1023) == 0 && tm.outOfTime()))) {
         return 0;
     }
 
@@ -384,16 +387,15 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                         && (!hashed || hashedBoard.score >= beta)) {
             int R = 3 + depth / 3 + std::min((staticEval - beta) / 300, 4);
             td.searchStack[ply + 1].extLevel = extLevel;
-
             BITBOARD::make_null_move(b);
-            int nullRet = -pvSearch(b, td, depth - R - 1, -beta, -beta + 1, false, ply + 1, !cutNode);
+            int nullRet = -pvSearch(b, td, depth - R - 1, -beta, -beta + 1, false, ply + 1, false);
             BITBOARD::undo_null_move(b);
 
             if (nullRet >= beta && std::abs(nullRet) < MATE_VALUE_MAX) {
 
                 if (depth >= 14 && (!hashed || (hashedBoard.flagsAndAge & 0b11) == UPPER_BOUND)) {
                     td.nullMoveTree = false;
-                    nullRet = pvSearch(b, td, depth - R - 1, beta - 1, beta, false, ply, !cutNode);
+                    nullRet = pvSearch(b, td, depth - R - 1, beta - 1, beta, false, ply, false);
                     td.nullMoveTree = true;
                 }
 
@@ -478,7 +480,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 }
 
                 // Late move pruning
-                if (depth <= 8 && quietsSearched > lateMoveMargin[improving][std::max(1, depth - (!isPv * extLevelMax / 8))]) {
+                if (depth <= 8 && quietsSearched > lateMoveMargin[improving][std::min(8, std::max(1, depth - (!isPv * extLevelMax / 8)))]) {
                     mpd.stage = BAD_CAPTURES;
                     continue;
                 }
@@ -608,6 +610,9 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 if (score >= beta) {
                     break;
                 }
+                pvLine.moves[ply] = move;
+                pvLine.zobrist[ply] = b.state.posKey;
+                pvLine.count = ply + 1;
             }
         }
 
@@ -769,6 +774,9 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
                 if (tempRet >= beta) {
                     break;
                 }
+                pvLine.moves[ply] = move;
+                pvLine.zobrist[ply] = b.state.posKey;
+                pvLine.count = ply + 1;
             }
         }
 
