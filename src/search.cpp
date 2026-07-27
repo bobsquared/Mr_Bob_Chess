@@ -450,10 +450,12 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     int noisysSearched = 0;
     int numMoves = 0;
     bool isSingular = false;
+    PrevMoveInfo prev = GetPreviousMoveInfo(b);
+    MOVE counterMove = THREAD::getCounterMove(b, prev, td.historyData);
     MOVE quiets[MAX_NUM_MOVES];
     MOVE noisys[MAX_NUM_MOVES];
-    PrevMoveInfo prev = GetPreviousMoveInfo(b);
-    MovePickData mpd = MovePickData(ttMove, hashedBoard.move2, hashedBoard.move3, td.historyData.killers[ply][0], td.historyData.killers[ply][1], THREAD::getCounterMove(b, prev, td.historyData));
+    
+    MovePickData mpd = MovePickData(ttMove, hashedBoard.move2, hashedBoard.move3, td.historyData.killers[ply][0], td.historyData.killers[ply][1], counterMove);
     while (MOVEPICK::pick_move(move, b, prev, td, mpd)) {
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
@@ -563,8 +565,8 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
         else if (depth >= 3 && numMoves > isPv && (!isPv || (hashed && TTFlag != EXACT) || isQuiet)) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)] * (100 + extLevel) / 100; // Base reduction
 
-            lmr -= THREAD::isKiller(td.historyData, ply, move); // Don't reduce as much for killer moves
-            lmr -= !isQuiet && seeScore > 0;
+            lmr -= THREAD::isKiller(td.historyData, ply, move) || (counterMove == move); // Don't reduce as much for killer and counter moves
+            lmr += !isQuietMove(ttMove) && ttMove != NO_MOVE && ttMove != NULL_MOVE;
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh) / historyLmrVal; // Increase/decrease depth based on histories
