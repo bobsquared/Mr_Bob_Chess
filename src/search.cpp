@@ -1052,7 +1052,7 @@ Search::SearchInfo Search::search(int id, ThreadData &td, int depth, bool analys
                 }
 
                 aspNum++;
-                delta += 10 * delta / std::max(23, 35 - i) + 2;
+                delta += 10 * delta / std::max(18, 35 - i * i) + 1;
 
                 if (id == 0 && totalTime > 3000 && canPrintInfo && multiPv == 1) {
                     printSearchInfo(printInfo, pstring, 1, bound, pv);
