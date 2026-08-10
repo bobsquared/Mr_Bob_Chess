@@ -95,7 +95,7 @@ namespace THREAD {
 
     void UpdateHistories(const Board &b, const PrevMoveInfo &prev, HistoryData& hd, const MOVE *quietMoves, const MOVE *noisyMoves, int quietCount, int noisyCount, int depth, MOVE ttMove, MOVE bestMove) {
         bool toMove = b.state.toMove;
-        int piece = b.state.pieceAt[get_move_from(bestMove)] >> 1;
+        int bestPiece = b.state.pieceAt[get_move_from(bestMove)] >> 1;
         int histScalar = 32;
 
         if (bestMove == ttMove) {
@@ -116,21 +116,20 @@ namespace THREAD {
             for (int i = 0; i < quietCount; i++) {
                 int from = get_move_from(quietMoves[i]);
                 int to = get_move_to(quietMoves[i]);
-                piece = b.state.pieceAt[from] >> 1;
 
                 int hist = hd.quietHistory[toMove][from][to] * depthScoreDiv / 23;
                 hd.quietHistory[toMove][from][to] += -depthScore - hist;
             }
 
             if (prevMove != NULL_MOVE) {
-                hist = hd.counterHistory[toMove][prevPiece][prevMoveTo][piece][get_move_to(bestMove)] * depthScoreDiv / 23;
-                hd.counterHistory[toMove][prevPiece][prevMoveTo][piece][get_move_to(bestMove)] += depthScore - hist;
+                hist = hd.counterHistory[toMove][prevPiece][prevMoveTo][bestPiece][get_move_to(bestMove)] * depthScoreDiv / 23;
+                hd.counterHistory[toMove][prevPiece][prevMoveTo][bestPiece][get_move_to(bestMove)] += depthScore - hist;
                 hd.counterMove[b.state.toMove][prev.prevMoveFrom][prevMoveTo] = bestMove;
 
                 for (int i = 0; i < quietCount; i++) {
                     int from = get_move_from(quietMoves[i]);
                     int to = get_move_to(quietMoves[i]);
-                    piece = b.state.pieceAt[from] >> 1;
+                    int piece = b.state.pieceAt[from] >> 1;
 
                     int hist = hd.counterHistory[toMove][prevPiece][prevMoveTo][piece][to] * depthScoreDiv / 23;
                     hd.counterHistory[toMove][prevPiece][prevMoveTo][piece][to] += -depthScore - hist;
