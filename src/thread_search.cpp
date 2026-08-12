@@ -106,23 +106,30 @@ namespace THREAD {
         int prevMoveTo = prev.prevMoveTo;
         int prevPiece = prev.prevPiece;
 
-        int depthScore = histScalar * depth * depth;
-        int depthScoreDiv = std::min(depth, 20);
+        int sA = histScalar / 8;
+        int sB = histScalar / 4;
+        int sC = histScalar / 2;
+        
+        int depthScoreDivA = std::min(depth, 6);
+        int depthScoreDivB = std::min(depth, 12);
+        int depthScoreDivC = std::min(depth, 20);
+
+        int depthScore = sA * depthScoreDivA * depthScoreDivA * depthScoreDivA + sB * depthScoreDivB * depthScoreDivB + sC * depth;
 
         if (isQuietMove(bestMove)) {
-            int hist = hd.quietHistory[toMove][get_move_from(bestMove)][get_move_to(bestMove)] * depthScoreDiv / 23;
+            int hist = hd.quietHistory[toMove][get_move_from(bestMove)][get_move_to(bestMove)] * depthScoreDivC / 23;
             hd.quietHistory[toMove][get_move_from(bestMove)][get_move_to(bestMove)] += depthScore - hist;
 
             for (int i = 0; i < quietCount; i++) {
                 int from = get_move_from(quietMoves[i]);
                 int to = get_move_to(quietMoves[i]);
 
-                int hist = hd.quietHistory[toMove][from][to] * depthScoreDiv / 23;
+                int hist = hd.quietHistory[toMove][from][to] * depthScoreDivC / 23;
                 hd.quietHistory[toMove][from][to] += -depthScore - hist;
             }
 
             if (prevMove != NULL_MOVE) {
-                hist = hd.counterHistory[toMove][prevPiece][prevMoveTo][bestPiece][get_move_to(bestMove)] * depthScoreDiv / 23;
+                hist = hd.counterHistory[toMove][prevPiece][prevMoveTo][bestPiece][get_move_to(bestMove)] * depthScoreDivC / 23;
                 hd.counterHistory[toMove][prevPiece][prevMoveTo][bestPiece][get_move_to(bestMove)] += depthScore - hist;
                 hd.counterMove[b.state.toMove][prev.prevMoveFrom][prevMoveTo] = bestMove;
 
@@ -131,14 +138,14 @@ namespace THREAD {
                     int to = get_move_to(quietMoves[i]);
                     int piece = b.state.pieceAt[from] >> 1;
 
-                    int hist = hd.counterHistory[toMove][prevPiece][prevMoveTo][piece][to] * depthScoreDiv / 23;
+                    int hist = hd.counterHistory[toMove][prevPiece][prevMoveTo][piece][to] * depthScoreDivC / 23;
                     hd.counterHistory[toMove][prevPiece][prevMoveTo][piece][to] += -depthScore - hist;
                 }
             }
 
         }
         else {
-            int hist = hd.captureHistory[toMove][get_move_from(bestMove)][get_move_to(bestMove)] * depthScoreDiv / 23;
+            int hist = hd.captureHistory[toMove][get_move_from(bestMove)][get_move_to(bestMove)] * depthScoreDivC / 23;
             hd.captureHistory[toMove][get_move_from(bestMove)][get_move_to(bestMove)] += depthScore - hist;
         }
 
@@ -146,7 +153,7 @@ namespace THREAD {
             int noisyFrom = get_move_from(noisyMoves[i]);
             int noisyTo = get_move_to(noisyMoves[i]);
 
-            int hist = hd.captureHistory[b.state.toMove][noisyFrom][noisyTo] * depthScoreDiv / 23;
+            int hist = hd.captureHistory[b.state.toMove][noisyFrom][noisyTo] * depthScoreDivC / 23;
             hd.captureHistory[b.state.toMove][noisyFrom][noisyTo] += -depthScore - hist;
         }
 
