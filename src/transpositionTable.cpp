@@ -141,6 +141,23 @@ namespace TT {
 
 
 
+    void saveTTSecondary(uint64_t key, MOVE move) {
+        uint32_t lowerKey = key & 0xFFFFFFFFULL;
+        uint32_t upperKey = key >> 32;
+
+        uint64_t posKey = lowerKey & tt.mask;
+        TTBucket& bucket = tt.hashTable[posKey];
+
+        for (TTEntry& entry : bucket.entries) {
+            if (entry.posKey == upperKey && move != NULL_MOVE && move != entry.move && move != entry.move2) {
+                entry.move3 = entry.move2;
+                entry.move2 = move;
+            }
+        }
+    }
+
+
+
     bool probeTT(uint64_t key, TTEntry &hashedBoard, int depth, bool &ttRet, MOVE &ttMove, int alpha, int beta, int ply) {
         bool ret = false;
 

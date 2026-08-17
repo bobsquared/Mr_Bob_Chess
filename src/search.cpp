@@ -444,6 +444,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     // Search
     int ret = -INFINITY_VAL;
     MOVE bestMove = NULL_MOVE;
+    MOVE bestMove2 = NULL_MOVE;
     MOVE move;
     int quietsSearched = 0;
     int noisysSearched = 0;
@@ -570,6 +571,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
             lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh) / historyLmrVal; // Increase/decrease depth based on histories
             lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
+            lmr += cutNode;
 
             if (hashed && !isCheck) {
                 if (TTFlag == UPPER_BOUND && hashedBoard.score >= staticEval
@@ -579,7 +581,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
             }
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
-            score = -pvSearch(b, td, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1, !cutNode);
+            score = -pvSearch(b, td, newDepth - 1 - lmr, -alpha - 1, -alpha, true, ply + 1, true);
             if (score > alpha) {
                 if (lmr > 0) {
                     score = -pvSearch(b, td, newDepth - 1, -alpha - 1, -alpha, true, ply + 1, !cutNode);
@@ -646,9 +648,11 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     if (!hasSingMove) {
         int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
         TT::saveTT(td, bestMove, ret, staticEval, depth, bound, posKey, ply);
+        if (bestMove2 != NULL_MOVE) {
+            TT::saveTTSecondary(posKey, bestMove2);
+        }
     }
     
-
     return ret;
 
 }

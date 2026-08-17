@@ -57,6 +57,7 @@ namespace TT {
     int getHashFull(uint64_t writes);
     void clearHashTable();
     void incrementTTAge();
+    void saveTTSecondary(uint64_t key, MOVE move);
     std::string getPv(Board &b);
 
     inline uint8_t getAgeFromTT(uint8_t flagsAndAge) {
