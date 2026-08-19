@@ -546,6 +546,9 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 if (hashedBoard.score >= beta) {
                     extension = -1 - 2 * !isPv;
                 }
+                else if (cutNode) {
+                    extension = -2;
+                }
                 else if (hashedBoard.score <= alpha) {
                     extension = -1;
                 }
