@@ -485,13 +485,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 }
 
                 // History move pruning
-                if (depth <= 3 && quietsSearched >= 3 && hist < depth * depth * (-100 - (150 * improving))) {
-                    mpd.stage = BAD_CAPTURES;
-                    continue;
-                }
-
-                // Counter move history pruning
-                if (depth <= 3 && quietsSearched >= 3 && cmh < depth * depth * (-125 - (200 * improving))) {
+                if (!isPv && depth <= 3 && quietsSearched >= 3 && hist + cmh < depth * depth * (-125 - (150 * improving))) {
                     mpd.stage = BAD_CAPTURES;
                     continue;
                 }
