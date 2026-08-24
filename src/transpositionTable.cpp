@@ -2,6 +2,9 @@
 #include "transpositionTable.h"
 #include "board/move.h"
 #include "board/legality.h"
+#include "thread_search.h"
+#include <thread>
+#include <cstring>
 
 
 
@@ -9,11 +12,25 @@ namespace TT {
 
     TranspositionTable tt;
 
+    void clearHashTableSub(uint64_t start, uint64_t end) {
+        std::memset(static_cast<void*>(&tt.hashTable[start]), 0, (end - start) * sizeof(TTBucket));
+    }
+
 
 
     void clearHashTable() {
-        for (uint64_t i = 0; i < tt.numHashes; i++) {
-            tt.hashTable[i] = TTBucket();
+        std::deque<std::thread> threads;
+        uint64_t dataPerThread = tt.numHashes / THREAD::getNThreads();
+        
+        for (int i = 0; i < THREAD::getNThreads(); i++) {
+            uint64_t start = i * dataPerThread;
+            uint64_t end = (i == THREAD::getNThreads() - 1) ? tt.numHashes : start + dataPerThread;
+            std::thread t(clearHashTableSub, start, end);
+            threads.push_back(std::move(t));
+        }
+
+        for (std::thread& t : threads) {
+            t.join();
         }
     }
 
