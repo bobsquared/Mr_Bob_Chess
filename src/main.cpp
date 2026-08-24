@@ -52,6 +52,7 @@ int main(int argc, char* argv[]) {
 
     MAGIC_BITBOARDS::InitMagicBitboards();
     EVAL::InitEval("nets/b_bobbrain_31_0.002846.nnue");
+    THREAD::setNThreads(1);
     TT::InitTT(HASH_SIZE);                       /**< The transposition table for storing previously searched positions*/
 
     Search s = Search();
