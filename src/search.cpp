@@ -369,7 +369,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
 
         // Reverse futility pruning
         int rfpMargin = rfpVal 
-                        - extLevelMax 
+                        - std::max(0, extLevelMax) 
                         + hashLevel 
                         + ((256 - phase) / 16)
                         - 12 * (hashed && (hashedBoard.flagsAndAge & 0b11) != UPPER_BOUND);
