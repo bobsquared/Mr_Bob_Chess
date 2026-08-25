@@ -5,12 +5,45 @@
 #include "thread_search.h"
 #include <thread>
 #include <cstring>
+#include <new>
+
+#if defined(__linux__) && !defined(__ANDROID__)
+    #include <sys/mman.h>
+    #define TT_HUGEPAGES
+#endif
 
 
 
 namespace TT {
 
     TranspositionTable tt;
+    
+    #ifdef TT_HUGEPAGES
+    static constexpr std::align_val_t TT_ALIGN{2ULL * 1024 * 1024};
+    #else
+    static constexpr std::align_val_t TT_ALIGN{alignof(TTBucket)};
+    #endif
+
+
+
+    static TTBucket* allocTable(uint64_t n) {
+        uint64_t bytes = n * sizeof(TTBucket);
+        TTBucket* table = static_cast<TTBucket*>(::operator new(bytes, TT_ALIGN));
+
+        #ifdef TT_HUGEPAGES
+        madvise(table, bytes, MADV_HUGEPAGE);
+        #endif
+
+        return table;
+    }
+
+
+
+    static void freeTable(TTBucket* table) {
+        ::operator delete(table, TT_ALIGN);
+    }
+
+
 
     void clearHashTableSub(uint64_t start, uint64_t end) {
         std::memset(static_cast<void*>(&tt.hashTable[start]), 0, (end - start) * sizeof(TTBucket));
@@ -41,7 +74,7 @@ namespace TT {
         tt.numHashes = 1ULL << (63 - __builtin_clzll(tt.numHashes));
         tt.mask = tt.numHashes - 1;
 
-        tt.hashTable = new TTBucket [tt.numHashes];
+        tt.hashTable = allocTable(tt.numHashes);
         tt.age = 1;
 
         clearHashTable();
@@ -50,13 +83,13 @@ namespace TT {
 
 
     void setSize(uint64_t hashSize) {
-        delete [] tt.hashTable;
+        freeTable(tt.hashTable);
 
         tt.numHashes = ((uint64_t) hashSize * 1024 * 1024) / sizeof(TTBucket);
         tt.numHashes = 1ULL << (63 - __builtin_clzll(tt.numHashes));
         tt.mask = tt.numHashes - 1;
 
-        tt.hashTable = new TTBucket [tt.numHashes];
+        tt.hashTable = allocTable(tt.numHashes);
 
         clearHashTable();
     }
@@ -64,7 +97,7 @@ namespace TT {
 
 
     void DestroyTT() {
-        delete [] tt.hashTable;
+        freeTable(tt.hashTable);
     }
 
 
