@@ -18,9 +18,9 @@ struct SearchStackData {
 
 
 struct HistoryData {
-    int quietHistory[2][64][64] = {};
-    int captureHistory[2][64][64] = {};
-    int counterHistory[2][6][64][6][64] = {};
+    int16_t quietHistory[2][64][64] = {};
+    int16_t captureHistory[2][64][64] = {};
+    int16_t counterHistory[2][6][64][6][64] = {};
     MOVE killers[MAX_PLY][2] = {};
     MOVE counterMove[2][64][64] = {};
 };

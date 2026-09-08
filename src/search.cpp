@@ -142,7 +142,8 @@ int Search::qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, in
     td.nodes++; // update nodes searched
 
     // stop the search
-    if (stopable && exit_thread_flag) {
+    if (stopable && (exit_thread_flag || ((td.nodes & 1023) == 0 && tm.outOfTime()))) {
+        exit_thread_flag  = true;
         return 0;
     }
 
@@ -285,7 +286,8 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     td.nodes++; // Increment number of nodes
 
     // Stop the search
-    if (stopable && (exit_thread_flag || ((td.nodes & 1023) == 0 && tm.outOfTime()))) {
+    if (stopable && (exit_thread_flag || ((td.nodes & 31) == 0 && tm.outOfTime()))) {
+        exit_thread_flag  = true;
         return 0;
     }
 
