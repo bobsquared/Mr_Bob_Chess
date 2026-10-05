@@ -515,7 +515,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
         }
 
         // Singular extensions
-        if ((depth >= 8 || (extLevel <= 2 && depth >= 6)) && !extension && hashed && ttMove == move && TTFlag != UPPER_BOUND 
+        if ((depth >= 8 || (extLevel <= 2 && depth >= 6)) && !extension && hashed && ttMove == move && (TTFlag == LOWER_BOUND || ((TTFlag == EXACT) && extLevel <= 8)) 
             && hashedBoard.depth >= depth - 3 && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
             int singVal = hashedBoard.score - (1 + isPv) * depth;
 
@@ -527,7 +527,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 isSingular = true;
                 extension = 1;
 
-                if (phase >= 213 && !isPv) {
+                if (phase >= 255 && !isPv) {
                     extension = 2;
                 }
 
