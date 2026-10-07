@@ -168,7 +168,8 @@ int Search::qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, in
 
     bool inCheck = BITBOARD::InCheck(b.state);
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
-    int staticEval = hashed? hashedBoard.staticScore : EVAL::evaluate(b);
+    int rawEval = hashed? hashedBoard.staticScore : EVAL::evaluate(b);
+    int staticEval = EVAL::dampenEval(rawEval, b.state.halfMoves);
 
     if (!inCheck) {
         stand_pat = staticEval;
@@ -240,7 +241,7 @@ int Search::qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, in
 
     if (numMoves > 0) {
         int bound = prevAlpha >= stand_pat? UPPER_BOUND : (stand_pat >= beta? LOWER_BOUND : EXACT);
-        TT::saveTT(td, bestMove, stand_pat, staticEval, depth, bound, posKey, ply);
+        TT::saveTT(td, bestMove, stand_pat, rawEval, depth, bound, posKey, ply);
     }
 
     return stand_pat;
@@ -323,7 +324,8 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     }
 
     bool isCheck = BITBOARD::InCheck(b.state);
-    int staticEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : EVAL::evaluate(b));
+    int rawEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : EVAL::evaluate(b));
+    int staticEval = EVAL::dampenEval(rawEval, b.state.halfMoves);
     bool improving = !isCheck && (ply >= 2? staticEval > td.searchStack[ply - 2].eval : false);
     int extLevel = td.searchStack[ply].extLevel;
     int extLevelMax = std::min(20, extLevel);
@@ -348,7 +350,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
             bound = UPPER_BOUND;
         }
 
-        TT::saveTT(td, NULL_MOVE, res, staticEval, depth, bound, posKey, ply);
+        TT::saveTT(td, NULL_MOVE, res, rawEval, depth, bound, posKey, ply);
 
         if (bound == EXACT || (bound == LOWER_BOUND && res >= beta) || (bound == UPPER_BOUND && res <= alpha)) {
             return res;
@@ -427,7 +429,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 BITBOARD::undo_move(b, move);
 
                 if (score >= probBeta) {
-                    TT::saveTT(td, move, score, staticEval, depth - 3, LOWER_BOUND, posKey, ply);
+                    TT::saveTT(td, move, score, rawEval, depth - 3, LOWER_BOUND, posKey, ply);
                     return score;
                 }
             }
@@ -646,7 +648,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     assert (bestMove != 0);
     if (!hasSingMove) {
         int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
-        TT::saveTT(td, bestMove, ret, staticEval, depth, bound, posKey, ply);
+        TT::saveTT(td, bestMove, ret, rawEval, depth, bound, posKey, ply);
         if (bestMove2 != NULL_MOVE) {
             TT::saveTTSecondary(posKey, bestMove2);
         }

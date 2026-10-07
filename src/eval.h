@@ -33,6 +33,11 @@ namespace EVAL {
         return (phase * 255 + (TOTALPHASEEVAL / 2)) / TOTALPHASEEVAL;
     }
 
+    inline int dampenEval(int eval, int hm) {
+        int halfMoves = std::min(100, hm);
+        return eval * (-halfMoves * halfMoves - 100 * halfMoves + 30000) / 30000;
+    }
+
     void InitEval(std::string nnueFile);
     int evaluate(Board &board);
 }
