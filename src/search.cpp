@@ -165,11 +165,24 @@ int Search::qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, in
     if (!isPv && ttRet) {
         return hashedBoard.score;
     }
-
+    
+    uint8_t TTFlag = TT::getFlagsFromTT(hashedBoard.flagsAndAge);
     bool inCheck = BITBOARD::InCheck(b.state);
     int stand_pat = inCheck? -MATE_VALUE + ply : 0;
     int rawEval = hashed? hashedBoard.staticScore : EVAL::evaluate(b);
-    int staticEval = EVAL::dampenEval(rawEval, b.state.halfMoves);
+    int staticEval = rawEval;
+
+    if (!inCheck) {
+        staticEval = EVAL::dampenEval(rawEval, b.state.halfMoves);
+
+        if (hashed && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
+            if ((TTFlag == UPPER_BOUND && hashedBoard.score < staticEval)
+             || (TTFlag == LOWER_BOUND && hashedBoard.score > staticEval)
+             || (TTFlag == EXACT)) {
+                staticEval = hashedBoard.score;
+            }
+        }
+    }
 
     if (!inCheck) {
         stand_pat = staticEval;
@@ -325,15 +338,28 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
 
     bool isCheck = BITBOARD::InCheck(b.state);
     int rawEval = isCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : EVAL::evaluate(b));
-    int staticEval = EVAL::dampenEval(rawEval, b.state.halfMoves);
-    bool improving = !isCheck && (ply >= 2? staticEval > td.searchStack[ply - 2].eval : false);
+    int staticEval = rawEval;
+
+    if (!isCheck) {
+        staticEval = EVAL::dampenEval(rawEval, b.state.halfMoves);
+
+        if (hashed && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
+            if ((TTFlag == UPPER_BOUND && hashedBoard.score < staticEval)
+             || (TTFlag == LOWER_BOUND && hashedBoard.score > staticEval)
+             || (TTFlag == EXACT)) {
+                staticEval = hashedBoard.score;
+            }
+        }
+    }
+
+    bool improving = !isCheck && (ply >= 2? rawEval > td.searchStack[ply - 2].eval : false);
     int extLevel = td.searchStack[ply].extLevel;
     int extLevelMax = std::min(20, extLevel);
     int hashLevel = td.searchStack[ply].hashLevel;
     int phase =  EVAL::getPhase(b);
 
     THREAD::removeKiller(td.historyData, ply + 1);
-    td.searchStack[ply].eval = staticEval;
+    td.searchStack[ply].eval = rawEval;
     td.searchStack[ply + 1].hashLevel = hashLevel + hashed;
 
     // Probe Syzygy Tablebases
@@ -575,9 +601,9 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
             lmr += cutNode;
 
             if (hashed && !isCheck) {
-                if (TTFlag == UPPER_BOUND && hashedBoard.score >= staticEval
+                if (TTFlag == UPPER_BOUND && hashedBoard.score >= rawEval
                     && hashedBoard.depth >= depth - 2 && std::abs(alpha) < MATE_VALUE_MAX) {
-                    lmr -= (isPv * 2) + std::max(-4 + 2 * !isPv, std::min(0, (staticEval - alpha) / (45 * depth + 100 * isPv)));
+                    lmr -= (isPv * 2) + std::max(-4 + 2 * !isPv, std::min(0, (rawEval - alpha) / (45 * depth + 100 * isPv)));
                 }
             }
 
