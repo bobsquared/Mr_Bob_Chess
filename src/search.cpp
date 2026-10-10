@@ -118,6 +118,25 @@ PrevMoveInfo GetPreviousMoveInfo(Board &b) {
 }
 
 
+
+PrevMoveInfo GetOurPreviousMoveInfo(Board &b) {
+    if (b.moveHistory.count <= 1) {
+        return PrevMoveInfo(NO_MOVE, 0, 0, 0);
+    }
+
+    MOVE ourPrevMove = b.moveHistory.moves[b.moveHistory.count - 2].move;
+    MOVE prevMove = b.moveHistory.moves[b.moveHistory.count - 1].move;
+    int ourPrevMoveTo = get_move_to(ourPrevMove);
+
+    if (get_move_to(prevMove) == ourPrevMoveTo) {
+        return PrevMoveInfo(NO_MOVE, 0, 0, 0);
+    }
+    else {
+        return PrevMoveInfo(ourPrevMove, get_move_from(ourPrevMove), ourPrevMoveTo, b.state.pieceAt[ourPrevMoveTo] / 2);
+    }
+}
+
+
 /**
 * The function that searches only noisy moves
 *
@@ -492,17 +511,19 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     int numMoves = 0;
     bool isSingular = false;
     PrevMoveInfo prev = GetPreviousMoveInfo(b);
+    PrevMoveInfo ourPrev = GetOurPreviousMoveInfo(b);
     MOVE counterMove = THREAD::getCounterMove(b, prev, td.historyData);
     MOVE quiets[MAX_NUM_MOVES];
     MOVE noisys[MAX_NUM_MOVES];
     
     MovePickData mpd = MovePickData(ttMove, hashedBoard.move2, hashedBoard.move3, td.historyData.killers[ply][0], td.historyData.killers[ply][1], counterMove);
-    while (MOVEPICK::pick_move(move, b, prev, td, mpd)) {
+    while (MOVEPICK::pick_move(move, b, prev, ourPrev, td, mpd)) {
         bool isQuiet = isQuietMove(move);
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
         int hist = THREAD::getHistory(td.historyData,b.state.toMove, isQuiet, moveFrom, moveTo);
         int cmh = isQuiet * THREAD::getCounterHistory(b, prev, td.historyData, moveFrom, moveTo);
+        int fuh = isQuiet * THREAD::getFollowupHistory(b, ourPrev, td.historyData, moveFrom, moveTo);
         int seeScore = 0;
 
         if (singMove == move) {
@@ -526,7 +547,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 }
 
                 // History move pruning
-                if (!isPv && depth <= 3 && quietsSearched >= 3 && hist + cmh < depth * depth * (-125 - (150 * improving))) {
+                if (!isPv && depth <= 3 && quietsSearched >= 3 && hist + cmh + fuh < depth * depth * (-187 - (275 * improving))) {
                     mpd.stage = BAD_CAPTURES;
                     continue;
                 }
@@ -607,7 +628,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
             lmr += !isQuietMove(ttMove) && ttMove != NO_MOVE && ttMove != NULL_MOVE;
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
-            lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh) / historyLmrVal; // Increase/decrease depth based on histories
+            lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh + fuh) / historyLmrVal; // Increase/decrease depth based on histories
             lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
             lmr += cutNode;
 
@@ -677,7 +698,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
         if (isQuietMove(bestMove)) {
             THREAD::insertKiller(td.historyData,ply, bestMove);
         }
-        THREAD::UpdateHistories(b, prev, td.historyData, quiets, noisys, quietsSearched, noisysSearched, depth + (isSingular || isPv), ttMove, bestMove);
+        THREAD::UpdateHistories(b, prev, ourPrev, td.historyData, quiets, noisys, quietsSearched, noisysSearched, depth + (isSingular || isPv), ttMove, bestMove);
     }
 
     // Update Transposition tables
@@ -1020,10 +1041,11 @@ Search::SearchInfo Search::search(int id, ThreadData &td, int depth, bool analys
     std::string pstring = "";
 
     PrevMoveInfo prev = GetPreviousMoveInfo(b);
+    PrevMoveInfo ourPrev = GetOurPreviousMoveInfo(b);
 
     MoveList moveListOriginal;
     MOVE_GEN::generate_all_moves(moveListOriginal, b.state);
-    MOVEPICK::scoreMoves(moveListOriginal, b, prev, td);
+    MOVEPICK::scoreMoves(moveListOriginal, b, prev, ourPrev, td);
 
     if (id == 0) {
         tm.setTimer(moveListOriginal.count);
@@ -1085,7 +1107,7 @@ Search::SearchInfo Search::search(int id, ThreadData &td, int depth, bool analys
                     beta = (alpha + beta) / 2;
                     alpha = searchedEval - delta;
                     bound = UPPER_BOUND;
-                    d += 2;
+                    d = i;
                 }
                 // exact
                 else {

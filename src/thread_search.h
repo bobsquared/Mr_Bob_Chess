@@ -21,6 +21,7 @@ struct HistoryData {
     int16_t quietHistory[2][64][64] = {};
     int16_t captureHistory[2][64][64] = {};
     int16_t counterHistory[2][6][64][6][64] = {};
+    int16_t followupHistory[2][6][64][6][64] = {};
     MOVE killers[MAX_PLY][2] = {};
     MOVE counterMove[2][64][64] = {};
 };
@@ -49,7 +50,7 @@ namespace THREAD {
     void InitCounterMoves();
     int getNThreads();
     void setNThreads(int n);
-    void UpdateHistories(const Board &b, const PrevMoveInfo &prev, HistoryData &hd, const MOVE *quietMoves, const MOVE *noisyMoves, int quietCount, int noisyCount, int depth, MOVE ttMove, MOVE bestMove);
+    void UpdateHistories(const Board &b, const PrevMoveInfo &prev, const PrevMoveInfo &ourPrev, HistoryData &hd, const MOVE *quietMoves, const MOVE *noisyMoves, int quietCount, int noisyCount, int depth, MOVE ttMove, MOVE bestMove);
 
 
 
@@ -94,6 +95,18 @@ namespace THREAD {
         bool toMove = b.state.toMove;
 
         return hd.counterHistory[toMove][prev.prevPiece][prev.prevMoveTo][b.state.pieceAt[from] / 2][to];
+    }
+
+
+
+    inline int getFollowupHistory(Board &b, const PrevMoveInfo &ourPrev, const HistoryData& hd, int from, int to) {
+        if (ourPrev.prevMove == NULL_MOVE) {
+            return 0;
+        }
+
+        bool toMove = b.state.toMove;
+
+        return hd.followupHistory[toMove][ourPrev.prevPiece][ourPrev.prevMoveTo][b.state.pieceAt[from] / 2][to];
     }
 
 

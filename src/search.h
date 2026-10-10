@@ -116,7 +116,7 @@ private:
     int razorVal = 361;
     int probcutVal = 335;
     int futilityVal = 214;
-    int historyLmrVal = 2084;
+    int historyLmrVal = 2341;
     int historyLmrNoisyVal = 2534;
     
 };

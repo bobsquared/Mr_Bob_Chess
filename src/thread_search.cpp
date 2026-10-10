@@ -53,6 +53,7 @@ namespace THREAD {
                         for (int m = 0; m < 6; m++) {
                             for (int n = 0; n < 64; n++) {
                                 threadData[i].historyData.counterHistory[j][k][l][m][n] = 0;
+                                threadData[i].historyData.followupHistory[j][k][l][m][n] = 0;
                             }
                         }
                     }
@@ -93,7 +94,7 @@ namespace THREAD {
 
 
 
-    void UpdateHistories(const Board &b, const PrevMoveInfo &prev, HistoryData& hd, const MOVE *quietMoves, const MOVE *noisyMoves, int quietCount, int noisyCount, int depth, MOVE ttMove, MOVE bestMove) {
+    void UpdateHistories(const Board &b, const PrevMoveInfo &prev, const PrevMoveInfo &ourPrev, HistoryData& hd, const MOVE *quietMoves, const MOVE *noisyMoves, int quietCount, int noisyCount, int depth, MOVE ttMove, MOVE bestMove) {
         bool toMove = b.state.toMove;
         int bestPiece = b.state.pieceAt[get_move_from(bestMove)] >> 1;
         int histScalar = 32;
@@ -105,6 +106,10 @@ namespace THREAD {
         MOVE prevMove = prev.prevMove;
         int prevMoveTo = prev.prevMoveTo;
         int prevPiece = prev.prevPiece;
+
+        MOVE ourPrevMove = ourPrev.prevMove;
+        int ourPrevMoveTo = ourPrev.prevMoveTo;
+        int ourPrevPiece = ourPrev.prevPiece;
 
         int sA = histScalar / 8;
         int sB = histScalar / 4;
@@ -128,7 +133,7 @@ namespace THREAD {
                 hd.quietHistory[toMove][from][to] += -depthScore - hist;
             }
 
-            if (prevMove != NULL_MOVE) {
+            if (prevMove != NULL_MOVE && prevMove != NO_MOVE) {
                 hist = hd.counterHistory[toMove][prevPiece][prevMoveTo][bestPiece][get_move_to(bestMove)] * depthScoreDivC / 23;
                 hd.counterHistory[toMove][prevPiece][prevMoveTo][bestPiece][get_move_to(bestMove)] += depthScore - hist;
                 hd.counterMove[b.state.toMove][prev.prevMoveFrom][prevMoveTo] = bestMove;
@@ -140,6 +145,20 @@ namespace THREAD {
 
                     int hist = hd.counterHistory[toMove][prevPiece][prevMoveTo][piece][to] * depthScoreDivC / 23;
                     hd.counterHistory[toMove][prevPiece][prevMoveTo][piece][to] += -depthScore - hist;
+                }
+            }
+
+            if (ourPrevMove != NULL_MOVE && ourPrevMove != NO_MOVE) {
+                hist = hd.followupHistory[toMove][ourPrevPiece][ourPrevMoveTo][bestPiece][get_move_to(bestMove)] * depthScoreDivC / 23;
+                hd.followupHistory[toMove][ourPrevPiece][ourPrevMoveTo][bestPiece][get_move_to(bestMove)] += depthScore - hist;
+
+                for (int i = 0; i < quietCount; i++) {
+                    int from = get_move_from(quietMoves[i]);
+                    int to = get_move_to(quietMoves[i]);
+                    int piece = b.state.pieceAt[from] >> 1;
+
+                    int hist = hd.followupHistory[toMove][ourPrevPiece][ourPrevMoveTo][piece][to] * depthScoreDivC / 23;
+                    hd.followupHistory[toMove][ourPrevPiece][ourPrevMoveTo][piece][to] += -depthScore - hist;
                 }
             }
 
