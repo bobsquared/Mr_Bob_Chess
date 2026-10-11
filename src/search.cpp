@@ -752,6 +752,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
     bool hashed = TT::probeTT(posKey, hashedBoard, depth, ttRet, ttMove, alpha, beta, ply);
 
     PrevMoveInfo prev = GetPreviousMoveInfo(b);
+    PrevMoveInfo ourPrev = GetOurPreviousMoveInfo(b);
 
     // Initialize evaluation stack
     int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : EVAL::evaluate(b));
@@ -767,6 +768,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
         int hist = THREAD::getHistory(td.historyData, b.state.toMove, isQuiet, moveFrom, moveTo);
+        int fuh = isQuiet? THREAD::getFollowupHistory(b, prev, td.historyData, moveFrom, moveTo) : 0;
         int cmh = isQuiet? THREAD::getCounterHistory(b, prev, td.historyData, moveFrom, moveTo) : 0;
 
         // Check for legality
@@ -788,7 +790,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
         // Late move reductions
         else if (depth >= 3 && numMoves > 1 && ((hashed && (hashedBoard.flagsAndAge & 0b11) != EXACT) || isQuiet)) {
             int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)];
-            lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh) / historyLmrVal; // Increase/decrease depth based on histories
+            lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh + fuh) / historyLmrVal; // Increase/decrease depth based on histories
             lmr--;
 
             if (hashed && (hashedBoard.flagsAndAge & 0b11) == UPPER_BOUND && hashedBoard.score >= staticEval
