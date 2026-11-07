@@ -51,7 +51,7 @@ void Bench(Board &b, Search &s) {
 int main(int argc, char* argv[]) {
 
     MAGIC_BITBOARDS::InitMagicBitboards();
-    EVAL::InitEval("nets/b_bobbrain_20_0.002732.nnue");
+    EVAL::InitEval("nets/b_bobbrain_20_0.002269.nnue");
     THREAD::setNThreads(1);
     TT::InitTT(HASH_SIZE);                       /**< The transposition table for storing previously searched positions*/
 
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
     options.addOption([&](int n){s.setHistoryLMRsearch(n);}, "histlmr", 2084, 1, 10000);
     options.addOption([&](int n){s.setHistoryLMRNoisysearch(n);}, "histlmrnoisy", 2534, 1, 10000);
     options.addOption([&](std::string path){SYZYGY_PROBE::setPath(path);}, "SyzygyPath", "tb/syzygy");
-    options.addOption([&](std::string path){EVAL::InitEval(path);}, "EvalFile", "nets/b_bobbrain_31_0.002846.nnue");
+    options.addOption([&](std::string path){EVAL::InitEval(path);}, "EvalFile", "nets/b_bobbrain_20_0.002269.nnue");
 
     params.addParameter("movetime");
     params.addParameter("wtime");
