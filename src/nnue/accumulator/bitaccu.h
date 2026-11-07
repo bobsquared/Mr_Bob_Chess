@@ -29,11 +29,11 @@ namespace BITACCU {
         }
     }
 
-    inline void Add(int piece, int loc, BitAccu &bitAcc) {
+    inline void Add(int piece, int loc, int mirrorWhite, int mirrorBlack, BitAccu &bitAcc) {
         int blackPiece = piece + ((piece & 1) * -2) + 1;
 
-        bitAcc.addsWhites[piece] |= (1ULL << loc);
-        bitAcc.addsBlacks[blackPiece] |= (1ULL << (loc ^ 56));
+        bitAcc.addsWhites[piece] |= (1ULL << (loc ^ mirrorWhite));
+        bitAcc.addsBlacks[blackPiece] |= (1ULL << (loc ^ 56 ^ mirrorBlack));
 
         uint64_t maskWhite = bitAcc.addsWhites[piece] & bitAcc.removesWhites[piece];
         uint64_t maskBlack = bitAcc.addsBlacks[blackPiece] & bitAcc.removesBlacks[blackPiece];
@@ -44,11 +44,11 @@ namespace BITACCU {
         bitAcc.removesBlacks[blackPiece] ^= maskBlack;
     }
 
-    inline void Remove(int piece, int loc, BitAccu &bitAcc) {
+    inline void Remove(int piece, int loc, int mirrorWhite, int mirrorBlack, BitAccu &bitAcc) {
         int blackPiece = piece + ((piece & 1) * -2) + 1;
 
-        bitAcc.removesWhites[piece] |= (1ULL << loc);
-        bitAcc.removesBlacks[blackPiece] |= (1ULL << (loc ^ 56));
+        bitAcc.removesWhites[piece] |= (1ULL << (loc ^ mirrorWhite));
+        bitAcc.removesBlacks[blackPiece] |= (1ULL << (loc ^ 56 ^ mirrorBlack));
 
         uint64_t maskWhite = bitAcc.addsWhites[piece] & bitAcc.removesWhites[piece];
         uint64_t maskBlack = bitAcc.addsBlacks[blackPiece] & bitAcc.removesBlacks[blackPiece];

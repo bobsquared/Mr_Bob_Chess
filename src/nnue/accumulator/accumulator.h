@@ -16,10 +16,12 @@ public:
     Accumulator();
     int16_t* getOutputVectorWhite();
     int16_t* getOutputVectorBlack();
+    void SetMirror(bool mirrorWhite, bool mirrorBlack);
     void Add(int piece, int loc);
     void Remove(int piece, int loc);
     void Refresh();
     void Accumulate(const Layer::Linear<int16_t, ins, outs>& layerWhite, const Layer::Linear<int16_t, ins, outs>& layerBlack, bool training = true);
+    bool updateKingBucket(int w, int bl, int kingWhiteSquare, int kingBlackSquare);
 
 private:
     void UpdateNNUEFeatures(const Layer::Linear<int16_t, ins, outs>& layer, uint64_t* addFeatures, uint64_t* removeFeatures, int16_t* outputVector, bool toRefresh);
@@ -30,12 +32,50 @@ private:
 
     bool toRefresh;
     float scale;
+    int mirrorWhite = 0;
+    int mirrorBlack = 0;
+
+    uint8_t curKingWhiteSquare = -1;
+    uint8_t curKingBlackSquare = -1;
+    bool currMirrorWhite = false;
+    bool currMirrorBlack = false;
 };
 
 template <int ins, int outs>
 Accumulator<ins, outs>::Accumulator() : toRefresh(true) {
     BITACCU::Refresh(bitAcc);
 } 
+
+template <int ins, int outs>
+inline bool Accumulator<ins, outs>::updateKingBucket(int w, int bl, int kingWhiteSquare, int kingBlackSquare) {
+    bool mirrorWhite = (kingWhiteSquare & 7) < 4;
+    bool mirrorBlack = (kingBlackSquare & 7) < 4;
+
+    if (mirrorWhite) {
+        kingWhiteSquare ^= 7;
+    }
+
+    if (mirrorBlack) {
+        kingBlackSquare ^= 7;
+    }
+
+    if (w != curKingWhiteSquare || bl != curKingBlackSquare || mirrorWhite != currMirrorWhite || mirrorBlack != currMirrorBlack) {
+        curKingWhiteSquare = w;
+        curKingBlackSquare = bl;
+        currMirrorWhite = mirrorWhite;
+        currMirrorBlack = mirrorBlack;
+        SetMirror(mirrorWhite, mirrorBlack);
+        return true;
+    }
+
+    return false;
+}
+
+template <int ins, int outs>
+inline void Accumulator<ins, outs>::SetMirror(bool mirrorWhite, bool mirrorBlack) {
+    this->mirrorWhite = mirrorWhite ? 7 : 0;
+    this->mirrorBlack = mirrorBlack ? 7 : 0;
+}
 
 template <int ins, int outs>
 inline int16_t* Accumulator<ins, outs>::getOutputVectorWhite() {
@@ -48,19 +88,19 @@ inline int16_t* Accumulator<ins, outs>::getOutputVectorBlack() {
 }
 
 template <int ins, int outs>
-void Accumulator<ins, outs>::Refresh() {
+inline void Accumulator<ins, outs>::Refresh() {
     BITACCU::Refresh(bitAcc);
     toRefresh = true;
 }
 
 template <int ins, int outs>
 inline void Accumulator<ins, outs>::Add(int piece, int loc) {
-    BITACCU::Add(piece, loc, bitAcc);
+    BITACCU::Add(piece, loc, mirrorWhite, mirrorBlack, bitAcc);
 }
 
 template <int ins, int outs>
 inline void Accumulator<ins, outs>::Remove(int piece, int loc) {
-    BITACCU::Remove(piece, loc, bitAcc);
+    BITACCU::Remove(piece, loc, mirrorWhite, mirrorBlack, bitAcc);
 }
 
 template <int ins, int outs>
@@ -110,9 +150,6 @@ void Accumulator<ins, outs>::Accumulate(const Layer::Linear<int16_t, ins, outs>&
     }
     
 }
-
-
-
 
 
 

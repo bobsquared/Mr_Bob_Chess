@@ -30,7 +30,7 @@ namespace EVAL {
         phase -= (board.pieceCount[4] + board.pieceCount[5]) * BISHOPPHASE;
         phase -= (board.pieceCount[6] + board.pieceCount[7]) * ROOKPHASE;
 
-        return (phase * 255 + (TOTALPHASEEVAL / 2)) / TOTALPHASEEVAL;
+        return std::max(0, (phase * 255 + (TOTALPHASEEVAL / 2)) / TOTALPHASEEVAL);
     }
 
     inline int dampenEval(int eval, int hm) {
