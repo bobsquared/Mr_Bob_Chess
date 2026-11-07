@@ -14,13 +14,14 @@ namespace MOVEPICK {
 
 
 
-    void scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, ThreadData &td) {
+    void scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, PrevMoveInfo &ourPrev, ThreadData &td) {
 
         MOVE move;
         int from;
         int to;
         MOVE prevMove = prev.prevMove;
         bool isValidPrevMove = (prevMove != NO_MOVE && prevMove != NULL_MOVE);
+        bool isValidOurPrevMove = (ourPrev.prevMove != NO_MOVE && ourPrev.prevMove != NULL_MOVE);
 
         for (int i = 0; i < moveList.count; i++) {
             move = moveList.get_index_move(i);
@@ -55,15 +56,15 @@ namespace MOVEPICK {
             }
             else {
                 int cmh = isValidPrevMove * THREAD::getCounterHistory(b, prev, td.historyData,  moveFrom, moveTo);
-                moveList.set_score_index(i, THREAD::getHistory(td.historyData, b.state.toMove, true, moveFrom, moveTo) + cmh);
+                int fuh = isValidOurPrevMove * THREAD::getFollowupHistory(b, ourPrev, td.historyData,  moveFrom, moveTo);
+                moveList.set_score_index(i, THREAD::getHistory(td.historyData, b.state.toMove, true, moveFrom, moveTo) + cmh + fuh);
             }
         }
 
     }
 
 
-
-    bool pick_move(MOVE &move, Board &b, PrevMoveInfo &prev, ThreadData &td, MovePickData &mpd) {
+    bool pick_move(MOVE &move, Board &b, PrevMoveInfo &prev, PrevMoveInfo &ourPrev, ThreadData &td, MovePickData &mpd) {
 
         switch (mpd.stage) {
             case PV_MOVE: {
@@ -93,7 +94,7 @@ namespace MOVEPICK {
             case GEN_CAPTURES: {
                 mpd.stage = GOOD_CAPTURES;
                 MOVE_GEN::generate_captures_promotions(mpd.moveListCaptures, b.state);
-                scoreMoves(mpd.moveListCaptures, b, prev, td);
+                scoreMoves(mpd.moveListCaptures, b, prev, ourPrev, td);
                 [[fallthrough]];
             }
             case GOOD_CAPTURES: {
@@ -142,7 +143,7 @@ namespace MOVEPICK {
             case GEN_QUIETS: {
                 mpd.stage = QUIETS;
                 MOVE_GEN::generate_quiets(mpd.moveListQuiets, b.state);
-                scoreMoves(mpd.moveListQuiets, b, prev, td);
+                scoreMoves(mpd.moveListQuiets, b, prev, ourPrev, td);
                 [[fallthrough]];
             }
             case QUIETS: {

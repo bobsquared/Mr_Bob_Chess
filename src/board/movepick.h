@@ -62,9 +62,9 @@ struct MovePickDataQS {
 
 namespace MOVEPICK {
 
-    void scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, ThreadData &td);
+    void scoreMoves(MoveList &moveList, Board &b, PrevMoveInfo &prev, PrevMoveInfo &ourPrev, ThreadData &td);
 
-    bool pick_move(MOVE &move, Board &b, PrevMoveInfo &prev, ThreadData &td, MovePickData &moves);
+    bool pick_move(MOVE &move, Board &b, PrevMoveInfo &prev, PrevMoveInfo &ourPrev, ThreadData &td, MovePickData &moves);
 
     bool pick_move_qs(MOVE &move, Board &b, MovePickDataQS &mpd, bool inCheck);
 
