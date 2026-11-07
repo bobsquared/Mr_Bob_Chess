@@ -62,7 +62,7 @@ public:
     void stopSearch();
     void setSearch();
 
-    SearchInfo beginSearch(Board &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
+    SearchInfo beginSearch(Board &b, int depth, int nodes, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis);
 
 private:
 
@@ -95,7 +95,7 @@ private:
     static bool isMateScore(int eval);
     static int getSearchedScore(int eval);
     
-    SearchInfo search(int id, ThreadData &td, int depth, bool analysis, Board& b);
+    SearchInfo search(int id, ThreadData &td, int depth, int nodes, bool analysis, Board& b);
     BestMoveInfo pvSearchRoot(Board &b, ThreadData &td, int depth, const MoveList &moveList, int alpha, int beta, bool analysis);
     int pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, bool canNullMove, int ply, bool cutNode);
     int qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, int ply);

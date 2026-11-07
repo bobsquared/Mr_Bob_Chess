@@ -52,6 +52,7 @@ void GoCommand::execute() {
     int binc = 0;
     int movestogo = 0;
     int depth = 99;
+    int nodes = -1;
     int perft = -1;
     bool analysis = false;
 
@@ -82,6 +83,10 @@ void GoCommand::execute() {
                 analysis = true;
                 depth = param.val;
             }
+            else if (param.name == "nodes") {
+                analysis = true;
+                nodes = param.val;
+            }
             else if (param.name == "perft") {
                 perft = param.val;
             }
@@ -92,7 +97,7 @@ void GoCommand::execute() {
         Perft(b, perft);
     }
     else {
-        thr = std::thread(&Search::beginSearch, &s, std::ref(b), depth, wtime, btime, winc, binc, movestogo, analysis);
+        thr = std::thread(&Search::beginSearch, &s, std::ref(b), depth, nodes, wtime, btime, winc, binc, movestogo, analysis);
         thr.detach();
     }
     

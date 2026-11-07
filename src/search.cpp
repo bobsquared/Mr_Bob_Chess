@@ -1030,7 +1030,7 @@ void Search::printSearchInfo(SearchInfo &printInfo, std::string &pstring, MOVE m
 * @param[in] analysis True if we are in analysis mode.
 * @param[in] b        The board representation.
 */
-Search::SearchInfo Search::search(int id, ThreadData &td, int depth, bool analysis, Board& b) {
+Search::SearchInfo Search::search(int id, ThreadData &td, int depth, int nodes, bool analysis, Board& b) {
 
     MOVE tempBestMove = NO_MOVE;
     MOVE bestMove = NO_MOVE;
@@ -1164,6 +1164,10 @@ Search::SearchInfo Search::search(int id, ThreadData &td, int depth, bool analys
             break;
         }
 
+        if (nodes > 0 && getTotalNodesSearched() >= nodes) {
+            break;
+        }
+
     }
 
     td.bestMove = bestMove;
@@ -1226,7 +1230,7 @@ void Search::moveToStruct(SearchInfo &si, MOVE move) {
 * @param[in]      movesToGo Moves to go until the next time control.
 * @param[in]      analysis  True if we are in analysis mode.
 */
-Search::SearchInfo Search::beginSearch(Board &b, int depth, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
+Search::SearchInfo Search::beginSearch(Board &b, int depth, int nodes, int wtime, int btime, int winc, int binc, int movesToGo, bool analysis) {
     stopable = false;
     totalTime = 0;
 
@@ -1264,10 +1268,10 @@ Search::SearchInfo Search::beginSearch(Board &b, int depth, int wtime, int btime
     std::vector<Board> boards(THREAD::getNThreads() - 1);
     for (int id = 1; id < THREAD::getNThreads(); id++) {
         BITBOARD::CopyAllBoard(b, boards[id - 1]);
-        threads.emplace_back(&Search::search, this, id, std::ref(THREAD::threadData[id]), depth, analysis, std::ref(boards[id - 1]));
+        threads.emplace_back(&Search::search, this, id, std::ref(THREAD::threadData[id]), depth, nodes, analysis, std::ref(boards[id - 1]));
     }
 
-    Search::SearchInfo ret = search(0, std::ref(THREAD::threadData[0]), depth, analysis, b);
+    Search::SearchInfo ret = search(0, std::ref(THREAD::threadData[0]), depth, nodes, analysis, b);
 
     for (auto &t : threads) {
         t.join();

@@ -34,7 +34,7 @@ void Bench(Board &b, Search &s) {
     for (int i = 0; strcmp(Benchmarks[i], ""); i++) {
         s.setSearch();
         BITBOARD::setPosFen(b.state, b.acc, Benchmarks[i]);
-        Search::SearchInfo ret = s.beginSearch(b, 13, INT_MAX, INT_MAX, 0, 0, 0, true);
+        Search::SearchInfo ret = s.beginSearch(b, 13, -1, INT_MAX, INT_MAX, 0, 0, 0, true);
         nodes = s.getTotalNodesSearched();
         printf("Bench [# %2d] %12d nodes %8d nps %8d CP\n", i + 1, (int) nodes, (int) (1000.0f * nodes / (s.getTotalTime() + 1)), ret.score);
         nn += nodes;
@@ -51,7 +51,7 @@ void Bench(Board &b, Search &s) {
 int main(int argc, char* argv[]) {
 
     MAGIC_BITBOARDS::InitMagicBitboards();
-    EVAL::InitEval("nets/b_bobbrain_31_0.002846.nnue");
+    EVAL::InitEval("nets/b_bobbrain_20_0.002732.nnue");
     THREAD::setNThreads(1);
     TT::InitTT(HASH_SIZE);                       /**< The transposition table for storing previously searched positions*/
 
@@ -89,6 +89,7 @@ int main(int argc, char* argv[]) {
     params.addParameter("binc");
     params.addParameter("movestogo");
     params.addParameter("depth");
+    params.addParameter("nodes");
     params.addParameter("perft");
 
     c = new StartCommand();
