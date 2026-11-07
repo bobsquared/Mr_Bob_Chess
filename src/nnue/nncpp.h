@@ -19,45 +19,49 @@ private:
     static constexpr float scaleO = 625.0f;
 
     // Define the Layers, boolean argument indicates that the layer has gradients and is trainable
-    Layer::Linear<int16_t, 768, 768> *l1_pov = new Layer::Linear<int16_t, 768, 768>(false, scaleA, scaleS, Layer::INIT_HE, 1.0f);
-    Layer::Linear<int16_t, 768, 768> *l1_vop = new Layer::Linear<int16_t, 768, 768>(false, scaleA, scaleS, Layer::INIT_HE, 1.0f);
+    Layer::Linear<int16_t, 768, 768> l1[14];
 
     CRelu<1536> relu = CRelu<1536>(false);
-    // Layer::Linear<int8_t, 1536, 1> l2r;
     Layer::Linear<int8_t, 1536, 1> l2[8];
 
-    static constexpr int nPawnMapping[17] = {
-        0, 0, 0, 0,  // 0-3
-        1, 1, 1,  // 4-6
-        2, 2,     // 7-8
-        3,        // 9
-        4,        // 10
-        5,        // 11
-        6,        // 12
-        7, 7,     // 13-14
-        8, 8      // 15-16
-    };
+    uint8_t NO_QUEEN[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 3, 3};
+    uint8_t HAS_QUEEN[16] = {4, 4, 5, 5, 6, 6, 6, 7, 7, 7, 7, 7, 7, 7, 7, 7};
 
+    uint8_t halfKing[64] = {0, 0, 1, 2, 2, 1, 0, 0,
+                            3, 3, 4, 4, 4, 4, 3, 3,
+                            5, 5, 5, 5, 5, 5, 5, 5, 
+                            6, 6, 6, 6, 6, 6, 6, 6,  
+                            6, 6, 6, 6, 6, 6, 6, 6,  
+                            6, 6, 6, 6, 6, 6, 6, 6,
+                            6, 6, 6, 6, 6, 6, 6, 6,
+                            6, 6, 6, 6, 6, 6, 6, 6};
 public:
 
     NNCPP() {
-        // l2r = Layer::Linear<int8_t, 1536, 1>(false, scaleA, scaleS, Layer::INIT_XAVIAR, scaleO);
         for (int i = 0; i < 8; i++) {
             l2[i] = Layer::Linear<int8_t, 1536, 1>(false, scaleA, scaleS, Layer::INIT_XAVIAR, scaleO);
         }
+
+        for (int i = 0; i < 14; i++) {
+            l1[i] = Layer::Linear<int16_t, 768, 768>(true, scaleA, scaleS, Layer::INIT_HE, 1.0f);
+        }
     }
 
-    inline const auto& getL1White() const {
-        return *l1_pov;
+    inline uint8_t getHalfKing(int index) const {
+        return halfKing[index];
     }
 
-    inline const auto& getL1Black() const {
-        return *l1_vop;
+    inline const auto& getL1White(int index) const {
+        return l1[halfKing[index] * 2];
+    }
+
+    inline const auto& getL1Black(int index) const {
+        return l1[halfKing[index] * 2 + 1];
     }
 
     int32_t evaluate(const int16_t *whitepov, const int16_t *blackpov, bool blackToMove, int outBucketIndex) {
-        alignas(64) int16_t catBuffer[1536] = {0};
-        alignas(64) uint8_t l1ReluBuffer[1536] = {0};
+        alignas(64) int16_t catBuffer[1536];
+        alignas(64) uint8_t l1ReluBuffer[1536];
         alignas(64) int32_t l2Buffer[4] = {0};
 
         if (blackToMove) {
@@ -67,9 +71,16 @@ public:
             Layer::Concatenate::execute(whitepov, blackpov, catBuffer, 768, 768);
         }
 
+        bool hasQueen = (outBucketIndex & 16) != 0;
+        if (hasQueen) {
+            outBucketIndex = HAS_QUEEN[outBucketIndex & 15];
+        }
+        else {
+            outBucketIndex = NO_QUEEN[outBucketIndex & 15];
+        }
+
         relu.execute(catBuffer, l1ReluBuffer, scaleA);
         l2[outBucketIndex].execute(l1ReluBuffer, l2Buffer);
-        // l2r.execute(l1ReluBuffer, l2Buffer);
 
         return l2Buffer[0];
     }
@@ -82,11 +93,14 @@ public:
             return;
         }
 
-        l1_pov->Load(in);
-        l1_vop->Load(in);
-        // l2r.Load(in);
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < 14; i++) {
+            l1[i].Load(in);
+        }
+            
+        for (int i = 0; i < 8; i++) {
             l2[i].Load(in);
+        }
+            
         in.close();
     }
 
