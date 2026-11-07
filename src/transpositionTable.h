@@ -11,6 +11,7 @@
 #define EXACT 0
 #define LOWER_BOUND 1
 #define UPPER_BOUND 2
+#define NO_BOUND 3
 
 // This is what is stored in the transposition table
 struct TTEntry {
