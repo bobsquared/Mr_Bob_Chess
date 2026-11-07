@@ -20,6 +20,7 @@ struct MoveInfo {
     int captureType;
     int enpassantSq;
     int halfMoves;
+    int pliesFromNull;
     MOVE move;
     uint8_t castleRights;
 
@@ -28,10 +29,10 @@ struct MoveInfo {
     }
 
     MoveInfo() :
-        posKey(0), captureType(-1), enpassantSq(0), halfMoves(0), move(NO_MOVE), castleRights(15) {}
+        posKey(0), captureType(-1), enpassantSq(0), halfMoves(0), pliesFromNull(0), move(NO_MOVE), castleRights(15) {}
 
-    MoveInfo(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey, MOVE move) :
-        posKey(posKey), captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), move(move), castleRights(castleRights) {}
+    MoveInfo(int captureType, int enpassantSq, int halfMoves, int pliesFromNull, uint8_t castleRights, uint64_t posKey, MOVE move) :
+        posKey(posKey), captureType(captureType), enpassantSq(enpassantSq), halfMoves(halfMoves), pliesFromNull(pliesFromNull), move(move), castleRights(castleRights) {}
 
 };
 
@@ -43,11 +44,12 @@ struct MoveInfoStack {
 
     MoveInfoStack() : count(0) {}
 
-    inline void insert(int captureType, int enpassantSq, int halfMoves, uint8_t castleRights, uint64_t posKey, MOVE move) {
+    inline void insert(int captureType, int enpassantSq, int halfMoves, int pliesFromNull, uint8_t castleRights, uint64_t posKey, MOVE move) {
         MoveInfo& info = moves[count++];
         info.captureType = captureType;
         info.enpassantSq = enpassantSq;
         info.halfMoves = halfMoves;
+        info.pliesFromNull = pliesFromNull;
         info.castleRights = castleRights;
         info.posKey = posKey;
         info.move = move;
@@ -75,6 +77,7 @@ struct BoardState {
     int enpassantSq;
     int fullMoves;
     int halfMoves;
+    int pliesFromNull;
     uint8_t castleRights;
     bool toMove;
 };
@@ -103,6 +106,7 @@ namespace BITBOARD {
 
     // Initialization functions
     void InitBoard();
+    void InitFeatures(BoardState& bs, Accumulator<768, 768>& acc);
     void CopyAllBoard(const Board &bOrig, Board &bTarget);
     void reset(Board& b);
 

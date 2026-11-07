@@ -22,7 +22,8 @@ namespace BITBOARD::detail {
 
     void make_null_move_impl(BoardState& bs, MoveInfoStack& moveHistory) {
         bs.toMove = !bs.toMove;
-        moveHistory.insert(0, bs.enpassantSq, bs.halfMoves, bs.castleRights, bs.posKey, NULL_MOVE);
+        moveHistory.insert(0, bs.enpassantSq, bs.halfMoves, bs.pliesFromNull, bs.castleRights, bs.posKey, NULL_MOVE);
+        bs.pliesFromNull = 0;
 
         if (bs.enpassantSq) {
             ZOBRIST::hashBoard_enpassant(bs.posKey, bs.enpassantSq);
@@ -42,6 +43,7 @@ namespace BITBOARD::detail {
         bs.castleRights = moveInfo.castleRights;
         bs.enpassantSq = moveInfo.enpassantSq;
         bs.posKey = moveInfo.posKey;
+        bs.pliesFromNull = moveInfo.pliesFromNull;
         return;
     }
 
@@ -198,7 +200,8 @@ namespace BITBOARD::detail {
 
         bs.toMove = !bs.toMove;
         ZOBRIST::hashBoard_turn(bs.posKey);
-        moveHistory.insert(toPiece, enSq, hmoves, crights, prevPosKey, move);
+        moveHistory.insert(toPiece, enSq, hmoves, bs.pliesFromNull, crights, prevPosKey, move);
+        bs.pliesFromNull++;
     }
 
 
@@ -221,6 +224,7 @@ namespace BITBOARD::detail {
         bs.castleRights = moveInfo.castleRights;
         bs.enpassantSq = moveInfo.enpassantSq;
         bs.posKey = moveInfo.posKey;
+        bs.pliesFromNull = moveInfo.pliesFromNull;
 
         bs.fullMoves -= bs.toMove;
 

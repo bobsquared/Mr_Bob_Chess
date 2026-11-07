@@ -16,13 +16,15 @@ namespace BITBOARD {
         }
 
         // Repetition
-        bool repetition = false;
-        for (int i = moveHistory.count - 2; i >= std::max(0, moveHistory.count - bs.halfMoves) ; i -= 2) {
+        int end = std::min(bs.halfMoves, bs.pliesFromNull);
+        bool seen = false;
+        for (int dist = 4; dist <= end; dist += 2) {
+            int i = moveHistory.count - dist;
             if (moveHistory.moves[i].posKey == bs.posKey) {
-                if (repetition || ply > 1) {
+                if (dist < ply || seen) {
                     return true;
-                }
-                repetition = true;
+                } 
+                seen = true;
             }
         }
 

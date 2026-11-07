@@ -180,6 +180,7 @@ namespace BITBOARD {
         bTarget.fullMoves = bOrig.fullMoves;
         bTarget.kingLoc[0] = bOrig.kingLoc[0];
         bTarget.kingLoc[1] = bOrig.kingLoc[1];
+        bTarget.pliesFromNull = bOrig.pliesFromNull;
 
         bTarget.posKey = bOrig.posKey;
     }
@@ -203,6 +204,7 @@ namespace BITBOARD {
         BoardState& bs = b.state;
         MoveInfoStack& moveHistory = b.moveHistory;
         b.acc = Accumulator<768, 768>();
+        bs.pliesFromNull = 0;
 
         bs.pieces[0] = (1ULL << 8) | (1ULL << 9) | (1ULL << 10) | (1ULL << 11) | (1ULL << 12) | (1ULL << 13) | (1ULL << 14) | (1ULL << 15);
         bs.pieces[1] = (1ULL << 48) | (1ULL << 49) | (1ULL << 50) | (1ULL << 51) | (1ULL << 52) | (1ULL << 53) | (1ULL << 54) | (1ULL << 55);

@@ -113,6 +113,7 @@ namespace BITBOARD {
         bs.color[0] = 0;
         bs.color[1] = 0;
         bs.occupied = 0;
+        bs.pliesFromNull = 0;
 
         bs.posKey = 0;
 
