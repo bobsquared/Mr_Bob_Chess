@@ -53,7 +53,7 @@ void Search::willPrintInfo(bool b) {
 void Search::InitLateMoveArray() {
     for (int i = 1; i < 64; i++) {
         for (int j = 1; j < 64; j++) {
-            lmrReduction[i][j] = (exp(3) * log(i) * log(j) + 72) / 54;
+            lmrReduction[i][j] = (19.75 * log(i) * log(j) + 69) / 58;
         }
     }
 }
@@ -243,7 +243,7 @@ int Search::qsearch(Board &b, ThreadData &td, int depth, int alpha, int beta, in
 
             if (prevMoveTo != get_move_to(move)) {
                 int seeEval = see + staticEval;
-                if (seeEval >= beta + 200 + std::max(-150, (-depth * depth))) {
+                if (seeEval >= beta + 201 + std::max(-161, (-depth * depth))) {
                     return seeEval;
                 }
 
@@ -432,16 +432,16 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                         - std::max(0, extLevelMax) 
                         + hashLevel 
                         + ((256 - phase) / 16)
-                        - 12 * (ttHit && (hashedBoard.flagsAndAge & 0b11) != UPPER_BOUND);
+                        - 15 * (ttHit && (hashedBoard.flagsAndAge & 0b11) != UPPER_BOUND);
 
-        if (depth <= 7 && staticEval - rfpMargin * (depth - improving) >= beta && std::abs(staticEval) < MATE_VALUE_MAX) {
+        if (depth <= 6 && staticEval - rfpMargin * (depth - improving) >= beta && std::abs(staticEval) < MATE_VALUE_MAX) {
             return staticEval;
         }
 
         // Null move pruning
-        if (canNullMove && staticEval >= beta + 25 * (phase >= 200) + 128 - depth * 4 && depth >= 2
+        if (canNullMove && staticEval >= beta + 25 * (phase >= 200) + 82 - depth * 7 && depth >= 1
                         && td.nullMoveTree && BITBOARD::nullMoveable(b.state)) {
-            int R = 3 + depth / 3 + std::max(0, std::min((staticEval - beta) / 200, 4));
+            int R = 4 + depth / 4 + std::max(0, std::min((staticEval - beta) / 196, 4));
             td.searchStack[ply + 1].extLevel = extLevel;
             BITBOARD::make_null_move(b);
             int nullRet = -pvSearch(b, td, depth - R - 1, -beta, -beta + 1, false, ply + 1, false);
@@ -464,7 +464,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
 
         // Probcut
         int probBeta = beta + probcutVal;
-        if (depth > 4 && !(ttHit && hashedBoard.depth >= depth - 3 && hashedBoard.score < probBeta) && std::abs(beta) < MATE_VALUE_MAX) {
+        if (depth > 6 && !(ttHit && hashedBoard.depth >= depth - 3 && hashedBoard.score < probBeta) && std::abs(beta) < MATE_VALUE_MAX) {
             MoveList moveList;
             MOVE move;
 
@@ -535,7 +535,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 int fDepth = std::max(1, 1 + depth - lmrReduction[std::min(63, numMoves)][std::min(63, depth)]);
 
                 // Futility pruning
-                if (!isCheck && fDepth <= 7 && staticEval + (futilityVal - extLevelMax) * fDepth + 250 <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
+                if (!isCheck && fDepth <= 7 && staticEval + (futilityVal - extLevelMax) * fDepth + 231 <= alpha && std::abs(alpha) < MATE_VALUE_MAX) {
                     mpd.stage = BAD_CAPTURES;
                     continue;
                 }
@@ -547,7 +547,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                 }
 
                 // History move pruning
-                if (!isPv && depth <= 3 && quietsSearched >= 3 && hist + cmh + fuh < depth * depth * (-187 - (275 * improving))) {
+                if (!isPv && depth <= 5 && quietsSearched >= 3 && hist + cmh + fuh < depth * depth * (-209 - (293 * improving))) {
                     mpd.stage = BAD_CAPTURES;
                     continue;
                 }
@@ -575,7 +575,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
         }
 
         // Singular extensions
-        if ((depth >= 8 || (extLevel <= 2 && depth >= 6)) && !extension && ttHit && ttMove == move && (TTFlag == LOWER_BOUND || ((TTFlag == EXACT) && extLevel <= 8)) 
+        if (depth >= 7 && !extension && ttHit && ttMove == move && (TTFlag == LOWER_BOUND || ((TTFlag == EXACT) && extLevel <= 8)) 
             && hashedBoard.depth >= depth - 3 && std::abs(hashedBoard.score) < MATE_VALUE_MAX) {
             int singVal = hashedBoard.score - (1 + isPv) * depth;
 
@@ -591,7 +591,7 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
                     extension = 2;
                 }
 
-                if (!isPv && score < singVal - 2 * depth && extLevel <= 8) {
+                if (!isPv && score < singVal - depth * 29 / 16 && extLevel <= 8) {
                     extension++;
                 }
             }
@@ -622,20 +622,20 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
         }
         // Late move reductions
         else if (depth >= 3 && numMoves > isPv && (!isPv || (ttHit && TTFlag != EXACT) || isQuiet)) {
-            int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)] * (100 + extLevel) / 100; // Base reduction
+            int lmr = lmrReduction[std::min(63, numMoves)][std::min(63, depth)] * (100 + extLevel * 102 / 100) / 100; // Base reduction
 
             lmr -= THREAD::isKiller(td.historyData, ply, move) || (counterMove == move); // Don't reduce as much for killer and counter moves
             lmr += !isQuietMove(ttMove) && ttMove != NO_MOVE && ttMove != NULL_MOVE;
             lmr += !improving; // Reduce if evaluation is improving
             lmr -= isPv; // Don't reduce as much for PV nodes
             lmr -= (hist + (!isQuiet * historyLmrNoisyVal) + cmh + fuh) / historyLmrVal; // Increase/decrease depth based on histories
-            lmr += isQuiet * (quietsSearched > (improving? 40 : 60)); //Adjust if very late move
+            lmr += isQuiet * (quietsSearched > (improving? 45 : 59)); //Adjust if very late move
             lmr += cutNode;
 
             if (ttHit && !isCheck) {
                 if (TTFlag == UPPER_BOUND && hashedBoard.score >= rawEval
                     && hashedBoard.depth >= depth - 2 && std::abs(alpha) < MATE_VALUE_MAX) {
-                    lmr -= (isPv * 2) + std::max(-4 + 2 * !isPv, std::min(0, (rawEval - alpha) / (45 * depth + 100 * isPv)));
+                    lmr -= (isPv * 2) + std::max(-4 + 2 * !isPv, std::min(0, (rawEval - alpha) / (46 * depth + 96 * isPv)));
                 }
             }
 
@@ -795,7 +795,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
 
             if (hashed && (hashedBoard.flagsAndAge & 0b11) == UPPER_BOUND && hashedBoard.score >= staticEval
                 && hashedBoard.depth >= depth - 2 && std::abs(alpha) < MATE_VALUE_MAX) {
-                lmr -= std::max(-2, std::min(0, (staticEval - alpha) / 250));
+                lmr -= std::max(-2, std::min(0, (staticEval - alpha) / 262));
             }
 
             lmr = std::min(depth - 2, std::max(lmr, 0));
@@ -1055,7 +1055,7 @@ Search::SearchInfo Search::search(int id, ThreadData &td, int depth, int nodes, 
 
     for (int i = 1; i <= depth; i++) {
 
-        int delta = ASPIRATION_DELTA + std::abs(searchedEval / 750);
+        int delta = ASPIRATION_DELTA + std::abs(searchedEval / 929);
         int aspNum = 0;
 
         // Use aspiration window with depth >= 4
@@ -1117,7 +1117,7 @@ Search::SearchInfo Search::search(int id, ThreadData &td, int depth, int nodes, 
                 }
 
                 aspNum++;
-                delta += 10 * delta / std::max(18, 35 - i * i) + 1;
+                delta += 10 * delta / std::max(20, 35 - i * i) + 1;
 
                 if (id == 0 && totalTime > 3000 && canPrintInfo && multiPv == 1) {
                     printSearchInfo(printInfo, pstring, 1, bound, pv);

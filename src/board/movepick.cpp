@@ -39,7 +39,7 @@ namespace MOVEPICK {
                 else {
                     int see = BITBOARD::seeCapture(b.state, move);
                     int score = (see > 0? 1000000 : (see == 0? 950000 : -1000000));
-                    moveList.set_score_index(i, score + mvvlva[from][to] + THREAD::getHistory(td.historyData, b.state.toMove, false, moveFrom, moveTo) / 256);
+                    moveList.set_score_index(i, score + mvvlva[from][to] + THREAD::getHistory(td.historyData, b.state.toMove, false, moveFrom, moveTo) / 216);
                 }
 
             }
