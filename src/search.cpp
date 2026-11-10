@@ -53,7 +53,7 @@ void Search::willPrintInfo(bool b) {
 void Search::InitLateMoveArray() {
     for (int i = 1; i < 64; i++) {
         for (int j = 1; j < 64; j++) {
-            lmrReduction[i][j] = (19.75 * log(i) * log(j) + 69) / 58;
+            lmrReduction[i][j] = (283 * log(j) * pow(i, 0.25) + 265 * log(i) * pow(j, 0.25) + 564) / 1024.0;
         }
     }
 }
