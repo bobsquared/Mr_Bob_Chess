@@ -1,4 +1,5 @@
 #include "timeman.h"
+#include <cstdint>
 
 
 
@@ -31,23 +32,24 @@ TimeManager::TimeManager(bool col, int wtime, int btime, int winc, int binc, int
 
 
 void TimeManager::setTimer(int numMoves) {
-    bool hasInc = col? (binc > 0) : (winc > 0);
+    int time = col? btime : wtime;
+    int inc = col? binc : winc;
+    bool hasInc = inc > 0;
 
-    bool bmode = col? (btime < 15000 && binc == 0 && movesToGo == 0) : (wtime < 15000 && winc == 0 && movesToGo == 0);
-    int timeDivisor = std::max(12, 32 + bmode * std::min(25, 50000 / (col? btime : wtime)) - (numMoves / 7) - (movesToGo > 0? 4 : -1) - (hasInc * 4));
-    if (col) {
-        this->timeLeft = btime / (timeDivisor - (binc >= 10? std::min(5, (binc / 200)) : -1));
-    }
-    else {
-        this->timeLeft = wtime / (timeDivisor - (winc >= 10? std::min(5, (winc / 200)) : -1));
-    }
+    bool bmode = time < 15000 && inc == 0 && movesToGo == 0;
+    int timeDivisor = std::max(12000, 29434 + bmode * std::min(25, 50000 / time) * 1000 - numMoves * 133 - (movesToGo > 0? 4000 : -1000) - hasInc * 4000);
+    int incReduction = inc >= 10? std::min(5000, inc * 5) : -1000;
+    this->timeLeft = (int64_t) time * 1000 / (timeDivisor - incReduction) + inc * 88 / 1000;
 
-    int totalTime = col? btime : wtime;
+    int totalTime = time;
     if (movesToGo <= 18 && movesToGo > 0) {
         timeLeft = (movesToGo == 1? 0 : (timeLeft / (19 - movesToGo))) + (totalTime / (0.5 + movesToGo));
     }
 
-    this->maxTimeLeft = timeLeft * ((bmode || (movesToGo <= 2 && movesToGo > 0))? 1 : 4);
+    this->maxTimeLeft = (bmode || (movesToGo <= 2 && movesToGo > 0))? timeLeft : (int64_t) timeLeft * 4328 / 1000;
+
+    timeLeft = std::min(timeLeft, time);
+    maxTimeLeft = std::min(maxTimeLeft, time);
     initTime = std::chrono::high_resolution_clock::now();
 }
 
@@ -64,7 +66,7 @@ int TimeManager::getTimePassed() {
 bool TimeManager::outOfTimeRootThreshold() {
     std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
     int diff = std::chrono::duration_cast<std::chrono::milliseconds> (t2 - initTime).count();
-    return ((double) diff) / timeLeft > 0.75;
+    return (int64_t) diff * 1000 > (int64_t) timeLeft * 744;
 }
 
 
