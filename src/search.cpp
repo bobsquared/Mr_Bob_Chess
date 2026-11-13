@@ -1159,7 +1159,7 @@ Search::SearchInfo Search::search(int id, ThreadData &td, int depth, int nodes, 
             break;
         }
 
-        if (nodes > 0 && getTotalNodesSearched() >= nodes) {
+        if (nodes > 0 && getTotalNodesSearched() >= static_cast<uint64_t>(nodes)) {
             break;
         }
 
