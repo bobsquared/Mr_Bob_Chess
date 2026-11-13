@@ -757,7 +757,6 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
     // Initialize evaluation stack
     int staticEval = inCheck? MATE_VALUE + 1 : (hashed? hashedBoard.staticScore : EVAL::evaluate(b));
     td.searchStack[ply].eval = hashed? hashedBoard.staticScore : staticEval;
-    int quietsSearched = 0;
     MoveList localMoveList = moveList;
 
     while (localMoveList.get_next_move(move)) {
@@ -768,7 +767,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
         int moveFrom = get_move_from(move);
         int moveTo = get_move_to(move);
         int hist = THREAD::getHistory(td.historyData, b.state.toMove, isQuiet, moveFrom, moveTo);
-        int fuh = isQuiet? THREAD::getFollowupHistory(b, prev, td.historyData, moveFrom, moveTo) : 0;
+        int fuh = isQuiet? THREAD::getFollowupHistory(b, ourPrev, td.historyData, moveFrom, moveTo) : 0;
         int cmh = isQuiet? THREAD::getCounterHistory(b, prev, td.historyData, moveFrom, moveTo) : 0;
 
         // Check for legality
@@ -835,10 +834,6 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
                     break;
                 }
             }
-        }
-
-        if (isQuiet) {
-            quietsSearched++;
         }
 
     }
