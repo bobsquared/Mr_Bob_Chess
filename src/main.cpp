@@ -16,8 +16,9 @@
 #include "nnue/nncpp.h"
 #include "transpositionTable.h"
 #include "board/syzygy_probe.h"
+#include "incbin/incbin.h"
 
-
+INCBIN(bobBrain, "../nets/b_bobbrain_20_0.002269.nnue"); 
 
 
 void Bench(Board &b, Search &s) {
@@ -51,7 +52,7 @@ void Bench(Board &b, Search &s) {
 int main(int argc, char* argv[]) {
 
     MAGIC_BITBOARDS::InitMagicBitboards();
-    EVAL::InitEval("nets/b_bobbrain_20_0.002269.nnue");
+    EVAL::InitEvalEmbedded(gbobBrainData, gbobBrainSize);
     THREAD::setNThreads(1);
     TT::InitTT(HASH_SIZE);                       /**< The transposition table for storing previously searched positions*/
 
@@ -80,7 +81,10 @@ int main(int argc, char* argv[]) {
     options.addOption([&](int n){s.setHistoryLMRsearch(n);}, "histlmr", 1828, 1, 10000);
     options.addOption([&](int n){s.setHistoryLMRNoisysearch(n);}, "histlmrnoisy", 2625, 1, 10000);
     options.addOption([&](std::string path){SYZYGY_PROBE::setPath(path);}, "SyzygyPath", "tb/syzygy");
-    options.addOption([&](std::string path){EVAL::InitEval(path);}, "EvalFile", "nets/b_bobbrain_20_0.002269.nnue");
+    options.addOption([&](std::string path){
+        if (path.empty() || path == "<empty>") EVAL::InitEvalEmbedded(gbobBrainData, gbobBrainSize);
+        else EVAL::InitEval(path);
+    }, "EvalFile", "<empty>");
 
     params.addParameter("movetime");
     params.addParameter("wtime");

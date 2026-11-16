@@ -38,6 +38,7 @@ namespace EVAL {
         return eval * (-halfMoves * halfMoves - 100 * halfMoves + 30000) / 30000;
     }
 
+    void InitEvalEmbedded(const unsigned char* data, size_t size);
     void InitEval(std::string nnueFile);
     int evaluate(Board &board);
 }

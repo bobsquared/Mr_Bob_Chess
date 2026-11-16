@@ -213,7 +213,7 @@ namespace Layer {
             }
         }
 
-        void Load(std::ifstream& in) {
+        void Load(std::istream& in) {
             if (!in) {
                 throw std::runtime_error("Failed to open file for loading.");
             }

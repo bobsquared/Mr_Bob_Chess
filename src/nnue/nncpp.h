@@ -4,6 +4,7 @@
 
 #include <vector>
 #include <string>
+#include <sstream>
 #include "layers/relu.h"
 #include "layers/layer.h"
 #include "layers/sigmoid.h"
@@ -85,6 +86,16 @@ public:
         return l2Buffer[0];
     }
 
+    void LoadNetwork(std::istream& in) {
+        for (int i = 0; i < 14; i++) {
+            l1[i].Load(in);
+        }
+            
+        for (int i = 0; i < 8; i++) {
+            l2[i].Load(in);
+        }  
+    }
+
     void LoadNetwork(std::string fileName) {
         std::ifstream in(fileName, std::ios::binary);
 
@@ -93,15 +104,13 @@ public:
             return;
         }
 
-        for (int i = 0; i < 14; i++) {
-            l1[i].Load(in);
-        }
-            
-        for (int i = 0; i < 8; i++) {
-            l2[i].Load(in);
-        }
-            
+        LoadNetwork(in);
         in.close();
+    }
+
+    void LoadNetwork(const unsigned char* data, size_t size) {
+        std::istringstream in(std::string(reinterpret_cast<const char*>(data), size), std::ios::binary);
+        LoadNetwork(in);
     }
 
 };

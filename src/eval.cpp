@@ -11,6 +11,11 @@ namespace EVAL {
     void InitEval(std::string nnueFile) {
         model->LoadNetwork(nnueFile);
     }
+
+
+    void InitEvalEmbedded(const unsigned char* data, size_t size) {
+        model->LoadNetwork(data, size);
+    }
     
 
     // Evaluate the position
