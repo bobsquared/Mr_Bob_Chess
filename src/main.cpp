@@ -73,13 +73,6 @@ int main(int argc, char* argv[]) {
     options.addOption([&](int n){TT::setSize(n);}, "Hash", 256, 1, 524288);
     options.addOption([&](int n){THREAD::setNThreads(n);}, "Threads", 1, 1, 2048);
     options.addOption([&](int n){s.setMultiPVSearch(n);}, "MultiPV", 1, 1, 256);
-
-    options.addOption([&](int n){s.setRFPsearch(n);}, "rfp", 64, 1, 500);
-    options.addOption([&](int n){s.setRazorsearch(n);}, "razor", 391, 1, 1000);
-    options.addOption([&](int n){s.setProbcutsearch(n);}, "probcut", 332, 1, 1000);
-    options.addOption([&](int n){s.setFutilitysearch(n);}, "futility", 198, 1, 1000);
-    options.addOption([&](int n){s.setHistoryLMRsearch(n);}, "histlmr", 1828, 1, 10000);
-    options.addOption([&](int n){s.setHistoryLMRNoisysearch(n);}, "histlmrnoisy", 2625, 1, 10000);
     options.addOption([&](std::string path){SYZYGY_PROBE::setPath(path);}, "SyzygyPath", "<empty>");
     options.addOption([&](std::string path){
         if (path.empty() || path == "<empty>") EVAL::InitEvalEmbedded(gbobBrainData, gbobBrainSize);
