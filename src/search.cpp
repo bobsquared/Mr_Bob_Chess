@@ -742,6 +742,7 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
     int numMoves = 0;
     int ret = -INFINITY_VAL;
     int ply = 0;
+    int prevAlpha = alpha;
     bool inCheck = BITBOARD::InCheck(b.state);
 
     // Probe transposition table:
@@ -850,7 +851,8 @@ Search::BestMoveInfo Search::pvSearchRoot(Board &b, ThreadData &td, int depth, c
     // Update transposition table
     if (!exit_thread_flag && !tm.outOfTime()) {
         assert (bestMove != 0);
-        TT::saveTT(td, bestMove, ret, staticEval, depth, EXACT, posKey, ply);
+        int bound = prevAlpha >= ret? UPPER_BOUND : (alpha >= beta? LOWER_BOUND : EXACT);
+        TT::saveTT(td, bestMove, ret, staticEval, depth, bound, posKey, ply);
     }
 
     return BestMoveInfo(bestMove, ret);
