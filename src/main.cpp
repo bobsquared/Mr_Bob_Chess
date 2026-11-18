@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
     options.addOption([&](int n){s.setFutilitysearch(n);}, "futility", 198, 1, 1000);
     options.addOption([&](int n){s.setHistoryLMRsearch(n);}, "histlmr", 1828, 1, 10000);
     options.addOption([&](int n){s.setHistoryLMRNoisysearch(n);}, "histlmrnoisy", 2625, 1, 10000);
-    options.addOption([&](std::string path){SYZYGY_PROBE::setPath(path);}, "SyzygyPath", "tb/syzygy");
+    options.addOption([&](std::string path){SYZYGY_PROBE::setPath(path);}, "SyzygyPath", "<empty>");
     options.addOption([&](std::string path){
         if (path.empty() || path == "<empty>") EVAL::InitEvalEmbedded(gbobBrainData, gbobBrainSize);
         else EVAL::InitEval(path);

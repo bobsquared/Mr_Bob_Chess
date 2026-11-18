@@ -58,22 +58,18 @@ void OptionInt::printOption() {
 
 
 bool OptionString::setParameter(std::string command) {
-    std::string tempName = name;
-    std::transform(tempName.begin(), tempName.end(), tempName.begin(), ::tolower);
-    std::transform(command.begin(), command.end(), command.begin(), ::tolower);
-    
-
-    std::regex sp ("setoption\\sname\\s" + tempName + "\\svalue\\s(.+)");
+    std::regex sp("setoption\\s+name\\s+" + name + "\\s+value\\s+(.+)", std::regex::icase);
     std::smatch m;
 
     if (std::regex_search(command, m, sp)) {
-        func(m[1]);
+        std::string value = m[1];
+        if (!value.empty() && value.back() == '\r') {
+            value.pop_back();
+        }
+        func(value);
         return true;
     }
-    else {
-        return false;
-    }
-    
+    return false;
 }
 
 

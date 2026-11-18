@@ -116,7 +116,7 @@ namespace TT {
 
 
     void saveTT(ThreadData &td, MOVE move, int score, int staticScore, int depth, uint8_t flag, uint64_t key, int ply) {
-        score += score > MATE_VALUE_MAX? ply : (score < -MATE_VALUE_MAX? -ply : 0);
+        score += score > MATE_VALUE_MAX - MAX_PLY? ply : (score < -MATE_VALUE_MAX + MAX_PLY? -ply : 0);
         uint32_t lowerKey = key & 0xFFFFFFFFULL;
         uint32_t upperKey = key >> 32;
 
@@ -221,7 +221,7 @@ namespace TT {
                 hashedBoard = entry;
                 ret = true;
                 ttMove = hashedBoard.move;
-                hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
+                hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX + MAX_PLY? ply : (hashedBoard.score > MATE_VALUE_MAX - MAX_PLY? -ply : 0);
 
                 // Ensure hashedBoard depth >= current depth
                 if (hashedBoard.depth >= depth) {
@@ -256,7 +256,7 @@ namespace TT {
                 hashedBoard = entry;
                 ret = true;
                 ttMove = hashedBoard.move;
-                hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX? ply : (hashedBoard.score > MATE_VALUE_MAX? -ply : 0);
+                hashedBoard.score += hashedBoard.score < -MATE_VALUE_MAX + MAX_PLY? ply : (hashedBoard.score > MATE_VALUE_MAX - MAX_PLY? -ply : 0);
                 uint8_t ttFlag = getFlagsFromTT(hashedBoard.flagsAndAge);
                 alpha = ttFlag == LOWER_BOUND? hashedBoard.score : alpha; // Low bound
                 beta = ttFlag == UPPER_BOUND? hashedBoard.score : beta; // upper bound

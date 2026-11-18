@@ -393,16 +393,16 @@ int Search::pvSearch(Board &b, ThreadData &td, int depth, int alpha, int beta, b
     td.searchStack[ply + 1].hashLevel = hashLevel + ttHit;
 
     // Probe Syzygy Tablebases
-    int res = SYZYGY_PROBE::probe_wdl(b.state, ply);
+    int res = hasSingMove? -1 : SYZYGY_PROBE::probe_wdl(b.state, ply);
 
     if (res != -1) {
         td.tbHits++;
 
         int bound = EXACT;
-        if (res > MATE_VALUE_MAX) {
+        if (res > MATE_VALUE_MAX - MAX_PLY) {
             bound = LOWER_BOUND;
         }
-        else if (res < -MATE_VALUE_MAX) {
+        else if (res < -MATE_VALUE_MAX + MAX_PLY) {
             bound = UPPER_BOUND;
         }
 
@@ -1242,10 +1242,10 @@ Search::SearchInfo Search::beginSearch(Board &b, int depth, int nodes, int wtime
             THREAD::threadData[0].tbHits++;
 
             if (canPrintInfo) {
-                if (tbScore > 0) {
-                    std::cout << "info depth 1 score mate " << (tbDtz + 5) / 2 << " pv " << moveToString(tbMove) << std::endl;
-                } else if (tbScore < 0) {
-                    std::cout << "info depth 1 score mate " << -((tbDtz + 5) / 2) << " pv " << moveToString(tbMove) << std::endl;
+                if (tbScore > 16) {
+                    std::cout << "info depth 1 score cp " << MATE_VALUE_MAX  << " pv " << moveToString(tbMove) << std::endl;
+                } else if (tbScore < -16) {
+                    std::cout << "info depth 1 score cp " << -MATE_VALUE_MAX  << " pv " << moveToString(tbMove) << std::endl;
                 } else {
                     std::cout << "info depth 1 score cp 0 pv " << moveToString(tbMove) << std::endl;
                 }
